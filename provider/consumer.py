@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+import logging
 import requests
 import ssl
 import threading
@@ -69,16 +70,19 @@ class Consumer (threading.Thread):
                                           auto_offset_reset="latest",
                                           enable_auto_commit=False)
 
-        print "Now listening in order to fire trigger: %s" % self.trigger
+        logging.info("Now listening in order to fire trigger: {}".format(self.trigger))
 
         while self.shouldRun:
             partition = self.consumer.poll(1000)
             if len(partition) > 0:
-                # print "partition: %s" % partition
+                logging.debug("partition: {}".format(partition))
                 topic = partition[partition.keys()[0]]  # this assumes we only ever listen to one topic per consumer
                 messages = []
+                messageSize = 0
+
                 for message in topic:
-                    # print "Consumed message: %s" % str(message)
+                    logging.debug("Consumed message: {}".format(str(message)))
+                    messageSize += len(message.value)
                     fieldsToSend = {
                         'value': message.value,
                         'topic': message.topic,
@@ -92,39 +96,39 @@ class Consumer (threading.Thread):
 
                 payload = {}
                 payload['messages'] = messages
-                print "Firing trigger {} with {} messages".format(self.trigger, len(messages))
+                logging.info("Firing trigger {} with {} messages with a total size of {} bytes".format(self.trigger, len(messages), messageSize))
 
                 try:
                     response = requests.post(self.triggerURL, json=payload)
                     status_code = response.status_code
-                    print "Repsonse status code %d" % status_code
+                    logging.info("Repsonse status code {}".format(status_code))
 
                     if status_code >= 400 and status_code < 500:
                         # TODO need to kill this trigger
                         # However, 429 is the status code for a throttled response
-                        print 'Need to kill this trigger due to status code %s' % status_code
+                        logging.info('Need to kill this trigger due to status code {}'.format(status_code))
                     elif status_code >= 500:
                         # TODO OW server error... now what?
-                        print 'Error talking to OW, status code %s' % status_code
+                        logging.error('Error talking to OW, status code {}'.format(status_code))
                     else:
                         # manually commit offsets only upon successfully
                         # firing the trigger
                         self.consumer.commit()
                 except requests.exceptions.RequestException as e:
                     # TODO network issue talking to OW... now what?
-                    print 'Error talking to OW: %s' % e
+                    logging.error('Error talking to OW: {}'.format(e))
 
                 # TODO
                 # error handling
                 # retries? I suppose certain status codes warrant it...
                 # only commit offset if post was successful?
 
-        print "Consumer for trigger %s exiting main loop" % self.trigger
+        logging.info("Consumer for trigger {} exiting main loop".format(self.trigger))
         self.consumer.unsubscribe()
         self.consumer.close()
 
     def shutdown(self):
-        print "Shutting down consumer for trigger %s" % self.trigger
+        logging.info("Shutting down consumer for trigger {}".format(self.trigger))
         self.shouldRun = False
         self.join()
 
