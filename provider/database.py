@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
 from cloudant import Cloudant
 from cloudant.result import Result
@@ -28,19 +29,28 @@ class Database:
     def recordTrigger(self, triggerFQN, doc):
         document = dict(doc)
         document['_id'] = triggerFQN
-        return self.database.create_document(document)
+
+        logging.info('Writing trigger {} to DB'.format(triggerFQN))
+        result = self.database.create_document(document)
+        logging.info('Successfully wrote trigger {} to DB'.format(triggerFQN))
+
+        return result
 
     def deleteTrigger(self, triggerFQN):
         document = self.database[triggerFQN]
         if document.exists():
+            logging.info('Found trigger to delete from DB: {}'.format(triggerFQN))
             document.delete()
-        # TODO should we bother with an else here?
+            logging.info('Successfully deleted trigger from DB: {}'.format(triggerFQN))
+        else:
+            logging.warn('Attempted to delete non-existent trigger from DB: {}'.format(triggerFQN))
 
     def triggers(self):
         allDocs = []
 
+        logging.info('Fetching all documents from DB')
         for document in Result(self.database.all_docs, include_docs=True):
-            # print "found doc %s" % document['doc']
             allDocs.append(document['doc'])
 
+        logging.info('Successfully retrieved {} documents'.format(len(allDocs)))
         return allDocs

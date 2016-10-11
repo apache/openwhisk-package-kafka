@@ -72,9 +72,8 @@ def authorizedForTrigger(auth, consumer):
 
 
 def createAndRunConsumer(triggerFQN, params, record=True):
-    # print "Right about now I would create and start a new consumer"
     if app.config['TESTING'] == True:
-        print "Just testing"
+        logging.debug("Just testing")
     else:
         consumer = Consumer(triggerFQN, params)
         # TODO
@@ -90,10 +89,11 @@ def createAndRunConsumer(triggerFQN, params, record=True):
 def restoreTriggers():
     for triggerDoc in database.triggers():
         triggerFQN = triggerDoc['_id']
-        print 'Restoring trigger %s' % triggerFQN
+        logging.info('Restoring trigger {}'.format(triggerFQN))
         createAndRunConsumer(triggerFQN, triggerDoc, record=False)
 
 port = os.getenv('PORT', '5000')
 if __name__ == "__main__":
+    logging.basicConfig(format='%(asctime)s [%(levelname)s]: %(message)s', level=logging.INFO)
     restoreTriggers()
     app.run(host='0.0.0.0', port=int(port))
