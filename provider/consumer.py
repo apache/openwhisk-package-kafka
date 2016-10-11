@@ -17,6 +17,7 @@ import logging
 import requests
 import ssl
 import threading
+import time
 from database import Database
 from kafka import KafkaConsumer, KafkaProducer
 from kafka.errors import KafkaError
@@ -24,13 +25,14 @@ from kafka.structs import OffsetAndMetadata
 
 
 class Consumer (threading.Thread):
+    retry_timeout = 1   # Timeout in seconds
+    max_retries = 10    # Maximum number of times to retry firing trigger
 
     def __init__(self, trigger, params):
         threading.Thread.__init__(self)
 
         self.daemon = True
         self.shouldRun = True
-
         self.trigger = trigger
         self.isMessageHub = params["isMessageHub"]
         self.triggerURL = params["triggerURL"]
@@ -47,6 +49,7 @@ class Consumer (threading.Thread):
             self.parseAsJson = False
 
     def run(self):
+
         # TODO may need different code paths for Message Hub vs generic Kafka
         if self.isMessageHub:
             sasl_mechanism = 'PLAIN'       # <-- changed from 'SASL_PLAINTEXT'
@@ -103,44 +106,55 @@ class Consumer (threading.Thread):
 
                 payload = {}
                 payload['messages'] = messages
-                logging.info("[{}] Firing trigger with {} messages with a total size of {} bytes".format(self.trigger, len(messages), messageSize))
+                retry = True
+                retry_count = 0
 
-                try:
-                    response = requests.post(self.triggerURL, json=payload)
-                    status_code = response.status_code
-                    logging.info("Repsonse status code {}".format(status_code))
+                logging.info("[{}] Firing trigger with {} messages with a total size of {} bytes".format(self.trigger,
+                     len(messages), messageSize))
 
-                    if status_code >= 400 and status_code < 500:
-                        # TODO need to kill this trigger
-                        # However, 429 is the status code for a throttled response
-                        logging.info('Need to kill this trigger due to status code {}'.format(status_code))
-                    elif status_code >= 500:
-                        # TODO OW server error... now what?
-                        logging.error('Error talking to OW, status code {}'.format(status_code))
-                    else:
-                        # manually commit offsets only upon successfully
-                        # firing the trigger
-                        self.consumer.commit()
-                except requests.exceptions.RequestException as e:
-                    # TODO network issue talking to OW... now what?
-                    logging.error('Error talking to OW: {}'.format(e))
+                while retry:
+                    try:
+                        response = requests.post(self.triggerURL, json=payload)
+                        status_code = response.status_code
+                        logging.info("[{}] Repsonse status code {}".format(self.trigger, status_code))
 
-                # TODO
-                # error handling
-                # retries? I suppose certain status codes warrant it...
-                # only commit offset if post was successful?
+                        # Manually commit offset if the trigger was fired successfully. Retry firing the trigger if the
+                        # service was unavailable (503), an internal server error occurred (500), the request timed out
+                        # (408), or the request was throttled (429).
+                        if status_code == 200:
+                            self.consumer.commit()
+                            retry = False
+                        elif status_code not in [503, 500, 408, 429]:
+                            logging.error('[{}] Error talking to OpenWhisk, status code {}'.format(self.trigger,
+                                status_code))
+                            self.shouldRun = False
+                            retry = False
+                    except requests.exceptions.RequestException as e:
+                        logging.error('[{}] Error talking to OpenWhisk: {}'.format(self.trigger, e))
 
-        logging.info("[{}] Consumer exiting main loop".format(self.trigger))
-        self.consumer.unsubscribe()
-        self.consumer.close()
+                    if retry:
+                        retry_count += 1
+
+                        if retry_count < self.max_retries:
+                            logging.info("[{}] Retrying in {} second(s)".format(self.trigger, self.retry_timeout))
+                            time.sleep(self.retry_timeout)
+                        else:
+                            logging.info("[{}] Skipping {} messages to offset {} of partition {}".format(self.trigger,
+                                len(messages), message.offset, message.partition))
+                            self.consumer.commit()
+                            retry = False
+
+        if not self.shouldRun:
+            logging.info("[{}] Consumer exiting main loop".format(self.trigger))
+            self.consumer.unsubscribe()
+            self.consumer.close()
+            database = Database()
+            database.deleteTrigger(self.trigger)
 
     def shutdown(self):
         logging.info("[{}] Shutting down consumer for trigger".format(self.trigger))
         self.shouldRun = False
         self.join()
-
-        database = Database()
-        database.deleteTrigger(self.trigger)
 
     def parseMessageIfNeeded(self, value):
         if self.parseAsJson:
