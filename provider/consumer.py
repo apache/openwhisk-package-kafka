@@ -61,7 +61,7 @@ class Consumer (threading.Thread):
                                           ssl_context=context,
                                           sasl_mechanism=sasl_mechanism,
                                           auto_offset_reset="latest",
-                                          enable_auto_commit=True)
+                                          enable_auto_commit=False)
         else:
             self.consumer = KafkaConsumer(self.topic,
                                           group_id=self.trigger,
