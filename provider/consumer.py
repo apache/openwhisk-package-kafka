@@ -66,7 +66,6 @@ class Consumer (threading.Thread):
                                           group_id=self.trigger,
                                           client_id="openwhisk",
                                           bootstrap_servers=self.brokers,
-                                          sasl_plain_username=self.username,
                                           auto_offset_reset="latest",
                                           enable_auto_commit=False)
 
