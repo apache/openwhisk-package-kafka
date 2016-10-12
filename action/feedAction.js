@@ -6,6 +6,7 @@ var request = require('request');
  *  @param {string} username - Kafka username
  *  @param {string} password - Kafka password
  *  @param {string} topic - topic to subscribe to
+ *  @param {bool} isJSONData - attempt to parse messages as JSON
  */
 function main(params) {
     var triggerComponents = params.triggerName.split("/");
@@ -83,6 +84,9 @@ function doRequest(options) {
 
 function validateParameters(rawParams) {
     var validatedParams = {};
+
+    // default value for isJSONData is false
+    validatedParams.isJSONData = rawParams.isJSONData ? rawParams.isJSONData : false;
 
     if (rawParams.topic && rawParams.topic.length > 0) {
         validatedParams.topic = rawParams.topic;
