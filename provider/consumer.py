@@ -70,7 +70,7 @@ class Consumer (threading.Thread):
                                           auto_offset_reset="latest",
                                           enable_auto_commit=False)
 
-        logging.info("Now listening in order to fire trigger: {}".format(self.trigger))
+        logging.info("[{}] Now listening in order to fire trigger".format(self.trigger))
 
         while self.shouldRun:
             partition = self.consumer.poll(1000)
@@ -96,7 +96,7 @@ class Consumer (threading.Thread):
 
                 payload = {}
                 payload['messages'] = messages
-                logging.info("Firing trigger {} with {} messages with a total size of {} bytes".format(self.trigger, len(messages), messageSize))
+                logging.info("[{}] Firing trigger with {} messages with a total size of {} bytes".format(self.trigger, len(messages), messageSize))
 
                 try:
                     response = requests.post(self.triggerURL, json=payload)
@@ -123,12 +123,12 @@ class Consumer (threading.Thread):
                 # retries? I suppose certain status codes warrant it...
                 # only commit offset if post was successful?
 
-        logging.info("Consumer for trigger {} exiting main loop".format(self.trigger))
+        logging.info("[{}] Consumer exiting main loop".format(self.trigger))
         self.consumer.unsubscribe()
         self.consumer.close()
 
     def shutdown(self):
-        logging.info("Shutting down consumer for trigger {}".format(self.trigger))
+        logging.info("[{}] Shutting down consumer for trigger".format(self.trigger))
         self.shouldRun = False
         self.join()
 
