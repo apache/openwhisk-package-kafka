@@ -39,6 +39,13 @@ class Consumer (threading.Thread):
         self.username = params["username"]
         self.password = params["password"]
 
+        # handle the case where there may be existing triggers that do not
+        # have the isJSONData field set
+        if "isJSONData" in params:
+            self.parseAsJson = params["isJSONData"]
+        else:
+            self.parseAsJson = False
+
     def run(self):
         # TODO may need different code paths for Message Hub vs generic Kafka
         if self.isMessageHub:
@@ -84,7 +91,7 @@ class Consumer (threading.Thread):
                     logging.debug("Consumed message: {}".format(str(message)))
                     messageSize += len(message.value)
                     fieldsToSend = {
-                        'value': message.value,
+                        'value': self.parseMessageIfNeeded(message.value),
                         'topic': message.topic,
                         'partition': message.partition,
                         'offset': message.offset,
@@ -134,3 +141,17 @@ class Consumer (threading.Thread):
 
         database = Database()
         database.deleteTrigger(self.trigger)
+
+    def parseMessageIfNeeded(self, value):
+        if self.parseAsJson:
+            try:
+                parsed = json.loads(value)
+                logging.info('[{}] Successfully parsed a message as JSON.'.format(self.trigger))
+                return parsed
+            except ValueError:
+                # no big deal, just return the original value
+                logging.warn('[{}] I was asked to parse a message as JSON, but I failed.'.format(self.trigger))
+                pass
+
+        logging.info('[{}] Returning un-parsed message'.format(self.trigger))
+        return value
