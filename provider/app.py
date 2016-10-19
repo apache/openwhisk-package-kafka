@@ -19,6 +19,7 @@ from flask import Flask, jsonify, request
 from consumer import Consumer
 from database import Database
 from urlparse import urlparse
+import requests
 
 app = Flask(__name__)
 database = Database()
@@ -29,13 +30,24 @@ consumers = dict()
 @app.route('/triggers/<namespace>/<trigger>', methods=['PUT'])
 def postTrigger(namespace, trigger):
     body = request.get_json(force=True, silent=True)
-
     triggerFQN = '/' + namespace + '/' + trigger
-    logging.info("About to create consumer with " +
-                 triggerFQN + " " + str(body))
-    createAndRunConsumer(triggerFQN, body)
-    logging.info("Finished creating consumer.")
-    result = {'success': True}
+    logging.info("[{}] Ensuring user has access rights to post a trigger".format(triggerFQN))
+    response = requests.get(body["triggerURL"])
+    status_code = response.status_code
+    logging.info("[{}] Repsonse status code from trigger authorization {}".format(triggerFQN, status_code))
+
+    if status_code == 200:
+        logging.info("[{}] User authenticated. About to create consumer {}".format(triggerFQN, str(body)))
+        createAndRunConsumer(triggerFQN, body)
+        logging.info("[{}] Finished creating consumer.".format(triggerFQN))
+        result = {'success': True}
+    elif status_code == 401:
+        logging.info("[{}] User not authenticated to post trigger".format(triggerFQN))
+        result = {'success': False}
+    else:
+        logging.info("[{}] Trigger authentication request failed with error code {}".format(triggerFQN, status_code))
+        result = {'success': False}
+
     return jsonify(result)
 
 
