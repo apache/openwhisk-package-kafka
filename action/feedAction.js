@@ -80,6 +80,8 @@ function doRequest(options) {
             }
         });
     });
+
+    return promise;
 }
 
 function validateParameters(rawParams) {
