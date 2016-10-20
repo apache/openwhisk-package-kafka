@@ -14,6 +14,7 @@
 
 import logging
 import os
+from datetime import datetime
 from flask import Flask, jsonify, request
 from consumer import Consumer
 from database import Database
@@ -65,6 +66,14 @@ def testRoute():
     return jsonify('pong')
 
 
+@app.route('/health')
+def healthRoute():
+    currentTime = datetime.now()
+    delta = currentTime - startTime
+    uptimeSeconds = int(round(delta.total_seconds()))
+    return jsonify({'uptime': uptimeSeconds})
+
+
 def authorizedForTrigger(auth, consumer):
     triggerURL = urlparse(consumer.triggerURL)
 
@@ -94,6 +103,8 @@ def restoreTriggers():
 
 port = os.getenv('PORT', '5000')
 if __name__ == "__main__":
-    logging.basicConfig(format='%(asctime)s [%(levelname)s]: %(message)s', level=logging.INFO)
+    startTime = datetime.now()
+    logging.basicConfig(
+        format='%(asctime)s [%(levelname)s]: %(message)s', level=logging.INFO)
     restoreTriggers()
     app.run(host='0.0.0.0', port=int(port))
