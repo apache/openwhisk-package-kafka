@@ -19,6 +19,7 @@ from flask import Flask, jsonify, request
 from consumer import Consumer
 from database import Database
 from urlparse import urlparse
+import requests
 
 app = Flask(__name__)
 database = Database()
@@ -29,14 +30,32 @@ consumers = dict()
 @app.route('/triggers/<namespace>/<trigger>', methods=['PUT'])
 def postTrigger(namespace, trigger):
     body = request.get_json(force=True, silent=True)
-
     triggerFQN = '/' + namespace + '/' + trigger
-    logging.info("About to create consumer with " +
-                 triggerFQN + " " + str(body))
-    createAndRunConsumer(triggerFQN, body)
-    logging.info("Finished creating consumer.")
-    result = {'success': True}
-    return jsonify(result)
+    logging.info("[{}] Ensuring user has access rights to post a trigger".format(triggerFQN))
+
+    trigger_get_response = requests.get(body["triggerURL"])
+    trigger_get_status_code = trigger_get_response.status_code
+    logging.info("[{}] Repsonse status code from trigger authorization {}".format(triggerFQN, trigger_get_status_code))
+
+    if trigger_get_status_code == 200:
+        logging.info("[{}] User authenticated. About to create consumer {}".format(triggerFQN, str(body)))
+        createAndRunConsumer(triggerFQN, body)
+        logging.info("[{}] Finished creating consumer.".format(triggerFQN))
+        result = {'success': True}
+    elif trigger_get_status_code == 401:
+        logging.info("[{}] User not authorized to post trigger".format(triggerFQN))
+        result = {
+            'success': False,
+            'error': 'not authorized'
+        }
+    else:
+        logging.info("[{}] Trigger authentication request failed with error code {}".format(triggerFQN,
+            trigger_get_status_code))
+        result = {'success': False}
+
+    response = jsonify(result)
+    response.status_code = trigger_get_status_code
+    return response
 
 
 @app.route('/triggers/<namespace>/<trigger>', methods=['DELETE'])
