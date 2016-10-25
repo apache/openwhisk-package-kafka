@@ -33,30 +33,39 @@ consumers = dict()
 def postTrigger(namespace, trigger):
     body = request.get_json(force=True, silent=True)
     triggerFQN = '/' + namespace + '/' + trigger
-    logging.info("[{}] Ensuring user has access rights to post a trigger".format(triggerFQN))
 
-    trigger_get_response = requests.get(body["triggerURL"])
-    trigger_get_status_code = trigger_get_response.status_code
-    logging.info("[{}] Repsonse status code from trigger authorization {}".format(triggerFQN, trigger_get_status_code))
-
-    if trigger_get_status_code == 200:
-        logging.info("[{}] User authenticated. About to create consumer {}".format(triggerFQN, str(body)))
-        createAndRunConsumer(triggerFQN, body)
-        logging.info("[{}] Finished creating consumer.".format(triggerFQN))
-        result = {'success': True}
-    elif trigger_get_status_code == 401:
-        logging.info("[{}] User not authorized to post trigger".format(triggerFQN))
-        result = {
+    if triggerFQN in consumers:
+        logging.info("[{}] Trigger already exists".format(triggerFQN))
+        response = jsonify({
             'success': False,
-            'error': 'not authorized'
-        }
+            'error': "trigger already exists"
+        })
+        response.status_code = 409
     else:
-        logging.info("[{}] Trigger authentication request failed with error code {}".format(triggerFQN,
-            trigger_get_status_code))
-        result = {'success': False}
+        logging.info("[{}] Ensuring user has access rights to post a trigger".format(triggerFQN))
+        trigger_get_response = requests.get(body["triggerURL"])
+        trigger_get_status_code = trigger_get_response.status_code
+        logging.info("[{}] Repsonse status code from trigger authorization {}".format(triggerFQN, trigger_get_status_code))
 
-    response = jsonify(result)
-    response.status_code = trigger_get_status_code
+        if trigger_get_status_code == 200:
+            logging.info("[{}] User authenticated. About to create consumer {}".format(triggerFQN, str(body)))
+            createAndRunConsumer(triggerFQN, body)
+            logging.info("[{}] Finished creating consumer.".format(triggerFQN))
+            response = jsonify({'success': True})
+            response.status_code = trigger_get_status_code
+        elif trigger_get_status_code == 401:
+            logging.info("[{}] User not authorized to post trigger".format(triggerFQN))
+            response = jsonify({
+                'success': False,
+                'error': 'not authorized'
+            })
+            response.status_code = trigger_get_status_code
+        else:
+            logging.info("[{}] Trigger authentication request failed with error code {}".format(triggerFQN,
+                trigger_get_status_code))
+            response = jsonify({'success': False})
+            response.status_code = trigger_get_status_code
+
     return response
 
 
