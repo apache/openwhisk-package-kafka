@@ -179,6 +179,14 @@ def main():
     streamHandler.setFormatter(formatter)
     logger.addHandler(streamHandler)
 
+    # also log to file if /logs is present
+    if os.path.isdir('/logs'):
+        fh = logging.FileHandler('/logs/kafkatriggers.log')
+        formatter = logging.Formatter(
+            '%(asctime)s [%(levelname)s]: %(message)s')
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+
     TheDoctor(consumers).start()
 
     restoreTriggers()
