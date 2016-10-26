@@ -3,9 +3,13 @@ FROM python:2.7.12-alpine
 
 # Upgrade and install basic Python dependencies
 RUN apk add --no-cache bash \
-    && pip install --no-cache-dir flask==0.11.1 kafka_python==1.3.1 requests==2.10.0 cloudant==2.1.0
+    && apk add --no-cache --virtual .build-deps \
+        bzip2-dev \
+        gcc \
+        libc-dev \
+    && pip install --no-cache-dir gevent==1.1.2 flask==0.11.1 kafka_python==1.3.1 requests==2.10.0 cloudant==2.1.0
 
-ENV FLASK_PROXY_PORT 8080
+ENV PORT 5000
 
 RUN mkdir -p /KafkaFeedProvider
 ADD provider/*.py /KafkaFeedProvider/

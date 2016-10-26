@@ -20,8 +20,10 @@ from consumer import Consumer
 from database import Database
 from urlparse import urlparse
 import requests
+from gevent.wsgi import WSGIServer
 
 app = Flask(__name__)
+app.debug = False
 database = Database()
 
 consumers = dict()
@@ -120,10 +122,16 @@ def restoreTriggers():
         logging.info('Restoring trigger {}'.format(triggerFQN))
         createAndRunConsumer(triggerFQN, triggerDoc, record=False)
 
-port = os.getenv('PORT', '5000')
-if __name__ == "__main__":
-    startTime = datetime.now()
+
+def main():
     logging.basicConfig(
         format='%(asctime)s [%(levelname)s]: %(message)s', level=logging.INFO)
     restoreTriggers()
-    app.run(host='0.0.0.0', port=int(port))
+
+    port = int(os.getenv('PORT', 5000))
+    server = WSGIServer(('', port), app, log=None)
+    server.serve_forever()
+
+if __name__ == '__main__':
+    startTime = datetime.now()
+    main()
