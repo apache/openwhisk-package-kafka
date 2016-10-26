@@ -154,7 +154,8 @@ class Consumer (threading.Thread):
     def shutdown(self):
         logging.info("[{}] Shutting down consumer for trigger".format(self.trigger))
         self.shouldRun = False
-        self.join()
+        database = Database()
+        database.deleteTrigger(self.trigger)
 
     def parseMessageIfNeeded(self, value):
         if self.parseAsJson:
