@@ -14,6 +14,7 @@
 
 import logging
 import os
+import sys
 from datetime import datetime
 from flask import Flask, jsonify, request
 from consumer import Consumer
@@ -147,12 +148,19 @@ def restoreTriggers():
 
 
 def main():
-    logging.basicConfig(
-        format='%(asctime)s [%(levelname)s]: %(message)s', level=logging.INFO)
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    # Make sure we log to the console
+    streamHandler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s [%(levelname)s]: %(message)s')
+    streamHandler.setFormatter(formatter)
+    logger.addHandler(streamHandler)
+
     restoreTriggers()
 
     port = int(os.getenv('PORT', 5000))
-    server = WSGIServer(('', port), app, log=None)
+    server = WSGIServer(('', port), app, log=logging.getLogger())
     server.serve_forever()
 
 if __name__ == '__main__':
