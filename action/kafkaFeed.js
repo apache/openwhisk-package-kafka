@@ -4,7 +4,8 @@ var request = require('request');
  *   Feed to listen to Kafka messages
  *  @param {string} brokers - array of Kafka brokers
  *  @param {string} topic - topic to subscribe to
- *  @param {bool} isJSONData - attempt to parse messages as JSON
+ *  @param {bool}   isJSONData - attempt to parse messages as JSON
+ *  @param {string} endpoint - address to OpenWhisk deployment
  */
 function main(params) {
     var triggerComponents = params.triggerName.split("/");

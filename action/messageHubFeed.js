@@ -6,14 +6,15 @@ var request = require('request');
  *  @param {string} username - Kafka username
  *  @param {string} password - Kafka password
  *  @param {string} topic - topic to subscribe to
- *  @param {bool} isJSONData - attempt to parse messages as JSON
+ *  @param {bool}   isJSONData - attempt to parse messages as JSON
+ *  @param {string} endpoint - address to OpenWhisk deployment
  */
 function main(params) {
     var triggerComponents = params.triggerName.split("/");
     var namespace = encodeURIComponent(triggerComponents[1]);
     var trigger = encodeURIComponent(triggerComponents[2]);
 
-    var feedServiceURL = 'http://owkafkafeedprovider.mybluemix.net/triggers/' + namespace + '/' + trigger;
+    var feedServiceURL = 'http://169.46.145.194:5000/triggers/' + namespace + '/' + trigger;
 
     if (params.lifecycleEvent === 'CREATE') {
         var validatedParams = validateParameters(params);
