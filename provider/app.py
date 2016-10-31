@@ -89,10 +89,24 @@ def testRoute():
 
 @app.route('/health')
 def healthRoute():
+    healthReport = {}
+
     currentTime = datetime.now()
     delta = currentTime - startTime
     uptimeSeconds = int(round(delta.total_seconds()))
-    return jsonify({'uptime': uptimeSeconds})
+    healthReport['uptime'] = uptimeSeconds
+
+    consumerReports = []
+    for consumerId in consumers:
+        consumer = consumers[consumerId]
+        lastPollDelta = currentTime - consumer.lastPoll
+        consumerInfo = {}
+        consumerInfo[consumerId] = {'secondsSinceLastPoll': lastPollDelta.total_seconds()}
+        consumerReports.append(consumerInfo)
+
+    healthReport['consumers'] = consumerReports
+
+    return jsonify(healthReport)
 
 
 def authorizedForTrigger(auth, consumer):

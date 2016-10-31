@@ -19,6 +19,7 @@ import ssl
 import threading
 import time
 from database import Database
+from datetime import datetime
 from kafka import KafkaConsumer, KafkaProducer
 from kafka.errors import KafkaError
 from kafka.structs import OffsetAndMetadata
@@ -40,6 +41,8 @@ class Consumer (threading.Thread):
         self.topic = params["topic"]
         self.username = params["username"]
         self.password = params["password"]
+
+        self.lastPoll = datetime.max
 
         # handle the case where there may be existing triggers that do not
         # have the isJSONData field set
@@ -143,6 +146,8 @@ class Consumer (threading.Thread):
                                 len(messages), message.offset, message.partition))
                             self.consumer.commit()
                             retry = False
+
+            self.lastPoll = datetime.now()
 
         if not self.shouldRun:
             logging.info("[{}] Consumer exiting main loop".format(self.trigger))
