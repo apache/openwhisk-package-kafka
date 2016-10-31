@@ -3,6 +3,7 @@ var request = require('request');
 /**
  *   Feed to listen to Kafka messages
  *  @param {string} brokers - array of Kafka brokers
+ *  @param {string} kafka_brokers_sasl - array of MessageHub brokers
  *  @param {string} username - Kafka username
  *  @param {string} password - Kafka password
  *  @param {string} topic - topic to subscribe to
@@ -120,10 +121,6 @@ function validateParameters(rawParams) {
         validatedParams.isMessageHub = false;
         if (isNonEmptyArray(rawParams.brokers)) {
             validatedParams.brokers = rawParams.brokers;
-
-            // username and password are optional in the generic kafka case
-            validatedParams.username = rawParams.username;
-            validatedParams.password = rawParams.password;
         } else {
             whisk.error('You must supply a "brokers" parameter as an array of Kafka brokers.');
             return;
