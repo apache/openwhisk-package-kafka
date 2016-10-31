@@ -18,13 +18,19 @@ from cloudant import Cloudant
 from cloudant.result import Result
 
 class Database:
+    dbname = "ow_kafka_triggers"
     username = os.environ['CLOUDANT_USER']
     password = os.environ['CLOUDANT_PASS']
 
     client = Cloudant(username, password, account=username)
     client.connect()
 
-    database = client['ow_kafka_triggers']
+    if dbname in client.all_dbs():
+        logging.info('Database exists - connecting to it.')
+        database = client[dbname]
+    else:
+        logging.warn('Database does not exist - creating it.')
+        database = client.create_database(dbname)
 
     def recordTrigger(self, triggerFQN, doc):
         document = dict(doc)
