@@ -91,9 +91,9 @@ def deleteTrigger(namespace, trigger):
     return response
 
 
-@app.route('/ping')
+@app.route('/')
 def testRoute():
-    return jsonify('pong')
+    return jsonify('Hi!')
 
 
 @app.route('/health')
