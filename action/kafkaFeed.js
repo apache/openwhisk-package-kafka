@@ -8,11 +8,16 @@ var request = require('request');
  *  @param {string} endpoint - address to OpenWhisk deployment
  */
 function main(params) {
+    if(!params.package_endpoint) {
+        whisk.error('Could not find the package_endpoint parameter.');
+        return;
+    }
+
     var triggerComponents = params.triggerName.split("/");
     var namespace = encodeURIComponent(triggerComponents[1]);
     var trigger = encodeURIComponent(triggerComponents[2]);
 
-    var feedServiceURL = 'http://owkafkafeedprovider.mybluemix.net/triggers/' + namespace + '/' + trigger;
+    var feedServiceURL = 'http://' + params.package_endpoint + '/triggers/' + namespace + '/' + trigger;
 
     if (params.lifecycleEvent === 'CREATE') {
         var validatedParams = validateParameters(params);
