@@ -1,20 +1,20 @@
 var request = require('request');
 
 /**
- *   Feed to listen to Kafka messages
- *  @param {string} brokers - array of Kafka brokers
- *  @param {string} kafka_brokers_sasl - array of MessageHub brokers
+ *   Feed to listen to MessageHub messages
+ *  @param {string} kafka_brokers_sasl - array of Message Hub brokers
  *  @param {string} username - Kafka username
  *  @param {string} password - Kafka password
  *  @param {string} topic - topic to subscribe to
- *  @param {bool} isJSONData - attempt to parse messages as JSON
+ *  @param {bool}   isJSONData - attempt to parse messages as JSON
+ *  @param {string} endpoint - address to OpenWhisk deployment
  */
 function main(params) {
     var triggerComponents = params.triggerName.split("/");
     var namespace = encodeURIComponent(triggerComponents[1]);
     var trigger = encodeURIComponent(triggerComponents[2]);
 
-    var feedServiceURL = 'http://owkafkafeedprovider.mybluemix.net/triggers/' + namespace + '/' + trigger;
+    var feedServiceURL = 'http://169.46.145.194:5000/triggers/' + namespace + '/' + trigger;
 
     if (params.lifecycleEvent === 'CREATE') {
         var validatedParams = validateParameters(params);
@@ -68,7 +68,7 @@ function doRequest(options) {
                 console.log("Status code: " + response.statusCode);
 
                 if (response.statusCode >= 400) {
-                    console.log("Response from Kafaka feed service: " + body);
+                    console.log("Response from Message Hub feed service: " + body);
                     reject({
                         statusCode: response.statusCode,
                         response: body
@@ -98,7 +98,6 @@ function validateParameters(rawParams) {
         return;
     }
 
-    // handle the Message Hub case
     if (isNonEmptyArray(rawParams.kafka_brokers_sasl)) {
         validatedParams.isMessageHub = true;
         validatedParams.brokers = rawParams.kafka_brokers_sasl;
@@ -117,14 +116,8 @@ function validateParameters(rawParams) {
             return;
         }
     } else {
-        // generic kafka
-        validatedParams.isMessageHub = false;
-        if (isNonEmptyArray(rawParams.brokers)) {
-            validatedParams.brokers = rawParams.brokers;
-        } else {
-            whisk.error('You must supply a "brokers" parameter as an array of Kafka brokers.');
-            return;
-        }
+        whisk.error('You must supply a "kafka_brokers_sasl" parameter as an array of Message Hub brokers.');
+        return;
     }
 
     return validatedParams;
