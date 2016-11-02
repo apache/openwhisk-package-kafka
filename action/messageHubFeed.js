@@ -67,7 +67,7 @@ function doRequest(options) {
                 reject({
                     response: response,
                     error: error,
-                    body: body
+                    body: JSON.parse(body)
                 });
             } else {
                 console.log("Status code: " + response.statusCode);
@@ -76,11 +76,11 @@ function doRequest(options) {
                     console.log("Response from Message Hub feed service: " + body);
                     reject({
                         statusCode: response.statusCode,
-                        response: body
+                        response: JSON.parse(body)
                     });
                 } else {
                     resolve({
-                        response: body
+                        response: JSON.parse(body)
                     });
                 }
             }
