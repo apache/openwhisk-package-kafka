@@ -7,7 +7,9 @@ RUN apk add --no-cache bash \
         bzip2-dev \
         gcc \
         libc-dev \
-    && pip install --no-cache-dir gevent==1.1.2 flask==0.11.1 kafka_python==1.3.1 requests==2.10.0 cloudant==2.1.0
+        linux-headers \
+    && pip install --no-cache-dir gevent==1.1.2 flask==0.11.1 kafka_python==1.3.1 requests==2.10.0 cloudant==2.1.0 \
+      psutil==5.0.0
 
 ENV PORT 5000
 

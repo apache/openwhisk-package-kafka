@@ -20,13 +20,14 @@ from flask import Flask, jsonify, request
 from consumer import Consumer
 from database import Database
 from urlparse import urlparse
+from health import generateHealthReport
 import requests
 from gevent.wsgi import WSGIServer
+
 
 app = Flask(__name__)
 app.debug = False
 database = Database()
-
 consumers = dict()
 
 
@@ -99,24 +100,7 @@ def testRoute():
 
 @app.route('/health')
 def healthRoute():
-    healthReport = {}
-
-    currentTime = datetime.now()
-    delta = currentTime - startTime
-    uptimeSeconds = int(round(delta.total_seconds()))
-    healthReport['uptime'] = uptimeSeconds
-
-    consumerReports = []
-    for consumerId in consumers:
-        consumer = consumers[consumerId]
-        lastPollDelta = currentTime - consumer.lastPoll
-        consumerInfo = {}
-        consumerInfo[consumerId] = {'secondsSinceLastPoll': lastPollDelta.total_seconds()}
-        consumerReports.append(consumerInfo)
-
-    healthReport['consumers'] = consumerReports
-
-    return jsonify(healthReport)
+    return jsonify(generateHealthReport(consumers))
 
 
 def authorizedForTrigger(auth, consumer):
@@ -131,7 +115,7 @@ def createAndRunConsumer(triggerFQN, params, record=True):
     else:
         consumer = Consumer(triggerFQN, params)
         # TODO
-        # only record after ensuring sucessful start
+        # only record after ensuring successful start
         # handle db errors/retries?
         consumer.start()
         consumers[triggerFQN] = consumer
@@ -164,5 +148,4 @@ def main():
     server.serve_forever()
 
 if __name__ == '__main__':
-    startTime = datetime.now()
     main()
