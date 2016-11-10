@@ -41,7 +41,6 @@ class Consumer (threading.Thread):
         self.topic = params["topic"]
         self.username = params["username"]
         self.password = params["password"]
-
         self.lastPoll = datetime.max
 
         # handle the case where there may be existing triggers that do not
@@ -53,40 +52,53 @@ class Consumer (threading.Thread):
 
     def run(self):
 
-        # TODO may need different code paths for Message Hub vs generic Kafka
-        if self.isMessageHub:
-            sasl_mechanism = 'PLAIN'       # <-- changed from 'SASL_PLAINTEXT'
-            security_protocol = 'SASL_SSL'
+        try:
+            # TODO may need different code paths for Message Hub vs generic Kafka
+            if self.isMessageHub:
+                sasl_mechanism = 'PLAIN'       # <-- changed from 'SASL_PLAINTEXT'
+                security_protocol = 'SASL_SSL'
 
-            # Create a new context using system defaults, disable all but TLS1.2
-            context = ssl.create_default_context()
-            context.options &= ssl.OP_NO_TLSv1
-            context.options &= ssl.OP_NO_TLSv1_1
+                # Create a new context using system defaults, disable all but TLS1.2
+                context = ssl.create_default_context()
+                context.options &= ssl.OP_NO_TLSv1
+                context.options &= ssl.OP_NO_TLSv1_1
 
-            # this initialization can take some time, might as well have it in
-            # the run method so it doesn't block the application
-            self.consumer = KafkaConsumer(self.topic,
-                                          group_id=self.trigger,
-                                          bootstrap_servers=self.brokers,
-                                          sasl_plain_username=self.username,
-                                          sasl_plain_password=self.password,
-                                          security_protocol=security_protocol,
-                                          ssl_context=context,
-                                          sasl_mechanism=sasl_mechanism,
-                                          auto_offset_reset="latest",
-                                          enable_auto_commit=False)
-        else:
-            self.consumer = KafkaConsumer(self.topic,
-                                          group_id=self.trigger,
-                                          client_id="openwhisk",
-                                          bootstrap_servers=self.brokers,
-                                          auto_offset_reset="latest",
-                                          enable_auto_commit=False)
+                # this initialization can take some time, might as well have it in
+                # the run method so it doesn't block the application
 
-        logging.info("[{}] Now listening in order to fire trigger".format(self.trigger))
+                self.consumer = KafkaConsumer(self.topic,
+                                              group_id=self.trigger,
+                                              bootstrap_servers=self.brokers,
+                                              sasl_plain_username='self.username',
+                                              sasl_plain_password=self.password,
+                                              security_protocol=security_protocol,
+                                              ssl_context=context,
+                                              sasl_mechanism=sasl_mechanism,
+                                              auto_offset_reset="latest",
+                                              enable_auto_commit=False)
+            else:
+                self.consumer = KafkaConsumer(self.topic,
+                                              group_id=self.trigger,
+                                              client_id="openwhisk",
+                                              bootstrap_servers=self.brokers,
+                                              auto_offset_reset="latest",
+                                              enable_auto_commit=False)
+
+            logging.info("[{}] Now listening in order to fire trigger".format(self.trigger))
+        except KafkaError:
+            logging.info("[{}] Failed to create consumer".format(self.trigger))
+            self.shutdown()
+            return
 
         while self.shouldRun:
-            partition = self.consumer.poll(1000)
+
+            try:
+                partition = self.consumer.poll(1000)
+            except KafkaError:
+                logging.info("[{}] Error occurred while polling consumer".format(self.trigger))
+                self.shouldRun = False
+                break
+
             if len(partition) > 0:
                 logging.debug("partition: {}".format(partition))
                 topic = partition[partition.keys()[0]]  # this assumes we only ever listen to one topic per consumer
