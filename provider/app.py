@@ -18,7 +18,10 @@ import sys
 from datetime import datetime
 from flask import Flask, jsonify, request
 from consumer import Consumer
+from consumercollection import ConsumerCollection
 from database import Database
+from threading import Lock
+from thedoctor import TheDoctor
 from urlparse import urlparse
 from health import generateHealthReport
 import requests
@@ -28,7 +31,8 @@ from gevent.wsgi import WSGIServer
 app = Flask(__name__)
 app.debug = False
 database = Database()
-consumers = dict()
+
+consumers = ConsumerCollection()
 
 
 @app.route('/triggers/<namespace>/<trigger>', methods=['PUT'])
@@ -36,7 +40,7 @@ def postTrigger(namespace, trigger):
     body = request.get_json(force=True, silent=True)
     triggerFQN = '/' + namespace + '/' + trigger
 
-    if triggerFQN in consumers:
+    if consumers.hasConsumerForTrigger(triggerFQN):
         logging.info("[{}] Trigger already exists".format(triggerFQN))
         response = jsonify({
             'success': False,
@@ -77,11 +81,11 @@ def deleteTrigger(namespace, trigger):
     body = request.get_json(force=True, silent=True)
 
     triggerFQN = '/' + namespace + '/' + trigger
-    consumer = consumers.get(triggerFQN)
+    consumer = consumers.getConsumerForTrigger(triggerFQN)
     if consumer != None:
         if authorizedForTrigger(auth, consumer):
             consumer.shutdown()
-            del consumers[triggerFQN]
+            consumers.removeConsumerForTrigger(triggerFQN)
             response = jsonify({'success': True})
         else:
             response = jsonify({'error': 'not authorized'})
@@ -97,7 +101,7 @@ def deleteTrigger(namespace, trigger):
 def testRoute():
     return jsonify('Hi!')
 
-
+#TODO call TheDoctor.isAlive() and report on that
 @app.route('/health')
 def healthRoute():
     return jsonify(generateHealthReport(consumers))
@@ -114,11 +118,8 @@ def createAndRunConsumer(triggerFQN, params, record=True):
         logging.debug("Just testing")
     else:
         consumer = Consumer(triggerFQN, params)
-        # TODO
-        # only record after ensuring successful start
-        # handle db errors/retries?
         consumer.start()
-        consumers[triggerFQN] = consumer
+        consumers.addConsumerForTrigger(triggerFQN, consumer)
 
         if record:
             database.recordTrigger(triggerFQN, params)
@@ -140,6 +141,8 @@ def main():
     formatter = logging.Formatter('%(asctime)s [%(levelname)s]: %(message)s')
     streamHandler.setFormatter(formatter)
     logger.addHandler(streamHandler)
+
+    TheDoctor(consumers).start()
 
     restoreTriggers()
 

@@ -16,7 +16,7 @@ import json
 import logging
 import requests
 import ssl
-import threading
+from threading import Thread, Lock
 import time
 from database import Database
 from datetime import datetime
@@ -25,15 +25,82 @@ from kafka.errors import KafkaError
 from kafka.structs import OffsetAndMetadata
 
 
-class Consumer (threading.Thread):
+class Consumer:
+    class State:
+        Initializing = 'Initializing'
+        Running = 'Running'
+        Stopping = 'Stopping'
+        Restart = 'Restart'
+        Dead = 'Dead'
+
+    def __init__(self, trigger, params):
+        self.trigger = trigger
+        self.params = params
+        self.thread = ConsumerThread(trigger, params)
+
+        # this is weird.
+        # The app needs this tho...
+        self.triggerURL = params["triggerURL"]
+
+    def currentState(self):
+        return self.thread.currentState()
+
+    def desiredState(self):
+        return self.thread.desiredState()
+
+    def shutdown(self):
+        self.thread.shutdown()
+
+    # TODO not sure this is even needed now...
+    def isAlive(self):
+        return self.thread.isAlive()
+
+    def start(self):
+        self.thread.start()
+
+    # should only be called by the Doctor thread
+    def restart(self):
+        if self.thread.desiredState() is Consumer.State.Dead:
+            logging.info('[{}] Request to restart a consumer that is already slated for deletion.'.format(self.trigger))
+            return
+
+        logging.info('[{}] Quietly shutting down consumer'.format(self.trigger))
+        self.thread.setDesiredState(Consumer.State.Restart)
+        self.thread.join()
+        logging.info('Consumer has shut down')
+
+        # user may have interleaved a request to delete the trigger, check again
+        if self.thread.desiredState() is not Consumer.State.Dead:
+            logging.info('[{}] Starting new consumer thread'.format(self.trigger))
+            self.thread = ConsumerThread(self.trigger, self.params)
+            self.thread.start()
+
+    def lastPoll(self):
+        return self.thread.lastPoll()
+
+    def secondsSinceLastPoll(self):
+        return self.thread.secondsSinceLastPoll()
+
+
+class ConsumerThread (Thread):
+
     retry_timeout = 1   # Timeout in seconds
     max_retries = 10    # Maximum number of times to retry firing trigger
 
+    database = Database()
+
     def __init__(self, trigger, params):
-        threading.Thread.__init__(self)
+        Thread.__init__(self)
+
+        self.lock = Lock()
+
+        # the following params may be set/read from other threads
+        # only access through helper methods which handle thread safety!
+        self.__currentState = Consumer.State.Initializing
+        self.__desiredState = Consumer.State.Running
+        self.__lastPoll = datetime.max
 
         self.daemon = True
-        self.shouldRun = True
         self.trigger = trigger
         self.isMessageHub = params["isMessageHub"]
         self.triggerURL = params["triggerURL"]
@@ -42,8 +109,6 @@ class Consumer (threading.Thread):
         self.username = params["username"]
         self.password = params["password"]
 
-        self.lastPoll = datetime.max
-
         # handle the case where there may be existing triggers that do not
         # have the isJSONData field set
         if "isJSONData" in params:
@@ -51,53 +116,140 @@ class Consumer (threading.Thread):
         else:
             self.parseAsJson = False
 
+    # this only records the current state, and does not affect a state transition
+    def __recordState(self, newState):
+        with self.lock:
+            self.__currentState = newState
+
+    def currentState(self):
+        with self.lock:
+            state = self.__currentState
+
+        return state
+
+    def setDesiredState(self, newState):
+        with self.lock:
+            if self.__desiredState is Consumer.State.Dead and newState is not Consumer.State.Dead:
+                # the user has already asked to delete this trigger, no other state changes are accepted
+                return
+            else:
+                self.__desiredState = newState
+
+    def desiredState(self):
+        with self.lock:
+            state = self.__desiredState
+
+        return state
+
+    # convenience method for checking if desiredState is Running
+    def __shouldRun(self):
+        return self.desiredState() is Consumer.State.Running
+
+    def lastPoll(self):
+        with self.lock:
+            lastPoll = self.__lastPoll
+
+        return lastPoll
+
+    def updateLastPoll(self):
+        with self.lock:
+            self.__lastPoll = datetime.now()
+
+    def secondsSinceLastPoll(self):
+        lastPollDelta = datetime.now() - self.lastPoll()
+        return lastPollDelta.total_seconds()
+
     def run(self):
+        try:
+            self.consumer = self.__createConsumer()
 
-        # TODO may need different code paths for Message Hub vs generic Kafka
-        if self.isMessageHub:
-            sasl_mechanism = 'PLAIN'       # <-- changed from 'SASL_PLAINTEXT'
-            security_protocol = 'SASL_SSL'
+            while self.__shouldRun():
+                messages = self.__pollForMessages()
 
-            # Create a new context using system defaults, disable all but TLS1.2
-            context = ssl.create_default_context()
-            context.options &= ssl.OP_NO_TLSv1
-            context.options &= ssl.OP_NO_TLSv1_1
+                if len(messages) > 0:
+                    # TODO make use of boolean return (success)?? Is this even needed now?
+                    success = self.__fireTrigger(messages)
+                    # if not success:
+                    #     self.setDesiredState(Consumer.State.Dead)
 
-            # this initialization can take some time, might as well have it in
-            # the run method so it doesn't block the application
-            self.consumer = KafkaConsumer(self.topic,
-                                          group_id=self.trigger,
-                                          bootstrap_servers=self.brokers,
-                                          sasl_plain_username=self.username,
-                                          sasl_plain_password=self.password,
-                                          security_protocol=security_protocol,
-                                          ssl_context=context,
-                                          sasl_mechanism=sasl_mechanism,
-                                          auto_offset_reset="latest",
-                                          enable_auto_commit=False)
-        else:
-            self.consumer = KafkaConsumer(self.topic,
-                                          group_id=self.trigger,
-                                          client_id="openwhisk",
-                                          bootstrap_servers=self.brokers,
-                                          auto_offset_reset="latest",
-                                          enable_auto_commit=False)
+            logging.info("[{}] Consumer exiting main loop".format(self.trigger))
 
-        logging.info("[{}] Now listening in order to fire trigger".format(self.trigger))
+            if self.desiredState() == Consumer.State.Dead:
+                logging.info('[{}] Permanently killing consumer because desired state is Dead'.format(self.trigger))
+                try:
+                    # TODO should we even bother?
+                    self.consumer.unsubscribe()
+                    self.consumer.close()
+                finally:
+                    self.database.deleteTrigger(self.trigger)
+            elif self.desiredState() == Consumer.State.Restart:
+                logging.info('[{}] Quietly letting the consumer thread stop in order to allow restart.'.format(self.trigger))
+                # nothing else to do because this Thread is about to go away
+            else:
+                # uh-oh... this really shouldn't happen
+                logging.error('[{}] Consumer stopped without being asked'.format(self.trigger))
+        except Exception as e:
+            logging.error('[{}] Uncaught exception: {}'.format(self.trigger, e))
+        finally:
+            logging.info('[{}] Recording consumer as Dead. Bye bye!'.format(self.trigger))
+            self.__recordState(Consumer.State.Dead)
 
-        while self.shouldRun:
+        # TODO where/when to delete from DB?
+
+    # TODO handle exceptions when creating consumer?
+    def __createConsumer(self):
+        if self.__shouldRun():
+            if self.isMessageHub:
+                sasl_mechanism = 'PLAIN'
+                security_protocol = 'SASL_SSL'
+
+                # Create a new context using system defaults, disable all but TLS1.2
+                context = ssl.create_default_context()
+                context.options &= ssl.OP_NO_TLSv1
+                context.options &= ssl.OP_NO_TLSv1_1
+
+                # this initialization can take some time, might as well have it in
+                # the run method so it doesn't block the application
+                consumer = KafkaConsumer(self.topic,
+                                              group_id=self.trigger,
+                                              bootstrap_servers=self.brokers,
+                                              sasl_plain_username=self.username,
+                                              sasl_plain_password=self.password,
+                                              security_protocol=security_protocol,
+                                              ssl_context=context,
+                                              sasl_mechanism=sasl_mechanism,
+                                              auto_offset_reset="latest",
+                                              enable_auto_commit=False)
+            else:
+                consumer = KafkaConsumer(self.topic,
+                                              group_id=self.trigger,
+                                              client_id="openwhisk",
+                                              bootstrap_servers=self.brokers,
+                                              auto_offset_reset="latest",
+                                              enable_auto_commit=False)
+
+            logging.info("[{}] Now listening in order to fire trigger".format(self.trigger))
+            return consumer
+
+    def __pollForMessages(self):
+        messages = []
+        messageSize = 0
+
+        if self.__shouldRun():
             partition = self.consumer.poll(1000)
+
+            if self.secondsSinceLastPoll() < 0:
+                self.__recordState(Consumer.State.Running)
+
             if len(partition) > 0:
                 logging.debug("partition: {}".format(partition))
                 topic = partition[partition.keys()[0]]  # this assumes we only ever listen to one topic per consumer
-                messages = []
-                messageSize = 0
 
                 for message in topic:
                     logging.debug("Consumed message: {}".format(str(message)))
                     messageSize += len(message.value)
                     fieldsToSend = {
-                        'value': self.parseMessageIfNeeded(message.value),
+                        'value': self.__parseMessageIfNeeded(message.value),
                         'topic': message.topic,
                         'partition': message.partition,
                         'offset': message.offset,
@@ -107,70 +259,78 @@ class Consumer (threading.Thread):
                     }
                     messages.append(fieldsToSend)
 
-                payload = {}
-                payload['messages'] = messages
-                retry = True
-                retry_count = 0
+        logging.info('[{}] Completed poll'.format(self.trigger))
 
-                logging.info("[{}] Firing trigger with {} messages with a total size of {} bytes".format(self.trigger,
-                     len(messages), messageSize))
+        if len(messages) > 0:
+            logging.info("[{}] Found {} messages with a total size of {} bytes".format(self.trigger, len(messages), messageSize))
 
-                while retry:
-                    try:
-                        response = requests.post(self.triggerURL, json=payload)
-                        status_code = response.status_code
-                        logging.info("[{}] Repsonse status code {}".format(self.trigger, status_code))
+        self.updateLastPoll()
+        return messages
 
-                        # Manually commit offset if the trigger was fired successfully. Retry firing the trigger if the
-                        # service was unavailable (503), an internal server error occurred (500), the request timed out
-                        # (408), or the request was throttled (429).
-                        if status_code == 200:
-                            self.consumer.commit()
-                            retry = False
-                        elif status_code not in [503, 500, 408, 429]:
-                            logging.error('[{}] Error talking to OpenWhisk, status code {}'.format(self.trigger,
-                                status_code))
-                            self.shouldRun = False
-                            retry = False
-                    except requests.exceptions.RequestException as e:
-                        logging.error('[{}] Error talking to OpenWhisk: {}'.format(self.trigger, e))
+    # TODO success = False out of here does not indicate the trigger should be deleted
+    # cleanup code should be moved here, or return something more informative
+    def __fireTrigger(self, messages):
+        if self.__shouldRun():
+            success = False
 
-                    if retry:
-                        retry_count += 1
+            payload = {}
+            payload['messages'] = messages
+            retry = True
+            retry_count = 0
 
-                        if retry_count < self.max_retries:
-                            logging.info("[{}] Retrying in {} second(s)".format(self.trigger, self.retry_timeout))
-                            time.sleep(self.retry_timeout)
-                        else:
-                            logging.info("[{}] Skipping {} messages to offset {} of partition {}".format(self.trigger,
-                                len(messages), message.offset, message.partition))
-                            self.consumer.commit()
-                            retry = False
+            logging.info("[{}] Firing trigger with {} messages".format(self.trigger,len(messages)))
 
-            self.lastPoll = datetime.now()
+            while not success and retry:
+                try:
+                    response = requests.post(self.triggerURL, json=payload)
+                    status_code = response.status_code
+                    logging.info("[{}] Repsonse status code {}".format(self.trigger, status_code))
 
-        if not self.shouldRun:
-            logging.info("[{}] Consumer exiting main loop".format(self.trigger))
-            self.consumer.unsubscribe()
-            self.consumer.close()
-            database = Database()
-            database.deleteTrigger(self.trigger)
+                    # Manually commit offset if the trigger was fired successfully. Retry firing the trigger if the
+                    # service was unavailable (503), an internal server error occurred (500), the request timed out
+                    # (408), or the request was throttled (429).
+                    if status_code == 200:
+                        self.consumer.commit()
+                        retry = False
+                    elif status_code not in [503, 500, 408, 429]:
+                        logging.error('[{}] Error talking to OpenWhisk, status code {}'.format(self.trigger, status_code))
+
+                        # abandon all hope?
+                        self.setDesiredState(Consumer.State.Dead)
+                        retry = False
+                except requests.exceptions.RequestException as e:
+                    logging.error('[{}] Error talking to OpenWhisk: {}'.format(self.trigger, e))
+
+                if retry:
+                    retry_count += 1
+
+                    if retry_count < self.max_retries:
+                        logging.info("[{}] Retrying in {} second(s)".format(
+                            self.trigger, self.retry_timeout))
+                        time.sleep(self.retry_timeout)
+                    else:
+                        logging.info("[{}] Skipping {} messages to offset {} of partition {}".format(self.trigger, len(messages), message.offset, message.partition))
+                        self.consumer.commit()
+                        retry = False
+
+            return success
 
     def shutdown(self):
         logging.info("[{}] Shutting down consumer for trigger".format(self.trigger))
-        self.shouldRun = False
-        database = Database()
-        database.deleteTrigger(self.trigger)
+        self.setDesiredState(Consumer.State.Dead)
+        self.database.deleteTrigger(self.trigger)
 
-    def parseMessageIfNeeded(self, value):
+    def __parseMessageIfNeeded(self, value):
         if self.parseAsJson:
             try:
                 parsed = json.loads(value)
-                logging.info('[{}] Successfully parsed a message as JSON.'.format(self.trigger))
+                logging.info(
+                    '[{}] Successfully parsed a message as JSON.'.format(self.trigger))
                 return parsed
             except ValueError:
                 # no big deal, just return the original value
-                logging.warn('[{}] I was asked to parse a message as JSON, but I failed.'.format(self.trigger))
+                logging.warn(
+                    '[{}] I was asked to parse a message as JSON, but I failed.'.format(self.trigger))
                 pass
 
         logging.info('[{}] Returning un-parsed message'.format(self.trigger))
