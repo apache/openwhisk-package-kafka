@@ -74,7 +74,6 @@ function checkMessageHubCredentials(params) {
     var options = {
         method: 'GET',
         url: topicURL,
-        json: true,
         headers: {
             'X-Auth-Token': params.api_key
         }
