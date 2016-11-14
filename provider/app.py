@@ -41,7 +41,7 @@ def postTrigger(namespace, trigger):
     triggerFQN = '/' + namespace + '/' + trigger
 
     if consumers.hasConsumerForTrigger(triggerFQN):
-        logging.info("[{}] Trigger already exists".format(triggerFQN))
+        logging.warn("[{}] Trigger already exists".format(triggerFQN))
         response = jsonify({
             'success': False,
             'error': "trigger already exists"
@@ -60,14 +60,14 @@ def postTrigger(namespace, trigger):
             response = jsonify({'success': True})
             response.status_code = trigger_get_status_code
         elif trigger_get_status_code == 401:
-            logging.info("[{}] User not authorized to post trigger".format(triggerFQN))
+            logging.warn("[{}] User not authorized to post trigger".format(triggerFQN))
             response = jsonify({
                 'success': False,
                 'error': 'not authorized'
             })
             response.status_code = trigger_get_status_code
         else:
-            logging.info("[{}] Trigger authentication request failed with error code {}".format(triggerFQN,
+            logging.warn("[{}] Trigger authentication request failed with error code {}".format(triggerFQN,
                 trigger_get_status_code))
             response = jsonify({'success': False})
             response.status_code = trigger_get_status_code
@@ -128,7 +128,7 @@ def createAndRunConsumer(triggerFQN, params, record=True):
 def restoreTriggers():
     for triggerDoc in database.triggers():
         triggerFQN = triggerDoc['_id']
-        logging.info('Restoring trigger {}'.format(triggerFQN))
+        logging.debug('Restoring trigger {}'.format(triggerFQN))
         createAndRunConsumer(triggerFQN, triggerDoc, record=False)
 
 

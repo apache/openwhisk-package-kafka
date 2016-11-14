@@ -22,7 +22,7 @@ class TheDoctor (Thread):
 
             for consumerId in consumers:
                 consumer = consumers[consumerId]
-                logging.info('[Doctor] [{}] Consumer is in state: {}'.format(consumerId, consumer.currentState()))
+                logging.debug('[Doctor] [{}] Consumer is in state: {}'.format(consumerId, consumer.currentState()))
 
                 if consumer.currentState() is Consumer.State.Dead and consumer.desiredState() is Consumer.State.Running:
                     # well this is unexpected...

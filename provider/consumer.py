@@ -64,7 +64,7 @@ class Consumer:
             logging.info('[{}] Request to restart a consumer that is already slated for deletion.'.format(self.trigger))
             return
 
-        logging.info('[{}] Quietly shutting down consumer'.format(self.trigger))
+        logging.info('[{}] Quietly shutting down consumer for restart'.format(self.trigger))
         self.thread.setDesiredState(Consumer.State.Restart)
         self.thread.join()
         logging.info('Consumer has shut down')
@@ -259,7 +259,7 @@ class ConsumerThread (Thread):
                     }
                     messages.append(fieldsToSend)
 
-        logging.info('[{}] Completed poll'.format(self.trigger))
+        logging.debug('[{}] Completed poll'.format(self.trigger))
 
         if len(messages) > 0:
             logging.info("[{}] Found {} messages with a total size of {} bytes".format(self.trigger, len(messages), messageSize))
@@ -309,7 +309,7 @@ class ConsumerThread (Thread):
                             self.trigger, self.retry_timeout))
                         time.sleep(self.retry_timeout)
                     else:
-                        logging.info("[{}] Skipping {} messages to offset {} of partition {}".format(self.trigger, len(messages), message.offset, message.partition))
+                        logging.warn("[{}] Skipping {} messages to offset {} of partition {}".format(self.trigger, len(messages), message.offset, message.partition))
                         self.consumer.commit()
                         retry = False
 
@@ -324,7 +324,7 @@ class ConsumerThread (Thread):
         if self.parseAsJson:
             try:
                 parsed = json.loads(value)
-                logging.info(
+                logging.debug(
                     '[{}] Successfully parsed a message as JSON.'.format(self.trigger))
                 return parsed
             except ValueError:
@@ -333,5 +333,5 @@ class ConsumerThread (Thread):
                     '[{}] I was asked to parse a message as JSON, but I failed.'.format(self.trigger))
                 pass
 
-        logging.info('[{}] Returning un-parsed message'.format(self.trigger))
+        logging.debug('[{}] Returning un-parsed message'.format(self.trigger))
         return value
