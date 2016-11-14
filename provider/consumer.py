@@ -38,6 +38,11 @@ class Consumer:
         self.params = params
         self.thread = ConsumerThread(trigger, params)
 
+        # the following fields can be accessed from multiple threads
+        # access needs to be protected with this Lock
+        self.__lock = Lock()
+        self.__restartCount = 0
+
         # this is weird.
         # The app needs this tho...
         self.triggerURL = params["triggerURL"]
@@ -64,6 +69,9 @@ class Consumer:
             logging.info('[{}] Request to restart a consumer that is already slated for deletion.'.format(self.trigger))
             return
 
+        with self.__lock:
+            self.__restartCount += 1
+
         logging.info('[{}] Quietly shutting down consumer for restart'.format(self.trigger))
         self.thread.setDesiredState(Consumer.State.Restart)
         self.thread.join()
@@ -74,6 +82,12 @@ class Consumer:
             logging.info('[{}] Starting new consumer thread'.format(self.trigger))
             self.thread = ConsumerThread(self.trigger, self.params)
             self.thread.start()
+
+    def restartCount(self):
+        with self.__lock:
+            restartCount = self.__restartCount
+
+        return restartCount
 
     def lastPoll(self):
         return self.thread.lastPoll()
@@ -128,11 +142,14 @@ class ConsumerThread (Thread):
         return state
 
     def setDesiredState(self, newState):
+        logging.info('[{}] Request to set desiredState to {}'.format(self.trigger, newState))
+
         with self.lock:
             if self.__desiredState is Consumer.State.Dead and newState is not Consumer.State.Dead:
-                # the user has already asked to delete this trigger, no other state changes are accepted
+                logging.info('[{}] Asking to kill a consumer that is already marked for death. Doing nothing.'.format(self.trigger))
                 return
             else:
+                logging.info('[{}] Setting desiredState to: {}'.format(self.trigger, newState))
                 self.__desiredState = newState
 
     def desiredState(self):
