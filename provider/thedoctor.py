@@ -6,7 +6,11 @@ from consumercollection import ConsumerCollection
 from threading import Thread
 
 class TheDoctor (Thread):
-    sleepy_time = 2
+    # maximum time to allow a consumer to not successfully poll() before restarting
+    poll_timeout_seconds = 2
+
+    # interval between the Doctor making rounds
+    sleepy_time_seconds = 2
 
     def __init__(self, consumerCollection):
         Thread.__init__(self)
@@ -32,5 +36,11 @@ class TheDoctor (Thread):
                     # Bring out yer dead...
                     logging.info('[{}] Removing dead consumer from the collection.'.format(consumer.trigger))
                     self.consumerCollection.removeConsumerForTrigger(consumer.trigger)
+                elif consumer.secondsSinceLastPoll() > self.poll_timeout_seconds and consumer.desiredState() is Consumer.State.Running:
+                    # there seems to be an issue with the kafka-python client where it gets into an
+                    # error-handling loop. This causes poll() to never complete, but also does not
+                    # throw an exception.
+                    logging.error('[Doctor][{}] Consumer timed-out, but should be alive! Restarting consumer.'.format(consumerId))
+                    consumer.restart()
 
-            time.sleep(self.sleepy_time)
+            time.sleep(self.sleepy_time_seconds)
