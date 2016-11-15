@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import psutil   # https://pythonhosted.org/psutil/
+
+from consumercollection import ConsumerCollection
 from datetime import datetime
 
 MILLISECONDS_IN_SECOND = 1000
@@ -118,11 +120,16 @@ def getConsumers(consumers):
     consumerReports = []
     currentTime = datetime.now()
 
-    for consumerId in consumers:
-        consumer = consumers[consumerId]
-        lastPollDelta = currentTime - consumer.lastPoll
+    consumerCopyRO = consumers.getCopyForRead()
+    for consumerId in consumerCopyRO:
+        consumer = consumerCopyRO[consumerId]
         consumerInfo = {}
-        consumerInfo[consumerId] = {'secondsSinceLastPoll': lastPollDelta.total_seconds()}
+        consumerInfo[consumerId] = {
+            'currentState': consumer.currentState(),
+            'desiredState': consumer.desiredState(),
+            'secondsSinceLastPoll': consumer.secondsSinceLastPoll(),
+            'restartCount': consumer.restartCount()
+        }
         consumerReports.append(consumerInfo)
 
     return consumerReports
