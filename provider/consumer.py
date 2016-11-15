@@ -120,8 +120,10 @@ class ConsumerThread (Thread):
         self.triggerURL = params["triggerURL"]
         self.brokers = params["brokers"]
         self.topic = params["topic"]
-        self.username = params["username"]
-        self.password = params["password"]
+
+        if self.isMessageHub:
+            self.username = params["username"]
+            self.password = params["password"]
 
         # handle the case where there may be existing triggers that do not
         # have the isJSONData field set
