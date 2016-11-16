@@ -48,7 +48,7 @@ def postTrigger(namespace, trigger):
             'error': "trigger already exists"
         })
         response.status_code = 409
-    elif body["triggerURL"][-len(expectedRoute):] != expectedRoute:
+    elif not body["triggerURL"].endswith(expectedRoute):
         logging.warn("[{}] Trigger and namespace from route must correspond to triggerURL".format(triggerFQN))
         response = jsonify({
             'success': False,
