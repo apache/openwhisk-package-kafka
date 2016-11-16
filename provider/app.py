@@ -39,6 +39,7 @@ consumers = ConsumerCollection()
 def postTrigger(namespace, trigger):
     body = request.get_json(force=True, silent=True)
     triggerFQN = '/' + namespace + '/' + trigger
+    expectedRoute = '/namespaces/' + namespace + '/triggers/' + trigger
 
     if consumers.hasConsumerForTrigger(triggerFQN):
         logging.warn("[{}] Trigger already exists".format(triggerFQN))
@@ -47,11 +48,19 @@ def postTrigger(namespace, trigger):
             'error': "trigger already exists"
         })
         response.status_code = 409
+    elif not body["triggerURL"].endswith(expectedRoute):
+        logging.warn("[{}] Trigger and namespace from route must correspond to triggerURL".format(triggerFQN))
+        response = jsonify({
+            'success': False,
+            'error': "trigger and namespace from route must correspond to triggerURL"
+        })
+        response.status_code = 409
     else:
         logging.info("[{}] Ensuring user has access rights to post a trigger".format(triggerFQN))
         trigger_get_response = requests.get(body["triggerURL"])
         trigger_get_status_code = trigger_get_response.status_code
-        logging.info("[{}] Repsonse status code from trigger authorization {}".format(triggerFQN, trigger_get_status_code))
+        logging.info("[{}] Repsonse status code from trigger authorization {}".format(triggerFQN,
+                                                                                      trigger_get_status_code))
 
         if trigger_get_status_code == 200:
             logging.info("[{}] User authenticated. About to create consumer {}".format(triggerFQN, str(body)))
