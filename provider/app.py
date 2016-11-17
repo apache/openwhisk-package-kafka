@@ -26,6 +26,7 @@ from urlparse import urlparse
 from health import generateHealthReport
 import requests
 from gevent.wsgi import WSGIServer
+import urllib
 
 
 app = Flask(__name__)
@@ -39,7 +40,7 @@ consumers = ConsumerCollection()
 def postTrigger(namespace, trigger):
     body = request.get_json(force=True, silent=True)
     triggerFQN = '/' + namespace + '/' + trigger
-    expectedRoute = '/namespaces/' + namespace + '/triggers/' + trigger
+    expectedRoute = urllib.quote('/namespaces/' + namespace + '/triggers/' + trigger)
 
     if consumers.hasConsumerForTrigger(triggerFQN):
         logging.warn("[{}] Trigger already exists".format(triggerFQN))
