@@ -15,7 +15,6 @@
 import json
 import logging
 import requests
-import ssl
 import time
 
 # HEADS UP! I'm importing confluent_kafka.Consumer as KafkaConsumer to avoid a
@@ -221,50 +220,22 @@ class ConsumerThread (Thread):
 
     def __createConsumer(self):
         if self.__shouldRun():
+            config = {'metadata.broker.list': ','.join(self.brokers),
+                        'group.id': self.trigger,
+                        'default.topic.config': {'auto.offset.reset': 'latest'},
+                        'enable.auto.commit': False
+                    }
+
             if self.isMessageHub:
-                sasl_mechanism = 'PLAIN'
-                security_protocol = 'SASL_SSL'
+                # append Message Hub specific config
+                config.update({'ssl.ca.location': '/etc/ssl/certs/',
+                                'sasl.mechanisms': 'PLAIN',
+                                'sasl.username': self.username,
+                                'sasl.password': self.password,
+                                'security.protocol': 'sasl_ssl'
+                             })
 
-                # Create a new context using system defaults, disable all but TLS1.2
-                context = ssl.create_default_context()
-                context.options &= ssl.OP_NO_TLSv1
-                context.options &= ssl.OP_NO_TLSv1_1
-
-                # this initialization can take some time, might as well have it in
-                # the run method so it doesn't block the application
-                consumer = KafkaConsumer({'metadata.broker.list': ','.join(self.brokers),
-                                            'group.id': self.trigger,
-                                            'ssl.ca.location': '/etc/ssl/certs/',
-                                            'sasl.mechanisms': 'PLAIN',
-                                            'sasl.username': self.username,
-                                            'sasl.password': self.password,
-                                            'security.protocol': 'sasl_ssl',
-                                            'default.topic.config': {'auto.offset.reset': 'latest'},
-                                            'enable.auto.commit': False
-                                         })
-                # consumer = KafkaConsumer(self.topic,
-                #                               group_id=self.trigger + '-local-dev',
-                #                               bootstrap_servers=self.brokers,
-                #                               sasl_plain_username=self.username,
-                #                               sasl_plain_password=self.password,
-                #                               security_protocol=security_protocol,
-                #                               ssl_context=context,
-                #                               sasl_mechanism=sasl_mechanism,
-                #                               auto_offset_reset="latest",
-                #                               enable_auto_commit=False)
-            else:
-                consumer = KafkaConsumer({'metadata.broker.list': ','.join(self.brokers),
-                                'group.id': self.trigger,
-                                'default.topic.config': {'auto.offset.reset': 'latest'},
-                                'enable.auto.commit': False
-                            })
-                # consumer = KafkaConsumer(self.topic,
-                #                               group_id=self.trigger,
-                #                               client_id="openwhisk",
-                #                               bootstrap_servers=self.brokers,
-                #                               auto_offset_reset="latest",
-                #                               enable_auto_commit=False)
-
+            consumer = KafkaConsumer(config)
             consumer.subscribe([self.topic])
             logging.info("[{}] Now listening in order to fire trigger".format(self.trigger))
             return consumer
