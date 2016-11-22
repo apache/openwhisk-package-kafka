@@ -243,20 +243,30 @@ class ConsumerThread (Thread):
     def __pollForMessages(self):
         messages = []
         messageSize = 0
+        batchMessages = True
 
         if self.__shouldRun():
-            message = self.consumer.poll(1.0)
+            while batchMessages and (self.secondsSinceLastPoll() < 2):
+                message = self.consumer.poll(1.0)
 
-            if self.secondsSinceLastPoll() < 0:
-                self.__recordState(Consumer.State.Running)
+                if self.secondsSinceLastPoll() < 0:
+                    self.__recordState(Consumer.State.Running)
 
-            if (message is not None):
-                if not message.error():
-                    logging.debug("Consumed message: {}".format(str(message)))
-                    messageSize += len(message.value())
-                    messages.append(message)
-                elif message.error().code() != KafkaError._PARTITION_EOF:
-                    logging.error('[{}] Error polling! Shutting down consumer: {}'.format(self.trigger, message.error()))
+                if (message is not None):
+                    if not message.error():
+                        logging.debug("Consumed message: {}".format(str(message)))
+                        messageSize += len(message.value())
+                        messages.append(message)
+                    elif message.error().code() != KafkaError._PARTITION_EOF:
+                        logging.error('[{}] Error polling! Shutting down consumer: {}'.format(self.trigger, message.error()))
+                        batchMessages = False
+                        self.setDesiredState(Consumer.State.Dead)
+                    else:
+                        logging.debug('[{}] No more messages. Stopping batch op.'.format(self.trigger))
+                        batchMessages = False
+                else:
+                    logging.debug('[{}] message was None. Stopping batch op.'.format(self.trigger))
+                    batchMessages = False
 
         logging.debug('[{}] Completed poll'.format(self.trigger))
 
