@@ -41,6 +41,7 @@ def postTrigger(namespace, trigger):
     body = request.get_json(force=True, silent=True)
     triggerFQN = '/' + namespace + '/' + trigger
     expectedRoute = urllib.quote('/namespaces/' + namespace + '/triggers/' + trigger)
+    missing = getMissingPostFields(body)
 
     if consumers.hasConsumerForTrigger(triggerFQN):
         logging.warn("[{}] Trigger already exists".format(triggerFQN))
@@ -49,6 +50,13 @@ def postTrigger(namespace, trigger):
             'error': "trigger already exists"
         })
         response.status_code = 409
+    elif len(missing) > 0:
+        response = jsonify({
+            'success': False,
+            'error': 'missing fields: %s' % ', '.join(missing)
+        })
+        response.status_code = 400
+        return response
     elif not body["triggerURL"].endswith(expectedRoute):
         logging.warn("[{}] Trigger and namespace from route must correspond to triggerURL".format(triggerFQN))
         response = jsonify({
@@ -140,6 +148,25 @@ def restoreTriggers():
         triggerFQN = triggerDoc['_id']
         logging.debug('Restoring trigger {}'.format(triggerFQN))
         createAndRunConsumer(triggerFQN, triggerDoc, record=False)
+
+
+def getMissingPostFields(fields):
+    missing = []
+    requiredFields = ['brokers', 'topic', 'triggerURL', 'isMessageHub']
+
+    if fields is None:
+        missing.extend(requiredFields)
+    else:
+        # Message Hub also requires 'username' and 'password fields'
+        if 'isMessageHub' in fields and fields['isMessageHub'] == True:
+            requiredFields.extend(['username', 'password'])
+
+        missing.extend([i for i in requiredFields if i not in fields])
+
+    if len(missing) > 0:
+        logging.info("Required fields are missing {}".format(missing))
+
+    return missing
 
 
 def main():
