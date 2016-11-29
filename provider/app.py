@@ -154,13 +154,13 @@ def getMissingPostFields(fields):
     missing = []
     requiredFields = ['brokers', 'topic', 'triggerURL', 'isMessageHub']
 
-    # Message Hub also requires 'username' and 'password fields'
-    if 'isMessageHub' in fields and fields['isMessageHub'] == True:
-        requiredFields.extend(['username', 'password'])
-
     if fields is None:
         missing.extend(requiredFields)
     else:
+        # Message Hub also requires 'username' and 'password fields'
+        if 'isMessageHub' in fields and fields['isMessageHub'] == True:
+            requiredFields.extend(['username', 'password'])
+
         missing.extend([i for i in requiredFields if i not in fields])
 
     if len(missing) > 0:
