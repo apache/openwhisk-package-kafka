@@ -152,16 +152,16 @@ def restoreTriggers():
 
 def getMissingPostFields(fields):
     missing = []
-    messageHubRequired = ['brokers', 'topic', 'triggerURL', 'isMessageHub', 'username', 'password']
-    kafkaRequired = ['brokers', 'topic', 'triggerURL', 'isMessageHub']
+    requiredFields = ['brokers', 'topic', 'triggerURL', 'isMessageHub']
+
+    # Message Hub also requires 'username' and 'password fields'
+    if 'isMessageHub' in fields and fields['isMessageHub'] == True:
+        requiredFields.extend(['username', 'password'])
 
     if fields is None:
-        missing.extend(kafkaRequired)
+        missing.extend(requiredFields)
     else:
-        if 'isMessageHub' in fields and fields['isMessageHub'] == True:
-            missing.extend([i for i in messageHubRequired if i not in fields])
-        else:
-            missing.extend([i for i in kafkaRequired if i not in fields])
+        missing.extend([i for i in requiredFields if i not in fields])
 
     if len(missing) > 0:
         logging.info("Required fields are missing {}".format(missing))
