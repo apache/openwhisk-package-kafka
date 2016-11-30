@@ -1,0 +1,2 @@
+ext.dockerImageName = 'catalog_kafkatrigger'
+apply from: 'gradle/docker.gradle'
