@@ -44,6 +44,7 @@ echo Installing the kafka package and feed action.
 $WSK_CLI -i --apihost "$APIHOST" package update messaging \
     --auth "$AUTH" \
     --shared yes \
+    -p bluemixServiceName 'messagehub' \
     -p endpoint "$APIHOST" \
     -p package_endpoint $KAFKA_PROVIDER_ENDPOINT
 
