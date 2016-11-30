@@ -1,15 +1,29 @@
-# Dockerfile for docker skeleton (useful for running blackbox binaries, scripts, or python actions).
-FROM python:2.7.12-alpine
+FROM buildpack-deps:xenial
 
-# Upgrade and install basic Python dependencies
-RUN apk add --no-cache bash \
-    && apk add --no-cache --virtual .build-deps \
-        bzip2-dev \
-        gcc \
-        libc-dev \
-        linux-headers \
-    && pip install --no-cache-dir gevent==1.1.2 flask==0.11.1 kafka_python==1.3.1 requests==2.10.0 cloudant==2.1.0 \
-      psutil==5.0.0
+# install system deps
+RUN apt-get update
+RUN apt-get install -y \
+    python-pip \
+    python-dev \
+    git \
+    gcc \
+    make \
+    zlib1g-dev \
+    libsasl2-dev \
+    libsasl2-modules
+
+# install librdkafka
+RUN git clone --depth 1 --branch v0.9.2 https://github.com/edenhill/librdkafka.git librdkafka \
+    && cd librdkafka \
+    && ./configure \
+    && make \
+    && make install
+ENV LD_LIBRARY_PATH=/usr/local/lib
+RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
+    && ldconfig
+
+RUN pip install gevent==1.1.2 flask==0.11.1 confluent-kafka==0.9.2 \
+        requests==2.10.0 cloudant==2.1.0 psutil==5.0.0
 
 ENV PORT 5000
 

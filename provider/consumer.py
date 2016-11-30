@@ -15,14 +15,14 @@
 import json
 import logging
 import requests
-import ssl
-from threading import Thread, Lock
 import time
+
+# HEADS UP! I'm importing confluent_kafka.Consumer as KafkaConsumer to avoid a
+# naming conflict with my own Consumer class
+from confluent_kafka import Consumer as KafkaConsumer, KafkaError
 from database import Database
 from datetime import datetime
-from kafka import KafkaConsumer, KafkaProducer
-from kafka.errors import KafkaError
-from kafka.structs import OffsetAndMetadata
+from threading import Thread, Lock
 
 
 class Consumer:
@@ -55,10 +55,6 @@ class Consumer:
 
     def shutdown(self):
         self.thread.shutdown()
-
-    # TODO not sure this is even needed now...
-    def isAlive(self):
-        return self.thread.isAlive()
 
     def start(self):
         self.thread.start()
@@ -132,6 +128,10 @@ class ConsumerThread (Thread):
         else:
             self.parseAsJson = False
 
+        # always init consumer to None in case the consumer needs to shut down
+        # before the KafkaConsumer is fully initialized/assigned
+        self.consumer = None
+
     # this only records the current state, and does not affect a state transition
     def __recordState(self, newState):
         with self.lock:
@@ -186,21 +186,13 @@ class ConsumerThread (Thread):
                 messages = self.__pollForMessages()
 
                 if len(messages) > 0:
-                    # TODO make use of boolean return (success)?? Is this even needed now?
-                    success = self.__fireTrigger(messages)
-                    # if not success:
-                    #     self.setDesiredState(Consumer.State.Dead)
+                    self.__fireTrigger(messages)
 
             logging.info("[{}] Consumer exiting main loop".format(self.trigger))
 
             if self.desiredState() == Consumer.State.Dead:
                 logging.info('[{}] Permanently killing consumer because desired state is Dead'.format(self.trigger))
-                try:
-                    # TODO should we even bother?
-                    self.consumer.unsubscribe()
-                    self.consumer.close()
-                finally:
-                    self.database.deleteTrigger(self.trigger)
+                self.database.deleteTrigger(self.trigger)
             elif self.desiredState() == Consumer.State.Restart:
                 logging.info('[{}] Quietly letting the consumer thread stop in order to allow restart.'.format(self.trigger))
                 # nothing else to do because this Thread is about to go away
@@ -209,74 +201,72 @@ class ConsumerThread (Thread):
                 logging.error('[{}] Consumer stopped without being asked'.format(self.trigger))
         except Exception as e:
             logging.error('[{}] Uncaught exception: {}'.format(self.trigger, e))
+
+        try:
+            if self.consumer is not None:
+                logging.info('[{}] Cleaning up consumer'.format(self.trigger))
+                logging.debug('[{}] Closing KafkaConsumer'.format(self.trigger))
+                self.consumer.unsubscribe()
+                self.consumer.close()
+                logging.debug('[{}] Successfully closed KafkaConsumer'.format(self.trigger))
+
+                logging.debug('[{}] Dellocating KafkaConsumer'.format(self.trigger))
+                self.consumer = None
+        except Exception as e:
+            logging.error('[{}] Uncaught exception while shutting down consumer: {}'.format(self.trigger, e))
         finally:
             logging.info('[{}] Recording consumer as Dead. Bye bye!'.format(self.trigger))
             self.__recordState(Consumer.State.Dead)
 
-        # TODO where/when to delete from DB?
-
-    # TODO handle exceptions when creating consumer?
     def __createConsumer(self):
         if self.__shouldRun():
+            config = {'metadata.broker.list': ','.join(self.brokers),
+                        'group.id': self.trigger,
+                        'default.topic.config': {'auto.offset.reset': 'latest'},
+                        'enable.auto.commit': False
+                    }
+
             if self.isMessageHub:
-                sasl_mechanism = 'PLAIN'
-                security_protocol = 'SASL_SSL'
+                # append Message Hub specific config
+                config.update({'ssl.ca.location': '/etc/ssl/certs/',
+                                'sasl.mechanisms': 'PLAIN',
+                                'sasl.username': self.username,
+                                'sasl.password': self.password,
+                                'security.protocol': 'sasl_ssl'
+                             })
 
-                # Create a new context using system defaults, disable all but TLS1.2
-                context = ssl.create_default_context()
-                context.options &= ssl.OP_NO_TLSv1
-                context.options &= ssl.OP_NO_TLSv1_1
-
-                # this initialization can take some time, might as well have it in
-                # the run method so it doesn't block the application
-                consumer = KafkaConsumer(self.topic,
-                                              group_id=self.trigger,
-                                              bootstrap_servers=self.brokers,
-                                              sasl_plain_username=self.username,
-                                              sasl_plain_password=self.password,
-                                              security_protocol=security_protocol,
-                                              ssl_context=context,
-                                              sasl_mechanism=sasl_mechanism,
-                                              auto_offset_reset="latest",
-                                              enable_auto_commit=False)
-            else:
-                consumer = KafkaConsumer(self.topic,
-                                              group_id=self.trigger,
-                                              client_id="openwhisk",
-                                              bootstrap_servers=self.brokers,
-                                              auto_offset_reset="latest",
-                                              enable_auto_commit=False)
-
+            consumer = KafkaConsumer(config)
+            consumer.subscribe([self.topic])
             logging.info("[{}] Now listening in order to fire trigger".format(self.trigger))
             return consumer
 
     def __pollForMessages(self):
         messages = []
         messageSize = 0
+        batchMessages = True
 
         if self.__shouldRun():
-            partition = self.consumer.poll(1000)
+            while batchMessages and (self.secondsSinceLastPoll() < 2):
+                message = self.consumer.poll(1.0)
 
-            if self.secondsSinceLastPoll() < 0:
-                self.__recordState(Consumer.State.Running)
+                if self.secondsSinceLastPoll() < 0:
+                    self.__recordState(Consumer.State.Running)
 
-            if len(partition) > 0:
-                logging.debug("partition: {}".format(partition))
-                topic = partition[partition.keys()[0]]  # this assumes we only ever listen to one topic per consumer
-
-                for message in topic:
-                    logging.debug("Consumed message: {}".format(str(message)))
-                    messageSize += len(message.value)
-                    fieldsToSend = {
-                        'value': self.__parseMessageIfNeeded(message.value),
-                        'topic': message.topic,
-                        'partition': message.partition,
-                        'offset': message.offset,
-                        'timestamp': message.timestamp,
-                        'timestamp_type': message.timestamp_type,
-                        'key': message.key
-                    }
-                    messages.append(fieldsToSend)
+                if (message is not None):
+                    if not message.error():
+                        logging.debug("Consumed message: {}".format(str(message)))
+                        messageSize += len(message.value())
+                        messages.append(message)
+                    elif message.error().code() != KafkaError._PARTITION_EOF:
+                        logging.error('[{}] Error polling! Shutting down consumer: {}'.format(self.trigger, message.error()))
+                        batchMessages = False
+                        self.setDesiredState(Consumer.State.Dead)
+                    else:
+                        logging.debug('[{}] No more messages. Stopping batch op.'.format(self.trigger))
+                        batchMessages = False
+                else:
+                    logging.debug('[{}] message was None. Stopping batch op.'.format(self.trigger))
+                    batchMessages = False
 
         logging.debug('[{}] Completed poll'.format(self.trigger))
 
@@ -286,20 +276,30 @@ class ConsumerThread (Thread):
         self.updateLastPoll()
         return messages
 
-    # TODO success = False out of here does not indicate the trigger should be deleted
-    # cleanup code should be moved here, or return something more informative
     def __fireTrigger(self, messages):
         if self.__shouldRun():
-            success = False
+            lastMessage = messages[len(messages) - 1]
+
+            # I'm sure there is a much more clever way to do this ;)
+            mappedMessages = []
+            for message in messages:
+                fieldsToSend = {
+                    'value': self.__parseMessageIfNeeded(message.value()),
+                    'topic': message.topic(),
+                    'partition': message.partition(),
+                    'offset': message.offset(),
+                    'key': message.key()
+                }
+                mappedMessages.append(fieldsToSend)
 
             payload = {}
-            payload['messages'] = messages
+            payload['messages'] = mappedMessages
             retry = True
             retry_count = 0
 
             logging.info("[{}] Firing trigger with {} messages".format(self.trigger,len(messages)))
 
-            while not success and retry:
+            while retry:
                 try:
                     response = requests.post(self.triggerURL, json=payload, timeout=10.0)
                     status_code = response.status_code
@@ -328,11 +328,9 @@ class ConsumerThread (Thread):
                             self.trigger, self.retry_timeout))
                         time.sleep(self.retry_timeout)
                     else:
-                        logging.warn("[{}] Skipping {} messages to offset {} of partition {}".format(self.trigger, len(messages), message.offset, message.partition))
+                        logging.warn("[{}] Skipping {} messages to offset {} of partition {}".format(self.trigger, len(messages), lastMessage.offset, lastMessage.partition))
                         self.consumer.commit()
                         retry = False
-
-            return success
 
     def shutdown(self):
         logging.info("[{}] Shutting down consumer for trigger".format(self.trigger))
