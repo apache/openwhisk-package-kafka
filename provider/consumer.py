@@ -258,7 +258,7 @@ class ConsumerThread (Thread):
                         messageSize += len(message.value())
                         messages.append(message)
                     elif message.error().code() != KafkaError._PARTITION_EOF:
-                        logging.error('[{}] Error polling! Shutting down consumer: {}'.format(self.trigger, message.error()))
+                        logging.error('[{}] Error polling: {}'.format(self.trigger, message.error()))
                         batchMessages = False
                     else:
                         logging.debug('[{}] No more messages. Stopping batch op.'.format(self.trigger))
