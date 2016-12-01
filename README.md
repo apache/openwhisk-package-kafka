@@ -4,11 +4,11 @@ This project is an OpenWhisk package that allows you to communicate with Kafka o
 This project is currently "beta". Most of the major work is done, and now we are putting on the final touches to get this ready for production use.
 
 ## Usage
-This package allows you to create triggers that react when messages are posted to either an IBM Message Hub instance, or to a generic kafka instance. Since the parameters required for each of these situations are different, there are two separate feeds to handle them: `/messaging/messageHubFeed` and `messaging/kafkaFeed`
+This package allows you to create triggers that react when messages are posted to either an IBM Message Hub instance, or to a generic kafka instance. Since the parameters required for each of these situations are different, there are two separate feeds to handle them: `/messaging/messageHubFeed` and `messaging/kafkaFeed`.
 
 
 ### Creating a Trigger that Listens to an IBM MessageHub Instance
-In order to create a trigger that reacts when messages are posted to a Message Hub instance, you need to use the feed named `messaging/messageHubFeed`. This feed supports the following parameters
+In order to create a trigger that reacts when messages are posted to a Message Hub instance, you need to use the feed named `messaging/messageHubFeed`. This feed supports the following parameters:
 
 |Name|Type|Description|
 |---|---|---|
@@ -23,6 +23,11 @@ In order to create a trigger that reacts when messages are posted to a Message H
 While this list of parameters may seem daunting, they can be automatically set for you by using the package refresh CLI command:
 
 ```wsk package refresh```
+
+However, if you want to create the trigger manually, it would look something like:
+```
+wsk trigger create MyMessageHubTrigger -f /whisk.system/messaging/messageHubFeed -p kafka_brokers_sasl "[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka02-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka03-prod01.messagehub.services.us-south.bluemix.net:9093\"]" -p topic mytopic -p user <your Message Hub user> -p password <your Message Hub password> -p kafka_admin_url https://kafka-admin-prod01.messagehub.services.us-south.bluemix.net:443 -p api_key <your API key> -p isJSONData true
+```
 
 ### Creating a Trigger that Listens to a Generic Kafka Instance
 In order to create a trigger that reacts when messages are posted to an unauthenticated Kafka instance, you need to use the feed named `messaging/kafkaFeed`. This feed supports the following parameters:
@@ -48,9 +53,9 @@ The payload of that trigger will contain a `messages` field which is an array of
 - key
 - value
 
-In Kafka terms, these fields should be self-evident. However, the `value` requires special consideration. If the `isJSONData` parameter was set `false` (or not set at all) when the trigger was created, the `value` field will be the raw value of the posted message. However , if `isJSONData` was set to `true` when the trigger was created, the system will make attempt to parse this value as a JSON object, on a best-effort basis. If parsing is successful, then the `value` in the trigger payload will be the resulting JSON object.
+In Kafka terms, these fields should be self-evident. However, the `value` requires special consideration. If the `isJSONData` parameter was set `false` (or not set at all) when the trigger was created, the `value` field will be the raw value of the posted message. However, if `isJSONData` was set to `true` when the trigger was created, the system will make attempt to parse this value as a JSON object, on a best-effort basis. If parsing is successful, then the `value` in the trigger payload will be the resulting JSON object.
 
-For example, if I post a message of `{"title": "Some string", "amount": 5, "isAwesome": true}` with `isJSONData` set to `true`, my trigger payload might look something like this:
+For example, if a message of `{"title": "Some string", "amount": 5, "isAwesome": true}` is posted with `isJSONData` set to `true`, the trigger payload might look something like this:
 
 ```JSON
 {
@@ -70,7 +75,7 @@ For example, if I post a message of `{"title": "Some string", "amount": 5, "isAw
 }
 ```
 
-However, if I post the same message content with `isJSONData` set to `false`, my trigger payload would look like this:
+However, if the same message content is posted with `isJSONData` set to `false`, the trigger payload would look like this:
 
 ```JSON
 {
