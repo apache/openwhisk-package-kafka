@@ -4,27 +4,36 @@
 # automatically
 #
 # To run this command
-# ./installCatalog.sh  <AUTH> <APIHOST> <WSK_CLI>
+# ./installCatalog.sh  <AUTH> <APIHOST> <KAFKA_TRIGGER_HOST> <KAFKA_TRIGGER_PORT>
 # AUTH and APIHOST are found in $HOME/.wskprops
-# WSK_CLI="$OPENWHISK_HOME/bin/wsk"
 
 set -e
 set -x
 
+: ${OPENWHISK_HOME:?"OPENWHISK_HOME must be set and non-empty"}
+WSK_CLI="$OPENWHISK_HOME/bin/wsk"
+
 if [ $# -eq 0 ]
 then
-echo "Usage: ./installCatalog.sh <authkey> <apihost> <pathtowskcli>"
+echo "Usage: ./installCatalog.sh <authkey> <apihost> <kafkatriggerhost> <kafkatriggerport>"
 fi
 
 AUTH="$1"
 APIHOST="$2"
-WSK_CLI="$3"
+KAFKA_TRIGGER_HOST="$3"
+KAFKA_TRIGGER_PORT="$4"
+
 
 # If the auth key file exists, read the key in the file. Otherwise, take the
 # first argument as the key itself.
 if [ -f "$AUTH" ]; then
     AUTH=`cat $AUTH`
 fi
+
+# Make sure that the APIHOST is not empty.
+: ${APIHOST:?"APIHOST must be set and non-empty"}
+
+KAFKA_PROVIDER_ENDPOINT=$KAFKA_TRIGGER_HOST':'$KAFKA_TRIGGER_PORT
 
 PACKAGE_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
