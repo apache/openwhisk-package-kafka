@@ -14,7 +14,11 @@
 
 import logging
 import os
+import requests
 import sys
+import urllib
+import uuid
+
 from datetime import datetime
 from flask import Flask, jsonify, request
 from consumer import Consumer
@@ -24,9 +28,7 @@ from threading import Lock
 from thedoctor import TheDoctor
 from urlparse import urlparse
 from health import generateHealthReport
-import requests
 from gevent.wsgi import WSGIServer
-import urllib
 
 
 app = Flask(__name__)
@@ -135,6 +137,10 @@ def createAndRunConsumer(triggerFQN, params, record=True):
     if app.config['TESTING'] == True:
         logging.debug("Just testing")
     else:
+        # generate a random uuid for new triggers
+        if not 'uuid' in params:
+            params['uuid'] = str(uuid.uuid4())
+
         consumer = Consumer(triggerFQN, params)
         consumer.start()
         consumers.addConsumerForTrigger(triggerFQN, consumer)
@@ -186,6 +192,8 @@ def main():
             '%(asctime)s [%(levelname)s]: %(message)s')
         fh.setFormatter(formatter)
         logger.addHandler(fh)
+
+    database.migrate()
 
     TheDoctor(consumers).start()
 

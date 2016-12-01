@@ -14,6 +14,8 @@
 
 import logging
 import os
+import uuid
+
 from cloudant import Cloudant
 from cloudant.result import Result
 
@@ -61,3 +63,22 @@ class Database:
 
         logging.info('Successfully retrieved {} documents'.format(len(allDocs)))
         return allDocs
+
+    def migrate(self):
+        logging.info('Starting DB migration')
+
+        for trigger in Result(self.database.all_docs, include_docs=True):
+            if 'uuid' not in trigger['doc']:
+                logging.info('[{}] Does not have a UUID. Generating one...'.format(trigger['id']));
+
+                # this little dance seems odd to me. trigger does not have a .save() method,
+                # so I am left to fetch the document this way:
+                doc = self.database[trigger['id']]
+                doc['uuid'] = str(uuid.uuid4())
+                doc.save()
+
+                logging.info('[{}] Now has UUID {}'.format(trigger['id'], doc['uuid']))
+            else:
+                logging.debug('[{}] Already has UUID'.format(trigger['id']));
+
+        logging.info('Database migration complete')
