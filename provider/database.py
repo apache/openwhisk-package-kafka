@@ -18,7 +18,7 @@ from cloudant import Cloudant
 from cloudant.result import Result
 
 class Database:
-    db_prefix = os.environ['DB_PREFIX']
+    db_prefix = os.getenv('DB_PREFIX', '')
     dbname = db_prefix + 'ow_kafka_triggers'
     username = os.environ['CLOUDANT_USER']
     password = os.environ['CLOUDANT_PASS']
