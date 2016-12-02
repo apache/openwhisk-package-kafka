@@ -124,7 +124,7 @@ def getConsumers(consumers):
     for consumerId in consumerCopyRO:
         consumer = consumerCopyRO[consumerId]
         consumerInfo = {}
-        consumerInfo[consumerId] = {
+        consumerInfo[consumer.params['uuid']] = {
             'currentState': consumer.currentState(),
             'desiredState': consumer.desiredState(),
             'secondsSinceLastPoll': consumer.secondsSinceLastPoll(),
