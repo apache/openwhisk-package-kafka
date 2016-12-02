@@ -14,6 +14,7 @@
 
 import json
 import logging
+import os
 import requests
 import time
 
@@ -24,6 +25,8 @@ from database import Database
 from datetime import datetime
 from threading import Thread, Lock
 
+local_dev = os.getenv('LOCAL_DEV', 'False')
+check_ssl = (local_dev == 'False')
 
 class Consumer:
     class State:
@@ -300,7 +303,7 @@ class ConsumerThread (Thread):
 
             while retry:
                 try:
-                    response = requests.post(self.triggerURL, json=payload, timeout=10.0)
+                    response = requests.post(self.triggerURL, json=payload, timeout=10.0, verify=check_ssl)
                     status_code = response.status_code
                     logging.info("[{}] Repsonse status code {}".format(self.trigger, status_code))
 

@@ -25,7 +25,10 @@ RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
 RUN pip install gevent==1.1.2 flask==0.11.1 confluent-kafka==0.9.2 \
         requests==2.10.0 cloudant==2.1.0 psutil==5.0.0
 
+# while I expect these will be overridden during deployment, we might as well
+# set reasonable defaults
 ENV PORT 5000
+ENV LOCAL_DEV False
 
 RUN mkdir -p /KafkaFeedProvider
 ADD provider/*.py /KafkaFeedProvider/
