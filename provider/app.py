@@ -68,7 +68,7 @@ def postTrigger(namespace, trigger):
         response.status_code = 409
     else:
         logging.info("[{}] Ensuring user has access rights to post a trigger".format(triggerFQN))
-        trigger_get_response = requests.get(body["triggerURL"])
+        trigger_get_response = requests.get(body["triggerURL"], verify=check_ssl)
         trigger_get_status_code = trigger_get_response.status_code
         logging.info("[{}] Repsonse status code from trigger authorization {}".format(triggerFQN,
                                                                                       trigger_get_status_code))
@@ -192,6 +192,11 @@ def main():
             '%(asctime)s [%(levelname)s]: %(message)s')
         fh.setFormatter(formatter)
         logger.addHandler(fh)
+
+    local_dev = os.getenv('LOCAL_DEV', 'False')
+    logging.debug('LOCAL_DEV is {} {}'.format(local_dev, type(local_dev)))
+    check_ssl = (local_dev == 'False')
+    logging.debug('check_ssl is {} {}'.format(check_ssl, type(check_ssl)))
 
     database.migrate()
 
