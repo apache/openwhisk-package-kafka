@@ -195,8 +195,9 @@ def main():
 
     local_dev = os.getenv('LOCAL_DEV', 'False')
     logging.debug('LOCAL_DEV is {} {}'.format(local_dev, type(local_dev)))
+    global check_ssl
     check_ssl = (local_dev == 'False')
-    logging.debug('check_ssl is {} {}'.format(check_ssl, type(check_ssl)))
+    logging.info('check_ssl is {} {}'.format(check_ssl, type(check_ssl)))
 
     database.migrate()
 
