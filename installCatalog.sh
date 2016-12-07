@@ -19,9 +19,10 @@ echo "Usage: ./installCatalog.sh <authkey> <apihost> <kafkatriggerhost> <kafkatr
 fi
 
 AUTH="$1"
-APIHOST="$2"
+EDGEHOST="$2"
 KAFKA_TRIGGER_HOST="$3"
 KAFKA_TRIGGER_PORT="$4"
+APIHOST="$5"
 
 
 # If the auth key file exists, read the key in the file. Otherwise, take the
@@ -41,20 +42,20 @@ export WSK_CONFIG_FILE= # override local property file to avoid namespace clashe
 
 echo Installing the kafka package and feed action.
 
-$WSK_CLI -i --apihost "$APIHOST" package update messaging \
+$WSK_CLI -i --apihost "$EDGEHOST" package update messaging \
     --auth "$AUTH" \
     --shared yes \
     -p bluemixServiceName 'messagehub' \
     -p endpoint "$APIHOST" \
     -p package_endpoint $KAFKA_PROVIDER_ENDPOINT
 
-$WSK_CLI -i --apihost "$APIHOST" action update messaging/kafkaFeed "$PACKAGE_HOME/action/kafkaFeed.js" \
+$WSK_CLI -i --apihost "$EDGEHOST" action update messaging/kafkaFeed "$PACKAGE_HOME/action/kafkaFeed.js" \
     --auth "$AUTH" \
     -a description 'Feed to listen to Kafka messages' \
     -a parameters '[ {"name":"brokers", "required":true, "description": "Array of Kafka brokers"}, {"name":"topic", "required":true, "description": "Topic to subscribe to"}, {"name":"isJSONData", "required":false, "description": "Attempt to parse message content as JSON"}, {"name":"endpoint", "required":true, "description": "Hostname and port of OpenWhisk deployment"}]' \
     -a sampleInput '{"brokers":"[\"127.0.0.1:9093\"]", "topic":"mytopic", "isJSONData":false, "endpoint": "openwhisk.ng.bluemix.net"}'
 
-$WSK_CLI -i --apihost "$APIHOST" action update messaging/messageHubFeed "$PACKAGE_HOME/action/messageHubFeed.js" \
+$WSK_CLI -i --apihost "$EDGEHOST" action update messaging/messageHubFeed "$PACKAGE_HOME/action/messageHubFeed.js" \
     --auth "$AUTH" \
     -a description 'Feed to list to Message Hub messages' \
     -a parameters '[ {"name":"kafka_brokers_sasl", "required":true, "description": "Array of Message Hub brokers"},{"name":"user", "required":true, "description": "Message Hub username"},{"name":"password", "required":true, "description": "Message Hub password"},{"name":"topic", "required":true, "description": "Topic to subscribe to"},{"name":"isJSONData", "required":false, "description": "Attempt to parse message content as JSON"},{"name":"endpoint", "required":true, "description": "Hostname and port of OpenWhisk deployment"},{"name":"kafka_admin_url", "required":true, "description": "Your Message Hub admin REST URL"},{"name":"api_key", "required":true, "description": "Message Hub admin key for RESTful interfaces"}]' \
