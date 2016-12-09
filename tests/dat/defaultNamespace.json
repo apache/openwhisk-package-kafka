@@ -1,0 +1,13 @@
+{
+  "kafka_brokers_sasl": [
+    "someBroker"
+  ],
+  "topic": "someTopic",
+  "user": "someUser",
+  "password": "somePassword",
+  "kafka_admin_url": "someURL",
+  "api_key": "someKey",
+  "package_endpoint": "someEndpoint",
+  "triggerName": "/_/someTrigger",
+  "lifecycleEvent": "CREATE"
+}
