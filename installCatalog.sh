@@ -45,6 +45,7 @@ echo Installing the kafka package and feed action.
 $WSK_CLI -i --apihost "$EDGEHOST" package update messaging \
     --auth "$AUTH" \
     --shared yes \
+    -a parameters '[ {"name":"kafka_brokers_sasl", "required":true, "description": "Array of Message Hub brokers", "bindTime":true},{"name":"user", "required":true, "description": "Message Hub username", "bindTime":true},{"name":"password", "required":true, "description": "Message Hub password", "bindTime":true, "type":"password"},{"name":"topic", "required":true, "description": "Topic to subscribe to"},{"name":"isJSONData", "required":false, "description": "Attempt to parse message content as JSON"},{"name":"endpoint", "required":true, "description": "Hostname and port of OpenWhisk deployment"},{"name":"kafka_admin_url", "required":true, "description": "Your Message Hub admin REST URL", "bindTime":true},{"name":"api_key", "required":true, "description": "Message Hub admin key for RESTful interfaces", "bindTime":true, "type":"password"}]' \
     -p bluemixServiceName 'messagehub' \
     -p endpoint "$APIHOST" \
     -p package_endpoint $KAFKA_PROVIDER_ENDPOINT
@@ -53,10 +54,11 @@ $WSK_CLI -i --apihost "$EDGEHOST" action update messaging/kafkaFeed "$PACKAGE_HO
     --auth "$AUTH" \
     -a description 'Feed to listen to Kafka messages' \
     -a parameters '[ {"name":"brokers", "required":true, "description": "Array of Kafka brokers"}, {"name":"topic", "required":true, "description": "Topic to subscribe to"}, {"name":"isJSONData", "required":false, "description": "Attempt to parse message content as JSON"}, {"name":"endpoint", "required":true, "description": "Hostname and port of OpenWhisk deployment"}]' \
-    -a sampleInput '{"brokers":"[\"127.0.0.1:9093\"]", "topic":"mytopic", "isJSONData":false, "endpoint": "openwhisk.ng.bluemix.net"}'
+    -a sampleInput '{"brokers":"[\"127.0.0.1:9093\"]", "topic":"mytopic", "isJSONData":"false", "endpoint": "openwhisk.ng.bluemix.net"}'
 
 $WSK_CLI -i --apihost "$EDGEHOST" action update messaging/messageHubFeed "$PACKAGE_HOME/action/messageHubFeed.js" \
     --auth "$AUTH" \
+    -a feed true \
     -a description 'Feed to list to Message Hub messages' \
-    -a parameters '[ {"name":"kafka_brokers_sasl", "required":true, "description": "Array of Message Hub brokers"},{"name":"user", "required":true, "description": "Message Hub username"},{"name":"password", "required":true, "description": "Message Hub password"},{"name":"topic", "required":true, "description": "Topic to subscribe to"},{"name":"isJSONData", "required":false, "description": "Attempt to parse message content as JSON"},{"name":"endpoint", "required":true, "description": "Hostname and port of OpenWhisk deployment"},{"name":"kafka_admin_url", "required":true, "description": "Your Message Hub admin REST URL"},{"name":"api_key", "required":true, "description": "Message Hub admin key for RESTful interfaces"}]' \
-    -a sampleInput '{"kafka_brokers_sasl":"[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\"]", "username":"someUsername", "password":"somePassword", "topic":"mytopic", "isJSONData":false, "endpoint":"openwhisk.ng.bluemix.net", "kafka_admin_url": "https://kafka-admin-prod01.messagehub.services.us-south.bluemix.net:443", "api_key": "supersecretstuffgoeshere"}'
+    -a parameters '[ {"name":"kafka_brokers_sasl", "required":true, "description": "Array of Message Hub brokers"},{"name":"user", "required":true, "description": "Message Hub username"},{"name":"password", "required":true, "description": "Message Hub password", "type":"password"},{"name":"topic", "required":true, "description": "Topic to subscribe to"},{"name":"isJSONData", "required":false, "description": "Attempt to parse message content as JSON"},{"name":"endpoint", "required":true, "description": "Hostname and port of OpenWhisk deployment"},{"name":"kafka_admin_url", "required":true, "description": "Your Message Hub admin REST URL"},{"name":"api_key", "required":true, "description": "Message Hub admin key for RESTful interfaces", "type":"password"}]' \
+    -a sampleInput '{"kafka_brokers_sasl":"[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\"]", "username":"someUsername", "password":"somePassword", "topic":"mytopic", "isJSONData": "false", "endpoint":"openwhisk.ng.bluemix.net", "kafka_admin_url":"https://kafka-admin-prod01.messagehub.services.us-south.bluemix.net:443", "api_key": "supersecretstuffgoeshere"}'
