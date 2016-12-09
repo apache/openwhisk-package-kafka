@@ -17,15 +17,23 @@ import os
 import uuid
 
 from cloudant import Cloudant
+from cloudant import CouchDB
 from cloudant.result import Result
 
 class Database:
     db_prefix = os.getenv('DB_PREFIX', '')
     dbname = db_prefix + 'ow_kafka_triggers'
-    username = os.environ['CLOUDANT_USER']
-    password = os.environ['CLOUDANT_PASS']
-
-    client = Cloudant(username, password, account=username)
+    db_provider = os.environ.get('DB_PROVIDER', "cloudant")
+    username = os.environ.get('DB_USERNAME')
+    password = os.environ.get('DB_PASSWORD')
+    if ("cloudant" == db_provider.lower()):
+        client = Cloudant(username, password, account=username)
+    else:
+        db_host = os.environ.get('DB_HOST')
+        db_port = os.environ.get('DB_PORT', '5984')
+        db_protocol = os.environ.get('DB_PROTOCOL', 'http')
+        url = "%s://%s:%s" % (db_protocol, db_host, db_port)
+        client = CouchDB(username, password, url=url)
     client.connect()
 
     if dbname in client.all_dbs():
