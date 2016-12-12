@@ -29,6 +29,7 @@ RUN pip install gevent==1.1.2 flask==0.11.1 confluent-kafka==0.9.2 \
 # set reasonable defaults
 ENV PORT 5000
 ENV LOCAL_DEV False
+ENV GENERIC_KAFKA True
 
 RUN mkdir -p /KafkaFeedProvider
 ADD provider/*.py /KafkaFeedProvider/

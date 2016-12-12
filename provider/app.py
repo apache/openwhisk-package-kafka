@@ -66,6 +66,14 @@ def postTrigger(namespace, trigger):
             'error': "trigger and namespace from route must correspond to triggerURL"
         })
         response.status_code = 409
+    elif not body["isMessageHub"] and not enable_generic_kafka:
+        # Generic Kafka triggers has been disabled
+        logging.warn("[{}] Attempt to create generic kafka trigger while function is disabled".format(triggerFQN))
+        response = jsonify({
+            'success': False,
+            'error': "Only triggers for Message Hub instances are allowed."
+        })
+        response.status_code = 403
     else:
         logging.info("[{}] Ensuring user has access rights to post a trigger".format(triggerFQN))
         trigger_get_response = requests.get(body["triggerURL"], verify=check_ssl)
@@ -198,6 +206,12 @@ def main():
     global check_ssl
     check_ssl = (local_dev == 'False')
     logging.info('check_ssl is {} {}'.format(check_ssl, type(check_ssl)))
+
+    generic_kafka = os.getenv('GENERIC_KAFKA', 'True')
+    logging.debug('GENERIC_KAFKA is {} {}'.format(generic_kafka, type(generic_kafka)))
+    global enable_generic_kafka
+    enable_generic_kafka = (generic_kafka == 'True')
+    logging.info('enable_generic_kafka is {} {}'.format(enable_generic_kafka, type(enable_generic_kafka)))
 
     database.migrate()
 
