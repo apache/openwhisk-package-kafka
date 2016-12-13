@@ -71,16 +71,33 @@ def postTrigger(namespace, trigger):
         logging.warn("[{}] Attempt to create generic kafka trigger while function is disabled".format(triggerFQN))
         response = jsonify({
             'success': False,
-            'error': "Only triggers for Message Hub instances are allowed."
+            'error': "only triggers for Message Hub instances are allowed."
         })
         response.status_code = 403
     else:
         logging.info("[{}] Ensuring user has access rights to post a trigger".format(triggerFQN))
-        trigger_get_response = requests.get(body["triggerURL"], verify=check_ssl)
+
+        try:
+            trigger_get_response = requests.get(body["triggerURL"], verify=check_ssl)
+        except:
+            triggerURL = urlparse(body["triggerURL"])
+
+            if triggerURL.port != None:
+                triggerAddress = "{}:{}".format(triggerURL.hostname, triggerURL.port)
+            else:
+                triggerAddress = "{}".format(triggerURL.hostname)
+
+            logging.warn("[{}] Failed to communicate with OpenWhisk server ({}) for authentication".format(triggerFQN, triggerAddress))
+            response = jsonify({
+                'success': False,
+                'error': "failed to communicate with OpenWhisk server ({}) for authentication.".format(triggerAddress)
+            })
+            response.status_code = 500
+            return response
+
         trigger_get_status_code = trigger_get_response.status_code
         logging.info("[{}] Repsonse status code from trigger authorization {}".format(triggerFQN,
                                                                                       trigger_get_status_code))
-
         if trigger_get_status_code == 200:
             logging.info("[{}] User authenticated. About to create consumer {}".format(triggerFQN, str(body)))
             createAndRunConsumer(triggerFQN, body)
