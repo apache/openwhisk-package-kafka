@@ -142,12 +142,16 @@ function validateParameters(rawParams) {
         return;
     }
 
-    if (isNonEmptyArray(rawParams.kafka_brokers_sasl)) {
+    if (rawParams.kafka_brokers_sasl) {
+        validatedParams.brokers = validateBrokerParam(rawParams.kafka_brokers_sasl);
+        if(!validatedParams.brokers) {
+            whisk.error('You must supply a "kafka_brokers_sasl" parameter as an array of Message Hub brokers.');
+            return;
+        }
         validatedParams.isMessageHub = true;
-        validatedParams.brokers = rawParams.kafka_brokers_sasl;
 
         if (rawParams.user) {
-            validatedParams.username = rawParams.user
+            validatedParams.username = rawParams.user;
         } else {
             whisk.error('You must supply a "user" parameter to authenticate with Message Hub.');
             return;
@@ -179,6 +183,16 @@ function validateParameters(rawParams) {
     }
 
     return validatedParams;
+}
+
+function validateBrokerParam(brokerParam) {
+    if(isNonEmptyArray(brokerParam)) {
+        return brokerParam;
+    } else if (typeof brokerParam === 'string') {
+        return brokerParam.split(',');
+    } else {
+        return undefined;
+    }
 }
 
 function isNonEmptyArray(obj) {
