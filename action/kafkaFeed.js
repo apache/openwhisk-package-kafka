@@ -17,6 +17,11 @@ function main(params) {
     var namespace = encodeURIComponent(triggerComponents[1]);
     var trigger = encodeURIComponent(triggerComponents[2]);
 
+    if (namespace === "_") {
+        whisk.error('You must supply a non-default namespace.');
+        return;
+    }
+
     var feedServiceURL = 'http://' + params.package_endpoint + '/triggers/' + namespace + '/' + trigger;
 
     if (params.lifecycleEvent === 'CREATE') {
