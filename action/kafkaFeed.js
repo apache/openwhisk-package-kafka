@@ -91,8 +91,7 @@ function doRequest(options) {
 function validateParameters(rawParams) {
     var validatedParams = {};
 
-    // default value for isJSONData is false
-    validatedParams.isJSONData = rawParams.isJSONData ? rawParams.isJSONData : false;
+    validatedParams.isJSONData = (typeof rawParams.isJSONData !== 'undefined' && rawParams.isJSONData && (rawParams.isJSONData === true || rawParams.isJSONData.toString().trim().toLowerCase() === 'true'))
 
     if (rawParams.topic && rawParams.topic.length > 0) {
         validatedParams.topic = rawParams.topic;
