@@ -41,7 +41,11 @@ function main(params) {
                 console.log("Successfully authenticated with Message Hub");
 
                 var body = validatedParams;
-                body.triggerURL = 'https://' + whisk.getAuthKey() + "@" + params.endpoint + '/api/v1/namespaces/' + namespace + '/triggers/' + trigger;
+
+                // params.endpoint may already include the protocol - if so,
+                // strip it out
+                var massagedAPIHost = params.endpoint.replace(/https?:\/\/(.*)/, "$1");
+                body.triggerURL = 'https://' + whisk.getAuthKey() + "@" + massagedAPIHost + '/api/v1/namespaces/' + namespace + '/triggers/' + trigger;
 
                 var options = {
                     method: 'PUT',
