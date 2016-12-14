@@ -41,7 +41,11 @@ function main(params) {
                 console.log("Successfully authenticated with Message Hub");
 
                 var body = validatedParams;
-                body.triggerURL = 'https://' + whisk.getAuthKey() + "@" + params.endpoint + '/api/v1/namespaces/' + namespace + '/triggers/' + trigger;
+
+                // params.endpoint may already include the protocol - if so,
+                // strip it out
+                var massagedAPIHost = massageAPIHost(params.endpoint);
+                body.triggerURL = 'https://' + whisk.getAuthKey() + "@" + massagedAPIHost + '/api/v1/namespaces/' + namespace + '/triggers/' + trigger;
 
                 var options = {
                     method: 'PUT',
@@ -197,4 +201,14 @@ function validateBrokerParam(brokerParam) {
 
 function isNonEmptyArray(obj) {
     return obj && Array.isArray(obj) && obj.length !== 0;
+}
+
+// if the apiHost already includes the protocol, remove it
+function massageAPIHost(apiHost) {
+    if(apiHost.substr(0, 4) === 'http') {
+        // the apiHost includes the protocol - strip it out
+        return apiHost.split('/')[2]
+    } else {
+        return apiHost;
+    }
 }
