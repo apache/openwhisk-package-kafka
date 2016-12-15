@@ -37,22 +37,27 @@ class MessagingServiceTests
       "http://" + System.getProperty("host") + ":" + System.getProperty("port")
     }
 
-  behavior of "Provider endpoint"
+  def makePutCallWithExpectedResult(url: String, params: JsObject, expectedResult: JsObject, expectedCode: Int) = {
+    val response = RestAssured.given().body(params.toString()).put(url)
+    assert(response.statusCode() == expectedCode)
+    response.body.asString.parseJson.asJsObject shouldBe expectedResult
+  }
+
+  behavior of "Messaging feed provider endpoint"
 
   it should "return status code HTTP 200 OK from /health endpoint" in {
     val response = RestAssured.given().get(getMessagingAddress + healthEndpoint)
+
     assert(response.statusCode() == 200 && response.asString().contains("consumers"))
   }
 
   it should "reject post of a trigger when missing all arguments" in {
-    val response = RestAssured.given().put(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger")
     val expectedJSON = JsObject(
       "error" -> JsString("missing fields: brokers, topic, triggerURL, isMessageHub"),
       "success" -> JsBoolean(false)
     )
 
-    assert(response.statusCode() == 400)
-    response.body.asString.parseJson.asJsObject shouldBe expectedJSON
+    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", JsObject(), expectedJSON, 400)
   }
 
   it should "reject post of a trigger due to missing brokers argument" in {
@@ -61,14 +66,12 @@ class MessagingServiceTests
       "triggerURL" -> JsString("someURL"),
       "isMessageHub" -> JsBoolean(false)
     )
-    val response = RestAssured.given().body(params.toString()).put(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger")
     val expectedJSON = JsObject(
       "error" -> JsString("missing fields: brokers"),
       "success" -> JsBoolean(false)
     )
 
-    assert(response.statusCode() == 400)
-    response.body.asString.parseJson.asJsObject shouldBe expectedJSON
+    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 400)
   }
 
   it should "reject post of a trigger due to missing topic argument" in {
@@ -77,14 +80,12 @@ class MessagingServiceTests
       "triggerURL" -> JsString("someURL"),
       "isMessageHub" -> JsBoolean(false)
     )
-    val response = RestAssured.given().body(params.toString()).put(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger")
     val expectedJSON = JsObject(
       "error" -> JsString("missing fields: topic"),
       "success" -> JsBoolean(false)
     )
 
-    assert(response.statusCode() == 400)
-    response.body.asString.parseJson.asJsObject shouldBe expectedJSON
+    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 400)
   }
 
   it should "reject post of a trigger due to missing triggerURL argument" in {
@@ -93,14 +94,12 @@ class MessagingServiceTests
       "topic" -> JsString("someTopic"),
       "isMessageHub" -> JsBoolean(false)
     )
-    val response = RestAssured.given().body(params.toString()).put(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger")
     val expectedJSON = JsObject(
       "error" -> JsString("missing fields: triggerURL"),
       "success" -> JsBoolean(false)
     )
 
-    assert(response.statusCode() == 400)
-    response.body.asString.parseJson.asJsObject shouldBe expectedJSON
+    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 400)
   }
 
   it should "reject post of a trigger due to missing isMessageHub argument" in {
@@ -109,14 +108,12 @@ class MessagingServiceTests
       "triggerURL" -> JsString("someURL"),
       "topic" -> JsString("someTopic")
     )
-    val response = RestAssured.given().body(params.toString()).put(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger")
     val expectedJSON = JsObject(
       "error" -> JsString("missing fields: isMessageHub"),
       "success" -> JsBoolean(false)
     )
 
-    assert(response.statusCode() == 400)
-    response.body.asString.parseJson.asJsObject shouldBe expectedJSON
+    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 400)
   }
 
   it should "reject post of a trigger due to missing username argument" in {
@@ -127,14 +124,12 @@ class MessagingServiceTests
       "triggerURL" -> JsString("someURL"),
       "isMessageHub" -> JsBoolean(true)
     )
-    val response = RestAssured.given().body(params.toString()).put(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger")
     val expectedJSON = JsObject(
       "error" -> JsString("missing fields: username"),
       "success" -> JsBoolean(false)
     )
 
-    assert(response.statusCode() == 400)
-    response.body.asString.parseJson.asJsObject shouldBe expectedJSON
+    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 400)
   }
 
   it should "reject post of a trigger due to missing password argument" in {
@@ -145,14 +140,12 @@ class MessagingServiceTests
       "triggerURL" -> JsString("someURL"),
       "isMessageHub" -> JsBoolean(true)
     )
-    val response = RestAssured.given().body(params.toString()).put(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger")
     val expectedJSON = JsObject(
       "error" -> JsString("missing fields: password"),
       "success" -> JsBoolean(false)
     )
 
-    assert(response.statusCode() == 400)
-    response.body.asString.parseJson.asJsObject shouldBe expectedJSON
+    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 400)
   }
 
   it should "reject post of a trigger due to mismatch between triggerURL and trigger name" in {
@@ -164,15 +157,12 @@ class MessagingServiceTests
       "triggerURL" -> JsString(s"https://someKey@${WhiskProperties.getEdgeHost}/api/v1/namespaces/invalidNamespace/triggers/someTrigger"),
       "isMessageHub" -> JsBoolean(true)
     )
-
-    val response = RestAssured.given().body(params.toString()).put(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger")
     val expectedJSON = JsObject(
       "error" -> JsString("trigger and namespace from route must correspond to triggerURL"),
       "success" -> JsBoolean(false)
     )
 
-    assert(response.statusCode() == 409)
-    response.body.asString.parseJson.asJsObject shouldBe expectedJSON
+    makePutCallWithExpectedResult(getMessagingAddress +  "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 409)
   }
 
   it should "reject post of a trigger due to mismatch between triggerURL and namespace" in {
@@ -184,15 +174,12 @@ class MessagingServiceTests
       "triggerURL" -> JsString(s"https://someKey@${WhiskProperties.getEdgeHost}/api/v1/namespaces/someNamespace/triggers/invalidTrigger"),
       "isMessageHub" -> JsBoolean(true)
     )
-
-    val response = RestAssured.given().body(params.toString()).put(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger")
     val expectedJSON = JsObject(
       "error" -> JsString("trigger and namespace from route must correspond to triggerURL"),
       "success" -> JsBoolean(false)
     )
 
-    assert(response.statusCode() == 409)
-    response.body.asString.parseJson.asJsObject shouldBe expectedJSON
+    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 409)
   }
 
   it should "reject post of a trigger when authentication fails" in {
@@ -204,15 +191,12 @@ class MessagingServiceTests
       "triggerURL" -> JsString(s"https://someKey@${WhiskProperties.getEdgeHost}/api/v1/namespaces/invalidNamespace/triggers/invalidTrigger"),
       "isMessageHub" -> JsBoolean(true)
     )
-
-    val response = RestAssured.given().body(params.toString()).put(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger")
     val expectedJSON = JsObject(
       "error" -> JsString("not authorized"),
       "success" -> JsBoolean(false)
     )
 
-    assert(response.statusCode() == 401)
-    response.body.asString.parseJson.asJsObject shouldBe expectedJSON
+    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 401)
   }
 
 }

@@ -28,6 +28,7 @@ import common.Wsk
 import common.WskActorSystem
 import common.WskProps
 import common.WskTestHelpers
+import ActionHelper._
 
 @RunWith(classOf[JUnitRunner])
 class KafkaFeedTests
@@ -41,85 +42,51 @@ class KafkaFeedTests
 
   implicit val wskprops = WskProps()
   val wsk = new Wsk()
+  val actionName = "kafkaFeedAction"
   val actionFile = "../action/kafkaFeed.js"
 
   behavior of "Kafka feed action"
 
-  it should "reject invocation when topic argument is missing" in withAssetCleaner(wskprops) {
-    (wp, assetHelper) =>
-      val actionName = "missingTopicAction"
-      val expectedOutput = JsObject(
-        "error" -> JsString("You must supply a \"topic\" parameter.")
-      )
-
-      assetHelper.withCleaner(wsk.action, actionName) {
-        (action, _) => action.create(actionName, Some(actionFile))
-      }
-
-      val run = wsk.action.invoke(actionName, parameterFile = Some("dat/missingTopic.json"))
-
-      withActivation(wsk.activation, run) {
-        activation =>
-          activation.response.result shouldBe Some(expectedOutput)
-      }
+  override def beforeAll() {
+    wsk.action.create(actionName, Some(actionFile))
+    super.beforeAll()
   }
 
-  it should "reject invocation when brokers argument is missing" in withAssetCleaner(wskprops) {
-    (wp, assetHelper) =>
-      val actionName = "missingBrokersAction"
-      val expectedOutput = JsObject(
-        "error" -> JsString("You must supply a \"brokers\" parameter as an array of Kafka brokers.")
-      )
-
-      assetHelper.withCleaner(wsk.action, actionName) {
-        (action, _) => action.create(actionName, Some(actionFile))
-      }
-
-      val run = wsk.action.invoke(actionName, parameterFile = Some("dat/missingBrokers.json"))
-
-      withActivation(wsk.activation, run) {
-        activation =>
-          activation.response.result shouldBe Some(expectedOutput)
-      }
+  override def afterAll()  {
+    wsk.action.delete(actionName)
+    super.afterAll()
   }
 
+  it should "reject invocation when topic argument is missing" in {
+    val expectedOutput = JsObject(
+      "error" -> JsString("You must supply a \"topic\" parameter.")
+    )
 
-  it should "reject invocation when package_endpoint argument is missing" in withAssetCleaner(wskprops) {
-    (wp, assetHelper) =>
-      val actionName = "missingPackageEndpointAction"
-      val expectedOutput = JsObject(
-        "error" -> JsString("Could not find the package_endpoint parameter.")
-      )
-
-      assetHelper.withCleaner(wsk.action, actionName) {
-        (action, _) => action.create(actionName, Some(actionFile))
-      }
-
-      val run = wsk.action.invoke(actionName, parameterFile = Some("dat/missingPackageEndpoint.json"))
-
-      withActivation(wsk.activation, run) {
-        activation =>
-          activation.response.result shouldBe Some(expectedOutput)
-      }
+    runActionWithExpectedResult(actionName, "dat/missingTopic.json", expectedOutput, false)
   }
 
-  it should "reject invocation when default namespace is used" in withAssetCleaner(wskprops) {
-    (wp, assetHelper) =>
-      val actionName = "defaultNamespaceAction"
-      val expectedOutput = JsObject(
-        "error" -> JsString("You must supply a non-default namespace.")
-      )
+  it should "reject invocation when brokers argument is missing" in  {
+    val expectedOutput = JsObject(
+      "error" -> JsString("You must supply a \"brokers\" parameter as an array of Kafka brokers.")
+    )
 
-      assetHelper.withCleaner(wsk.action, actionName) {
-        (action, _) => action.create(actionName, Some(actionFile))
-      }
+    runActionWithExpectedResult(actionName, "dat/missingBrokers.json", expectedOutput, false)
+  }
 
-      val run = wsk.action.invoke(actionName, parameterFile = Some("dat/defaultNamespace.json"))
+  it should "reject invocation when package_endpoint argument is missing" in {
+    val expectedOutput = JsObject(
+      "error" -> JsString("Could not find the package_endpoint parameter.")
+    )
 
-      withActivation(wsk.activation, run) {
-        activation =>
-          activation.response.result shouldBe Some(expectedOutput)
-      }
+    runActionWithExpectedResult(actionName, "dat/missingPackageEndpoint.json", expectedOutput, false)
+  }
+
+  it should "reject invocation when default namespace is used" in {
+    val expectedOutput = JsObject(
+      "error" -> JsString("You must supply a non-default namespace.")
+    )
+
+    runActionWithExpectedResult(actionName, "dat/defaultNamespace.json", expectedOutput, false)
   }
 
 }
