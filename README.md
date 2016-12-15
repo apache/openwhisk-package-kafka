@@ -96,6 +96,9 @@ You will notice that the trigger payload contains an array of messages. This mea
 
 Please keep in mind when coding actions that are fired by your trigger, that the number of messages in the payload is technically unbounded, but will always be greater than 0.
 
+## Testing
+An OpenWhisk deployment is required in order for the automated test suite to be executed. To run tests locally, run ```$ ./gradlew tests:test -Dhost=<container_address> -Dport=<docker_port>``` from the project's root directory. Where ```<docker_address>``` is the IP address of the service's docker container, and ```<docker_port>``` is the port the docker container is listening on. In addition, ```OPENWHISK_HOME``` must be set to the root of the local OpenWhisk directory. Ex: ```export OPENWHISK_HOME=<openwhisk_directory>```.
+
 ## References
 - [OpenWhisk](https://www.ibm.com/cloud-computing/bluemix/openwhisk)
 - [IBM Message Hub](https://developer.ibm.com/messaging/message-hub/)
