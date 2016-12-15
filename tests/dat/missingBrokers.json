@@ -1,0 +1,10 @@
+{
+  "topic": "someTopic",
+  "user": "someUsername",
+  "password": "somePassword",
+  "kafka_admin_url": "someURL",
+  "api_key": "someKey",
+  "package_endpoint": "someEndpoint",
+  "triggerName": "/someNamespace/someTrigger",
+  "lifecycleEvent": "CREATE"
+}
