@@ -63,6 +63,10 @@ class MessagingFeedTests
     val messagingPackage = "/whisk.system/messaging"
     val messageHubFeed = "messageHubFeed"
 
+    def getNonDefaultNamespace(): String = {
+        wsk.namespace.list().stdout.trim.split("\n").last
+    }
+
     def setMessageHubSecurityConfiguration(user: String, password: String) = {
         val map = new HashMap[String, String]()
         map.put("serviceName", "kafka")
@@ -80,6 +84,7 @@ class MessagingFeedTests
     behavior of "Message Hub"
 
     it should "fire a trigger when a message is posted to the message hub" in withAssetCleaner(wskprops) {
+        val nondefaultNamespace = getNonDefaultNamespace()
         var credentials = TestUtils.getCredentials("message_hub")
         val user = credentials.get("user").getAsString()
         val password = credentials.get("password").getAsString()
@@ -107,7 +112,7 @@ class MessagingFeedTests
         props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 
         (wp, assetHelper) =>
-            val triggerName = s"dummyMessageHubTrigger-$currentTime"
+            val triggerName = s"/$nondefaultNamespace/dummyMessageHubTrigger-$currentTime"
             val feedCreationResult = assetHelper.withCleaner(wsk.trigger, triggerName) {
                 (trigger, _) =>
                     trigger.create(triggerName, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = Map(
