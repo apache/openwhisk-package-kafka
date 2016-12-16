@@ -1,6 +1,6 @@
 include 'tests', ':WhiskTest', ':common:scala', ':core:invoker', ':core:controller'
 
-rootProject.name = 'openwhisk-package-alarms'
+rootProject.name = 'openwhisk-package-kafka'
 def whiskhome = "$System.env.OPENWHISK_HOME"
 
 project(':WhiskTest').projectDir = new File(whiskhome, 'tests')
