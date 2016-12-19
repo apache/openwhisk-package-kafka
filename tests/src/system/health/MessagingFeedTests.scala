@@ -64,7 +64,8 @@ class MessagingFeedTests
     val messageHubFeed = "messageHubFeed"
 
     def getNonDefaultNamespace(): String = {
-        wsk.namespace.list().stdout.trim.split("\n").last
+        val allNamespaces = wsk.namespace.list().stdout.trim.split("\n").drop(1)
+        allNamespaces.filter(_.indexOf('\'') < 0).head
     }
 
     def setMessageHubSecurityConfiguration(user: String, password: String) = {
@@ -85,6 +86,7 @@ class MessagingFeedTests
 
     it should "fire a trigger when a message is posted to the message hub" in withAssetCleaner(wskprops) {
         val nondefaultNamespace = getNonDefaultNamespace()
+        println(s"I chose namespace: ${nondefaultNamespace}")
         var credentials = TestUtils.getCredentials("message_hub")
         val user = credentials.get("user").getAsString()
         val password = credentials.get("password").getAsString()
