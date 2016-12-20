@@ -113,12 +113,4 @@ class MessageHubFeedTests
     runActionWithExpectedResult(actionName, "dat/missingPackageEndpoint.json", expectedOutput, false)
   }
 
-  it should "reject invocation when default namespace is used" in {
-    val expectedOutput = JsObject(
-      "error" -> JsString("You must supply a non-default namespace.")
-    )
-
-    runActionWithExpectedResult(actionName, "dat/defaultNamespace.json", expectedOutput, false)
-  }
-
 }

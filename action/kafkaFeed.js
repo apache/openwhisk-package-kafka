@@ -14,14 +14,8 @@ function main(params) {
     }
 
     var triggerComponents = params.triggerName.split("/");
-    var namespace = encodeURIComponent(triggerComponents[1]);
+    var namespace = encodeURIComponent(process.env['__OW_NAMESPACE']);
     var trigger = encodeURIComponent(triggerComponents[2]);
-
-    if (namespace === "_") {
-        whisk.error('You must supply a non-default namespace.');
-        return;
-    }
-
     var feedServiceURL = 'http://' + params.package_endpoint + '/triggers/' + namespace + '/' + trigger;
 
     if (params.lifecycleEvent === 'CREATE') {
