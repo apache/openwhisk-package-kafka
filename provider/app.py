@@ -189,15 +189,13 @@ def main():
 
     # Make sure we log to the console
     streamHandler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s]: %(message)s')
+    formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] [??] [kafkatriggers] %(message)s')
     streamHandler.setFormatter(formatter)
     logger.addHandler(streamHandler)
 
     # also log to file if /logs is present
     if os.path.isdir('/logs'):
-        fh = logging.FileHandler('/logs/kafkatriggers.log')
-        formatter = logging.Formatter(
-            '%(asctime)s [%(levelname)s]: %(message)s')
+        fh = logging.FileHandler('/logs/kafkatriggers_logs.log')
         fh.setFormatter(formatter)
         logger.addHandler(fh)
 
