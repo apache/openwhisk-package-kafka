@@ -17,7 +17,6 @@ In order to create a trigger that reacts when messages are posted to a Message H
 |password|String|Your Message Hub password|
 |topic|String|The topic you would like the trigger to listen to|
 |kafka_admin_url|URL String|The URL of the Message Hub admin REST interface|
-|api_key|String|Your Message Hub API key|
 |isJSONData|Boolean (Optional - default=false)|When set to `true` this will cause the feed to attempt the message content as JSON before passing it along as the trigger payload.|
 
 While this list of parameters may seem daunting, they can be automatically set for you by using the package refresh CLI command:
@@ -26,7 +25,7 @@ While this list of parameters may seem daunting, they can be automatically set f
 
 However, if you want to create the trigger manually, it would look something like:
 ```
-wsk trigger create MyMessageHubTrigger -f /whisk.system/messaging/messageHubFeed -p kafka_brokers_sasl "[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka02-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka03-prod01.messagehub.services.us-south.bluemix.net:9093\"]" -p topic mytopic -p user <your Message Hub user> -p password <your Message Hub password> -p kafka_admin_url https://kafka-admin-prod01.messagehub.services.us-south.bluemix.net:443 -p api_key <your API key> -p isJSONData true
+wsk trigger create MyMessageHubTrigger -f /whisk.system/messaging/messageHubFeed -p kafka_brokers_sasl "[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka02-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka03-prod01.messagehub.services.us-south.bluemix.net:9093\"]" -p topic mytopic -p user <your Message Hub user> -p password <your Message Hub password> -p kafka_admin_url https://kafka-admin-prod01.messagehub.services.us-south.bluemix.net:443 -p isJSONData true
 ```
 
 ### Creating a Trigger that Listens to a Generic Kafka Instance

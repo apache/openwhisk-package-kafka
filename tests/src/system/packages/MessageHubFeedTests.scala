@@ -81,14 +81,6 @@ class MessageHubFeedTests
     runActionWithExpectedResult(actionName, "dat/missingAdminURL.json", expectedOutput, false)
   }
 
-  it should "reject invocation when api_key argument is missing" in {
-    val expectedOutput = JsObject(
-      "error" -> JsString("You must supply an \"api_key\" parameter.")
-    )
-
-    runActionWithExpectedResult(actionName, "dat/missingAPIKey.json", expectedOutput, false)
-  }
-
   it should "reject invocation when user argument is missing" in {
     val expectedOutput = JsObject(
       "error" -> JsString("You must supply a \"user\" parameter to authenticate with Message Hub.")
