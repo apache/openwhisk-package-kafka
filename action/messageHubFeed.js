@@ -78,7 +78,7 @@ function checkMessageHubCredentials(params) {
         method: 'GET',
         url: topicURL,
         headers: {
-            'X-Auth-Token': params.api_key
+            'X-Auth-Token': params.username + params.password
         }
     };
 
@@ -131,6 +131,7 @@ function doRequest(options) {
 function validateParameters(rawParams) {
     var validatedParams = {};
 
+    validatedParams.isMessageHub = true;
     validatedParams.isJSONData = (typeof rawParams.isJSONData !== 'undefined' && rawParams.isJSONData && (rawParams.isJSONData === true || rawParams.isJSONData.toString().trim().toLowerCase() === 'true'))
 
     if (rawParams.topic && rawParams.topic.length > 0) {
@@ -146,23 +147,22 @@ function validateParameters(rawParams) {
             whisk.error('You must supply a "kafka_brokers_sasl" parameter as an array of Message Hub brokers.');
             return;
         }
-        validatedParams.isMessageHub = true;
-
-        if (rawParams.user) {
-            validatedParams.username = rawParams.user;
-        } else {
-            whisk.error('You must supply a "user" parameter to authenticate with Message Hub.');
-            return;
-        }
-
-        if (rawParams.password) {
-            validatedParams.password = rawParams.password;
-        } else {
-            whisk.error('You must supply a "password" parameter to authenticate with Message Hub.');
-            return;
-        }
     } else {
         whisk.error('You must supply a "kafka_brokers_sasl" parameter as an array of Message Hub brokers.');
+        return;
+    }
+
+    if (rawParams.user) {
+        validatedParams.username = rawParams.user;
+    } else {
+        whisk.error('You must supply a "user" parameter to authenticate with Message Hub.');
+        return;
+    }
+
+    if (rawParams.password) {
+        validatedParams.password = rawParams.password;
+    } else {
+        whisk.error('You must supply a "password" parameter to authenticate with Message Hub.');
         return;
     }
 
@@ -170,13 +170,6 @@ function validateParameters(rawParams) {
         validatedParams.kafka_admin_url = rawParams.kafka_admin_url;
     } else {
         whisk.error('You must supply a "kafka_admin_url" parameter.');
-        return;
-    }
-
-    if(rawParams.api_key) {
-        validatedParams.api_key = rawParams.api_key;
-    } else {
-        whisk.error('You must supply an "api_key" parameter.');
         return;
     }
 
