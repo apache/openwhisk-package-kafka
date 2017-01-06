@@ -10,30 +10,20 @@ var request = require('request');
  *  @param {string} endpoint - address to OpenWhisk deployment
  */
 function main(params) {
-    if(!params.package_endpoint) {
-        whisk.error('Could not find the package_endpoint parameter.');
-        return;
-    }
-
-    var triggerComponents = params.triggerName.split("/");
-    var namespace = encodeURIComponent(process.env['__OW_NAMESPACE']);
-    var trigger = encodeURIComponent(triggerComponents[2]);
-    var feedServiceURL = 'http://' + params.package_endpoint + '/triggers/' + namespace + '/' + trigger;
-
-    if (params.lifecycleEvent === 'CREATE') {
-        var validatedParams = validateParameters(params);
-        if (!validatedParams) {
-            // whisk.error has already been called.
-            // all that remains is to bail out.
+    var promise = new Promise(function(resolve, reject) {
+        if(!params.package_endpoint) {
+            reject('Could not find the package_endpoint parameter.');
             return;
         }
 
-        // make sure we have valid MH credentials
-        console.log("Checking Message Hub credentials...");
-        return checkMessageHubCredentials(validatedParams)
-            .then(function() {
-                console.log("Successfully authenticated with Message Hub");
+        var triggerComponents = params.triggerName.split("/");
+        var namespace = encodeURIComponent(process.env['__OW_NAMESPACE']);
+        var trigger = encodeURIComponent(triggerComponents[2]);
+        var feedServiceURL = 'http://' + params.package_endpoint + '/triggers/' + namespace + '/' + trigger;
 
+        if (params.lifecycleEvent === 'CREATE') {
+            // makes a PUT request to create the trigger in the feed service provider
+            var putTrigger = function(validatedParams) {
                 var body = validatedParams;
 
                 // params.endpoint may already include the protocol - if so,
@@ -52,25 +42,39 @@ function main(params) {
                 };
 
                 return doRequest(options);
-            });
-    } else if (params.lifecycleEvent === 'DELETE') {
-        var authorizationHeader = 'Basic ' + new Buffer(whisk.getAuthKey()).toString('base64');
+            };
 
-        var options = {
-            method: 'DELETE',
-            url: feedServiceURL,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': authorizationHeader,
-                'User-Agent': 'whisk'
-            }
-        };
+            return validateParameters(params)
+                .then(checkMessageHubCredentials)
+                .then(putTrigger)
+                .then(resolve)
+                .catch(reject);
+        } else if (params.lifecycleEvent === 'DELETE') {
+            var authorizationHeader = 'Basic ' + new Buffer(whisk.getAuthKey()).toString('base64');
 
-        return doRequest(options)
-    }
+            var options = {
+                method: 'DELETE',
+                url: feedServiceURL,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': authorizationHeader,
+                    'User-Agent': 'whisk'
+                }
+            };
+
+            doRequest(options)
+                .then(resolve)
+                .catch(reject);
+        }
+    });
+
+    return promise;
 }
 
 function checkMessageHubCredentials(params) {
+    // make sure we have valid MH credentials
+    console.log("Checking Message Hub credentials...");
+
     // listing topics seems to be the simplest way to check auth
     var topicURL = params.kafka_admin_url + '/admin/topics';
 
@@ -92,14 +96,18 @@ function checkMessageHubCredentials(params) {
 
             if(topicNames.indexOf(params.topic) < 0) {
                 return Promise.reject('Topic does not exist. You must create the topic first: ' + params.topic);
-            };
+            } else {
+                console.log("Topic exists.");
+                // return the params so they can be chained into the next function
+                return params;
+            }
         }, function(authError) {
             return Promise.reject('Could not authenticate with Message Hub. Please check your credentials.');
         });
 }
 
 function doRequest(options) {
-    var promise = new Promise(function (resolve, reject) {
+    var requestPromise = new Promise(function (resolve, reject) {
         request(options, function (error, response, body) {
             if (error) {
                 reject({
@@ -125,55 +133,64 @@ function doRequest(options) {
         });
     });
 
-    return promise;
+    return requestPromise;
 }
 
 function validateParameters(rawParams) {
-    var validatedParams = {};
+    var promise = new Promise(function(resolve, reject) {
+        var validatedParams = {};
 
-    validatedParams.isMessageHub = true;
-    validatedParams.isJSONData = (typeof rawParams.isJSONData !== 'undefined' && rawParams.isJSONData && (rawParams.isJSONData === true || rawParams.isJSONData.toString().trim().toLowerCase() === 'true'))
+        validatedParams.isMessageHub = true;
+        validatedParams.isJSONData = (typeof rawParams.isJSONData !== 'undefined' && rawParams.isJSONData && (rawParams.isJSONData === true || rawParams.isJSONData.toString().trim().toLowerCase() === 'true'));
 
-    if (rawParams.topic && rawParams.topic.length > 0) {
-        validatedParams.topic = rawParams.topic;
-    } else {
-        whisk.error('You must supply a "topic" parameter.');
-        return;
-    }
-
-    if (rawParams.kafka_brokers_sasl) {
-        validatedParams.brokers = validateBrokerParam(rawParams.kafka_brokers_sasl);
-        if(!validatedParams.brokers) {
-            whisk.error('You must supply a "kafka_brokers_sasl" parameter as an array of Message Hub brokers.');
+        // topic
+        if (rawParams.topic && rawParams.topic.length > 0) {
+            validatedParams.topic = rawParams.topic;
+        } else {
+            reject('You must supply a "topic" parameter.');
             return;
         }
-    } else {
-        whisk.error('You must supply a "kafka_brokers_sasl" parameter as an array of Message Hub brokers.');
-        return;
-    }
 
-    if (rawParams.user) {
-        validatedParams.username = rawParams.user;
-    } else {
-        whisk.error('You must supply a "user" parameter to authenticate with Message Hub.');
-        return;
-    }
+        // kafka_brokers_sasl
+        if (rawParams.kafka_brokers_sasl) {
+            validatedParams.brokers = validateBrokerParam(rawParams.kafka_brokers_sasl);
+            if(!validatedParams.brokers) {
+                reject('You must supply a "kafka_brokers_sasl" parameter as an array of Message Hub brokers.');
+                return;
+            }
+        } else {
+            reject('You must supply a "kafka_brokers_sasl" parameter as an array of Message Hub brokers.');
+            return;
+        }
 
-    if (rawParams.password) {
-        validatedParams.password = rawParams.password;
-    } else {
-        whisk.error('You must supply a "password" parameter to authenticate with Message Hub.');
-        return;
-    }
+        // user
+        if (rawParams.user) {
+            validatedParams.username = rawParams.user;
+        } else {
+            reject('You must supply a "user" parameter to authenticate with Message Hub.');
+            return;
+        }
 
-    if(rawParams.kafka_admin_url) {
-        validatedParams.kafka_admin_url = rawParams.kafka_admin_url;
-    } else {
-        whisk.error('You must supply a "kafka_admin_url" parameter.');
-        return;
-    }
+        // password
+        if (rawParams.password) {
+            validatedParams.password = rawParams.password;
+        } else {
+            reject('You must supply a "password" parameter to authenticate with Message Hub.');
+            return;
+        }
 
-    return validatedParams;
+        // kafka_admin_url
+        if(rawParams.kafka_admin_url) {
+            validatedParams.kafka_admin_url = rawParams.kafka_admin_url;
+        } else {
+            reject('You must supply a "kafka_admin_url" parameter.');
+            return;
+        }
+
+        resolve(validatedParams);
+    });
+
+    return promise;
 }
 
 function validateBrokerParam(brokerParam) {

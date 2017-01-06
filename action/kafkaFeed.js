@@ -8,60 +8,68 @@ var request = require('request');
  *  @param {string} endpoint - address to OpenWhisk deployment
  */
 function main(params) {
-    if(!params.package_endpoint) {
-        whisk.error('Could not find the package_endpoint parameter.');
-        return;
-    }
-
-    var triggerComponents = params.triggerName.split("/");
-    var namespace = encodeURIComponent(process.env['__OW_NAMESPACE']);
-    var trigger = encodeURIComponent(triggerComponents[2]);
-    var feedServiceURL = 'http://' + params.package_endpoint + '/triggers/' + namespace + '/' + trigger;
-
-    if (params.lifecycleEvent === 'CREATE') {
-        var validatedParams = validateParameters(params);
-        if (!validatedParams) {
-            // whisk.error has already been called.
-            // all that remains is to bail out.
+    var promise = new Promise(function(resolve, reject) {
+        if(!params.package_endpoint) {
+            reject('Could not find the package_endpoint parameter.');
             return;
         }
 
-        var body = validatedParams;
-        // params.endpoint may already include the protocol - if so,
-        // strip it out
-        var massagedAPIHost = params.endpoint.replace(/https?:\/\/(.*)/, "$1");
-        body.triggerURL = 'https://' + whisk.getAuthKey() + "@" + massagedAPIHost + '/api/v1/namespaces/' + namespace + '/triggers/' + trigger;
+        var triggerComponents = params.triggerName.split("/");
+        var namespace = encodeURIComponent(process.env['__OW_NAMESPACE']);
+        var trigger = encodeURIComponent(triggerComponents[2]);
+        var feedServiceURL = 'http://' + params.package_endpoint + '/triggers/' + namespace + '/' + trigger;
 
-        var options = {
-            method: 'PUT',
-            url: feedServiceURL,
-            body: JSON.stringify(body),
-            headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': 'whisk'
-            }
-        };
+        if (params.lifecycleEvent === 'CREATE') {
+            // makes a PUT request to create the trigger in the feed service provider
+            var putTrigger = function(validatedParams) {
+                var body = validatedParams;
 
-        return doRequest(options);
-    } else if (params.lifecycleEvent === 'DELETE') {
-        var authorizationHeader = 'Basic ' + new Buffer(whisk.getAuthKey()).toString('base64');
+                // params.endpoint may already include the protocol - if so,
+                // strip it out
+                var massagedAPIHost = params.endpoint.replace(/https?:\/\/(.*)/, "$1");
+                body.triggerURL = 'https://' + whisk.getAuthKey() + "@" + massagedAPIHost + '/api/v1/namespaces/' + namespace + '/triggers/' + trigger;
 
-        var options = {
-            method: 'DELETE',
-            url: feedServiceURL,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': authorizationHeader,
-                'User-Agent': 'whisk'
-            }
-        };
+                var options = {
+                    method: 'PUT',
+                    url: feedServiceURL,
+                    body: JSON.stringify(body),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'whisk'
+                    }
+                };
 
-        return doRequest(options)
-    }
+                return doRequest(options);
+            };
+
+            validateParameters(params)
+                .then(putTrigger)
+                .then(resolve)
+                .catch(reject);
+        } else if (params.lifecycleEvent === 'DELETE') {
+            var authorizationHeader = 'Basic ' + new Buffer(whisk.getAuthKey()).toString('base64');
+
+            var options = {
+                method: 'DELETE',
+                url: feedServiceURL,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': authorizationHeader,
+                    'User-Agent': 'whisk'
+                }
+            };
+
+            doRequest(options)
+                .then(resolve)
+                .catch(reject);
+        }
+    });
+
+    return promise;
 }
 
 function doRequest(options) {
-    var promise = new Promise(function (resolve, reject) {
+    var requestPromise = new Promise(function (resolve, reject) {
         request(options, function (error, response, body) {
             if (error) {
                 reject({
@@ -87,31 +95,34 @@ function doRequest(options) {
         });
     });
 
-    return promise;
+    return requestPromise;
 }
 
 function validateParameters(rawParams) {
-    var validatedParams = {};
+    var promise = new Promise(function(resolve, reject) {
+        var validatedParams = {};
 
-    validatedParams.isJSONData = (typeof rawParams.isJSONData !== 'undefined' && rawParams.isJSONData && (rawParams.isJSONData === true || rawParams.isJSONData.toString().trim().toLowerCase() === 'true'))
+        validatedParams.isMessageHub = false;
+        validatedParams.isJSONData = (typeof rawParams.isJSONData !== 'undefined' && rawParams.isJSONData && (rawParams.isJSONData === true || rawParams.isJSONData.toString().trim().toLowerCase() === 'true'));
 
-    if (rawParams.topic && rawParams.topic.length > 0) {
-        validatedParams.topic = rawParams.topic;
-    } else {
-        whisk.error('You must supply a "topic" parameter.');
-        return;
-    }
+        if (rawParams.topic && rawParams.topic.length > 0) {
+            validatedParams.topic = rawParams.topic;
+        } else {
+            reject('You must supply a "topic" parameter.');
+            return;
+        }
 
-    validatedParams.isMessageHub = false;
+        if (isNonEmptyArray(rawParams.brokers)) {
+            validatedParams.brokers = rawParams.brokers;
+        } else {
+            reject('You must supply a "brokers" parameter as an array of Kafka brokers.');
+            return;
+        }
 
-    if (isNonEmptyArray(rawParams.brokers)) {
-        validatedParams.brokers = rawParams.brokers;
-    } else {
-        whisk.error('You must supply a "brokers" parameter as an array of Kafka brokers.');
-        return;
-    }
+        resolve(validatedParams);
+    });
 
-    return validatedParams;
+    return promise;
 }
 
 function isNonEmptyArray(obj) {
