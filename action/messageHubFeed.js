@@ -29,7 +29,7 @@ function main(params) {
                 // params.endpoint may already include the protocol - if so,
                 // strip it out
                 var massagedAPIHost = params.endpoint.replace(/https?:\/\/(.*)/, "$1");
-                body.triggerURL = 'https://' + whisk.getAuthKey() + "@" + massagedAPIHost + '/api/v1/namespaces/' + namespace + '/triggers/' + trigger;
+                body.triggerURL = 'https://' + process.env['__OW_API_KEY'] + "@" + massagedAPIHost + '/api/v1/namespaces/' + namespace + '/triggers/' + trigger;
 
                 var options = {
                     method: 'PUT',
@@ -50,7 +50,7 @@ function main(params) {
                 .then(resolve)
                 .catch(reject);
         } else if (params.lifecycleEvent === 'DELETE') {
-            var authorizationHeader = 'Basic ' + new Buffer(whisk.getAuthKey()).toString('base64');
+            var authorizationHeader = 'Basic ' + new Buffer(process.env['__OW_API_KEY']).toString('base64');
 
             var options = {
                 method: 'DELETE',
