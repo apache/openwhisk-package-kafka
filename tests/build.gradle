@@ -71,10 +71,16 @@ tasks.withType(ScalaCompile) {
   scalaCompileOptions.additionalParameters = gradle.scala.compileFlags
 }
 
+task testProvider(type: Test) {
+  systemProperty 'test.router', 'true'
+  include 'system/provider/**'
+}
+
 task testHealth(type: Test) {
   systemProperty 'test.router', 'true'
   include 'system/health/**'
 }
+
 def keystorePath = new File(buildDir, 'classes/test/keystore')
 task deleteKeystore(type: Delete) {
   delete keystorePath

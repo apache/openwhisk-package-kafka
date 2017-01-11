@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="system.packages.KafkaFeedTests" tests="3" skipped="0" failures="0" errors="0" timestamp="2017-01-16T21:06:00" hostname="jamess-mbp.raleigh.ibm.com" time="4.817">
+  <properties/>
+  <testcase name="Kafka feed action should reject invocation when topic argument is missing" classname="system.packages.KafkaFeedTests" time="2.398"/>
+  <testcase name="Kafka feed action should reject invocation when brokers argument is missing" classname="system.packages.KafkaFeedTests" time="1.203"/>
+  <testcase name="Kafka feed action should reject invocation when package_endpoint argument is missing" classname="system.packages.KafkaFeedTests" time="1.213"/>
+  <system-out><![CDATA[[2017-01-16T21:06:00.565Z] [INFO] Slf4jLogger started [akka.event.slf4j.Slf4jLogger:85] 
+
+Starting test Kafka feed action should reject invocation when topic argument is missing at 2017-01-16 16:06:00.942
+
+Finished test Kafka feed action should reject invocation when topic argument is missing at 2017-01-16 16:06:03.341
+
+Starting test Kafka feed action should reject invocation when brokers argument is missing at 2017-01-16 16:06:03.342
+
+Finished test Kafka feed action should reject invocation when brokers argument is missing at 2017-01-16 16:06:04.546
+
+Starting test Kafka feed action should reject invocation when package_endpoint argument is missing at 2017-01-16 16:06:04.546
+
+Finished test Kafka feed action should reject invocation when package_endpoint argument is missing at 2017-01-16 16:06:05.760
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
