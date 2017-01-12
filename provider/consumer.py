@@ -192,18 +192,18 @@ class ConsumerThread (Thread):
                     self.__fireTrigger(messages)
 
             logging.info("[{}] Consumer exiting main loop".format(self.trigger))
-
-            if self.desiredState() == Consumer.State.Dead:
-                logging.info('[{}] Permanently killing consumer because desired state is Dead'.format(self.trigger))
-                self.database.deleteTrigger(self.trigger)
-            elif self.desiredState() == Consumer.State.Restart:
-                logging.info('[{}] Quietly letting the consumer thread stop in order to allow restart.'.format(self.trigger))
-                # nothing else to do because this Thread is about to go away
-            else:
-                # uh-oh... this really shouldn't happen
-                logging.error('[{}] Consumer stopped without being asked'.format(self.trigger))
         except Exception as e:
             logging.error('[{}] Uncaught exception: {}'.format(self.trigger, e))
+
+        if self.desiredState() == Consumer.State.Dead:
+            logging.info('[{}] Permanently killing consumer because desired state is Dead'.format(self.trigger))
+            self.database.deleteTrigger(self.trigger)
+        elif self.desiredState() == Consumer.State.Restart:
+            logging.info('[{}] Quietly letting the consumer thread stop in order to allow restart.'.format(self.trigger))
+            # nothing else to do because this Thread is about to go away
+        else:
+            # uh-oh... this really shouldn't happen
+            logging.error('[{}] Consumer stopped without being asked'.format(self.trigger))
 
         try:
             if self.consumer is not None:
@@ -336,8 +336,8 @@ class ConsumerThread (Thread):
 
     def shutdown(self):
         logging.info("[{}] Shutting down consumer for trigger".format(self.trigger))
+        self.__recordState(Consumer.State.Stopping)
         self.setDesiredState(Consumer.State.Dead)
-        self.database.deleteTrigger(self.trigger)
 
     def __parseMessageIfNeeded(self, value):
         if self.parseAsJson:
