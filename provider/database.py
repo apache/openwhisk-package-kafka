@@ -18,6 +18,7 @@ import uuid
 
 from cloudant import Cloudant
 from cloudant.result import Result
+from threading import Lock
 
 class Database:
     db_prefix = os.getenv('DB_PREFIX', '')
@@ -25,6 +26,7 @@ class Database:
     username = os.environ['CLOUDANT_USER']
     password = os.environ['CLOUDANT_PASS']
 
+    lock = Lock()
     client = Cloudant(username, password, account=username)
     client.connect()
 
@@ -36,23 +38,25 @@ class Database:
         database = client.create_database(dbname)
 
     def recordTrigger(self, triggerFQN, doc):
-        document = dict(doc)
-        document['_id'] = triggerFQN
+        with self.lock:
+            document = dict(doc)
+            document['_id'] = triggerFQN
 
-        logging.info('Writing trigger {} to DB'.format(triggerFQN))
-        result = self.database.create_document(document)
-        logging.info('Successfully wrote trigger {} to DB'.format(triggerFQN))
+            logging.info('Writing trigger {} to DB'.format(triggerFQN))
+            result = self.database.create_document(document)
+            logging.info('Successfully wrote trigger {} to DB'.format(triggerFQN))
 
         return result
 
     def deleteTrigger(self, triggerFQN):
-        document = self.database[triggerFQN]
-        if document.exists():
-            logging.info('Found trigger to delete from DB: {}'.format(triggerFQN))
-            document.delete()
-            logging.info('Successfully deleted trigger from DB: {}'.format(triggerFQN))
-        else:
-            logging.warn('Attempted to delete non-existent trigger from DB: {}'.format(triggerFQN))
+        with self.lock:
+            document = self.database[triggerFQN]
+            if document.exists():
+                logging.info('Found trigger to delete from DB: {}'.format(triggerFQN))
+                document.delete()
+                logging.info('Successfully deleted trigger from DB: {}'.format(triggerFQN))
+            else:
+                logging.warn('Attempted to delete non-existent trigger from DB: {}'.format(triggerFQN))
 
     def triggers(self):
         allDocs = []
