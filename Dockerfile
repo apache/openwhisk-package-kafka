@@ -10,7 +10,8 @@ RUN apt-get install -y \
     make \
     zlib1g-dev \
     libsasl2-dev \
-    libsasl2-modules
+    libsasl2-modules \
+    psmisc
 
 # install librdkafka
 RUN git clone --depth 1 --branch v0.9.2 https://github.com/edenhill/librdkafka.git librdkafka \
@@ -33,5 +34,11 @@ ENV GENERIC_KAFKA True
 
 RUN mkdir -p /KafkaFeedProvider
 ADD provider/*.py /KafkaFeedProvider/
+
+# Automatically curl the health endpoint every 5 minutes.
+# If the endpoint doesn't respond within 30 seconds, kill the main python process.
+# As of docker 1.12, a failed healthcheck never results in the container being
+# restarted. Killing the main process is a way to make the restart policy kicks in.
+HEALTHCHECK --interval=5m CMD curl -m 30 --fail http://localhost:5000/health || killall python
 
 CMD ["/bin/bash", "-c", "cd KafkaFeedProvider && python -u app.py"]
