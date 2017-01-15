@@ -211,10 +211,11 @@ class ConsumerThread (Thread):
                 logging.debug('[{}] Closing KafkaConsumer'.format(self.trigger))
                 self.consumer.unsubscribe()
                 self.consumer.close()
-                logging.debug('[{}] Successfully closed KafkaConsumer'.format(self.trigger))
+                logging.info('[{}] Successfully closed KafkaConsumer'.format(self.trigger))
 
                 logging.debug('[{}] Dellocating KafkaConsumer'.format(self.trigger))
                 self.consumer = None
+                logging.info('[{}] Successfully cleaned up consumer'.format(self.trigger))
         except Exception as e:
             logging.error('[{}] Uncaught exception while shutting down consumer: {}'.format(self.trigger, e))
         finally:
@@ -253,6 +254,7 @@ class ConsumerThread (Thread):
                 message = self.consumer.poll(1.0)
 
                 if self.secondsSinceLastPoll() < 0:
+                    logging.info('[{}] Completed first poll'.format(self.trigger))
                     self.__recordState(Consumer.State.Running)
 
                 if (message is not None):
@@ -330,7 +332,7 @@ class ConsumerThread (Thread):
                             self.trigger, self.retry_timeout))
                         time.sleep(self.retry_timeout)
                     else:
-                        logging.warn("[{}] Skipping {} messages to offset {} of partition {}".format(self.trigger, len(messages), lastMessage.offset, lastMessage.partition))
+                        logging.warn("[{}] Skipping {} messages to offset {} of partition {}".format(self.trigger, len(messages), lastMessage.offset(), lastMessage.partition()))
                         self.consumer.commit()
                         retry = False
 
