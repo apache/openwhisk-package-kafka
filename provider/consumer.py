@@ -313,6 +313,7 @@ class ConsumerThread (Thread):
                     # service was unavailable (503), an internal server error occurred (500), the request timed out
                     # (408), or the request was throttled (429).
                     if status_code == 200:
+                        logging.info("[{}] Fired trigger with activation {}".format(self.trigger, response.json()['activationId']))
                         self.consumer.commit()
                         retry = False
                     elif status_code not in [503, 500, 408, 429]:
