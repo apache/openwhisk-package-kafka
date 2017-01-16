@@ -50,13 +50,18 @@ class Database:
 
     def deleteTrigger(self, triggerFQN):
         with self.lock:
-            document = self.database[triggerFQN]
-            if document.exists():
-                logging.info('Found trigger to delete from DB: {}'.format(triggerFQN))
-                document.delete()
-                logging.info('Successfully deleted trigger from DB: {}'.format(triggerFQN))
-            else:
-                logging.warn('Attempted to delete non-existent trigger from DB: {}'.format(triggerFQN))
+            try:
+                document = self.database[triggerFQN]
+
+                if document.exists():
+                    logging.info('Found trigger to delete from DB: {}'.format(triggerFQN))
+                    document.delete()
+                    logging.info('Successfully deleted trigger from DB: {}'.format(triggerFQN))
+                else:
+                    logging.warn('Attempted to delete non-existent trigger from DB: {}'.format(triggerFQN))
+            except Exception as e:
+                logging.error('[{}] Uncaught exception while deleting trigger from database: {}'.format(triggerFQN, e))
+
 
     def triggers(self):
         allDocs = []
