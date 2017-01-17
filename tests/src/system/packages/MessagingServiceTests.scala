@@ -43,6 +43,12 @@ class MessagingServiceTests
     response.body.asString.parseJson.asJsObject shouldBe expectedResult
   }
 
+  def makeDeleteCallWithExpectedResult(url: String, expectedResult: JsObject, expectedCode: Int) = {
+    val response = RestAssured.given().delete(url)
+    assert(response.statusCode() == expectedCode)
+    response.body.asString.parseJson.asJsObject shouldBe expectedResult
+  }
+
   behavior of "Messaging feed provider endpoint"
 
   it should "return status code HTTP 200 OK from /health endpoint" in {
@@ -199,4 +205,47 @@ class MessagingServiceTests
     makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 401)
   }
 
+  it should "reject delete of a trigger that does not exist" in {
+    val expectedJSON = JsObject(
+      "error" -> JsString("not found")
+    )
+
+    makeDeleteCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", expectedJSON, 404)
+  }
+
+  it should "reject post of a trigger when OpenWhisk host and port fails" in {
+    val address = "0.0.0.0.0.0:9999"
+    val params = JsObject(
+      "brokers" -> JsArray(JsString("someBroker")),
+      "username" -> JsString("someUsername"),
+      "password" -> JsString("somePassword"),
+      "topic" -> JsString("someTopic"),
+      "triggerURL" -> JsString(s"https://someKey@$address/api/v1/namespaces/invalidNamespace/triggers/invalidTrigger"),
+      "isMessageHub" -> JsBoolean(true)
+    )
+    val expectedJSON = JsObject(
+      "error" -> JsString(s"failed to communicate with OpenWhisk server ($address) for authentication."),
+      "success" -> JsBoolean(false)
+    )
+
+    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 500)
+  }
+
+  it should "reject post of a trigger when OpenWhisk host fails" in {
+    val address = "0.0.0.0.0.0"
+    val params = JsObject(
+      "brokers" -> JsArray(JsString("someBroker")),
+      "username" -> JsString("someUsername"),
+      "password" -> JsString("somePassword"),
+      "topic" -> JsString("someTopic"),
+      "triggerURL" -> JsString(s"https://someKey@$address/api/v1/namespaces/invalidNamespace/triggers/invalidTrigger"),
+      "isMessageHub" -> JsBoolean(true)
+    )
+    val expectedJSON = JsObject(
+      "error" -> JsString(s"failed to communicate with OpenWhisk server ($address) for authentication."),
+      "success" -> JsBoolean(false)
+    )
+
+    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 500)
+  }
 }
