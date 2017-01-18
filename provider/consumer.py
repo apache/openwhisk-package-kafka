@@ -338,9 +338,12 @@ class ConsumerThread (Thread):
                         retry = False
 
     def shutdown(self):
-        logging.info("[{}] Shutting down consumer for trigger".format(self.trigger))
-        self.__recordState(Consumer.State.Stopping)
-        self.setDesiredState(Consumer.State.Dead)
+        if self.currentState() != Consumer.State.Stopping and self.currentState() != Consumer.State.Dead:
+            logging.info("[{}] Shutting down consumer for trigger".format(self.trigger))
+            self.__recordState(Consumer.State.Stopping)
+            self.setDesiredState(Consumer.State.Dead)
+        else:
+            logging.info("[{}] Ignoring request to shutdown consumer for trigger as it is already shutting down".format(self.trigger))
 
     def __parseMessageIfNeeded(self, value):
         if self.parseAsJson:
