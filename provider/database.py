@@ -39,14 +39,18 @@ class Database:
 
     def recordTrigger(self, triggerFQN, doc):
         with self.lock:
-            document = dict(doc)
-            document['_id'] = triggerFQN
+            try:
+                document = dict(doc)
+                document['_id'] = triggerFQN
 
-            logging.info('Writing trigger {} to DB'.format(triggerFQN))
-            result = self.database.create_document(document)
-            logging.info('Successfully wrote trigger {} to DB'.format(triggerFQN))
+                logging.info('Writing trigger {} to DB'.format(triggerFQN))
+                result = self.database.create_document(document)
+                logging.info('Successfully wrote trigger {} to DB'.format(triggerFQN))
 
-        return result
+                return result
+            except Exception as e:
+                logging.error('[{}] Uncaught exception while recording trigger to database: {}'.format(triggerFQN, e))
+
 
     def deleteTrigger(self, triggerFQN):
         with self.lock:
