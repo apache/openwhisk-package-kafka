@@ -127,10 +127,12 @@ class MessagingFeedTests
             // It takes a moment for the consumer to fully initialize. We choose 2 seconds
             // as a temporary length of time to wait for.
             Thread.sleep(2000)
+
             val producer = new KafkaProducer[String, String](props)
             val record = new ProducerRecord(topic, "key", currentTime)
             producer.send(record)
             producer.close()
+
             val activations = wsk.activation.pollFor(N = 2, Some(triggerName), retries = 30)
             var triggerFired = false
             assert(activations.length > 0)

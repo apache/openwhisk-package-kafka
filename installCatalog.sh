@@ -56,3 +56,14 @@ $WSK_CLI -i --apihost "$EDGEHOST" action update messaging/messageHubFeed "$PACKA
     -a description 'Feed to list to Message Hub messages' \
     -a parameters '[ {"name":"kafka_brokers_sasl", "required":true, "description": "Array of Message Hub brokers"},{"name":"user", "required":true, "description": "Message Hub username"},{"name":"password", "required":true, "description": "Message Hub password", "type":"password"},{"name":"topic", "required":true, "description": "Topic to subscribe to"},{"name":"isJSONData", "required":false, "description": "Attempt to parse message content as JSON"},{"name":"endpoint", "required":true, "description": "Hostname and port of OpenWhisk deployment"},{"name":"kafka_admin_url", "required":true, "description": "Your Message Hub admin REST URL"}]' \
     -a sampleInput '{"kafka_brokers_sasl":"[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\"]", "username":"someUsername", "password":"somePassword", "topic":"mytopic", "isJSONData": "false", "endpoint":"openwhisk.ng.bluemix.net", "kafka_admin_url":"https://kafka-admin-prod01.messagehub.services.us-south.bluemix.net:443"}'
+
+echo Packaging MessageHubProduce action zip
+
+action_zip="mh_produce.zip"
+cd $PACKAGE_HOME/action
+cp MessageHubProduce/package.json .
+zip -r $action_zip lib MessageHubProduce package.json
+cd $PACKAGE_HOME
+
+$WSK_CLI -i --apihost "$EDGEHOST" action update messaging/messageHubProduce --kind nodejs:6 "$PACKAGE_HOME/action/$action_zip" \
+    --auth "$AUTH" \

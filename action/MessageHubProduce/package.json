@@ -1,0 +1,4 @@
+{
+  "name": "messageHubProduce",
+  "main": "MessageHubProduce/postMessageHub.js"
+}
