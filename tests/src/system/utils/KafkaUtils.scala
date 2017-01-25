@@ -80,16 +80,14 @@ object KafkaUtils {
         val keySerializer = ("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         val valueSerializer = ("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 
+        // swizzle the JsonArray into List[String]
         var brokerList = new ListBuffer[String]()
         val jsonArray = credentials.get("kafka_brokers_sasl").getAsJsonArray()
-        // println(jsonArray)
         val brokerIterator = jsonArray.iterator()
         while(brokerIterator.hasNext()) {
             val current = brokerIterator.next().getAsString
-            // println(current)
             brokerList += current
         }
-        println(brokerList)
         val brokers = ("brokers", brokerList.toList)
 
         System.setProperty("java.security.auth.login.config", "")

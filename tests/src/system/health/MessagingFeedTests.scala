@@ -21,7 +21,6 @@ import system.utils.KafkaUtils
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.runner.RunWith
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FlatSpec
@@ -55,6 +54,7 @@ class MessagingFeedTests
 
     val messagingPackage = "/whisk.system/messaging"
     val messageHubFeed = "messageHubFeed"
+    val messageHubProduce = "messageHubProduce"
 
     val kafkaUtils = new KafkaUtils
 
@@ -85,10 +85,14 @@ class MessagingFeedTests
             // as a temporary length of time to wait for.
             Thread.sleep(2000)
 
-            val producer = kafkaUtils.createProducer()
-            val record = new ProducerRecord(topic, "key", currentTime)
-            producer.send(record)
-            producer.close()
+            withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
+                "user" -> kafkaUtils("user").asInstanceOf[String].toJson,
+                "password" -> kafkaUtils("password").asInstanceOf[String].toJson,
+                "kafka_brokers_sasl" -> kafkaUtils("brokers").asInstanceOf[List[String]].toJson,
+                "topic" -> topic.toJson,
+                "value" -> currentTime.toJson))) {
+                    _.response.success shouldBe true
+                }
 
             val activations = wsk.activation.pollFor(N = 2, Some(triggerName), retries = 30)
             var triggerFired = false
