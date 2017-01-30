@@ -47,3 +47,14 @@ $WSK_CLI -i --apihost "$EDGEHOST" action update messaging/kafkaFeed "$PACKAGE_HO
     -a description 'Feed to listen to Kafka messages' \
     -a parameters '[ {"name":"brokers", "required":true, "description": "Array of Kafka brokers"}, {"name":"topic", "required":true, "description": "Topic to subscribe to"}, {"name":"isJSONData", "required":false, "description": "Attempt to parse message content as JSON"}, {"name":"endpoint", "required":true, "description": "Hostname and port of OpenWhisk deployment"}]' \
     -a sampleInput '{"brokers":"[\"127.0.0.1:9093\"]", "topic":"mytopic", "isJSONData":"false", "endpoint": "openwhisk.ng.bluemix.net"}'
+
+echo Packaging KafkaProduce action zip
+
+action_zip="kafka_produce.zip"
+cd $PACKAGE_HOME/action
+cp KafkaProduce/package.json .
+zip -r $action_zip lib KafkaProduce package.json
+cd $PACKAGE_HOME
+
+$WSK_CLI -i --apihost "$EDGEHOST" action update messaging/kafkaProduce --kind nodejs:6 "$PACKAGE_HOME/action/$action_zip" \
+    --auth "$AUTH" \

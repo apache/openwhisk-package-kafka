@@ -1,0 +1,4 @@
+{
+  "name": "kafkaProduce",
+  "main": "KafkaProduce/postKafka.js"
+}
