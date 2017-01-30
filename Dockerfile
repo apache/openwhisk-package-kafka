@@ -39,6 +39,6 @@ ADD provider/*.py /KafkaFeedProvider/
 # If the endpoint doesn't respond within 30 seconds, kill the main python process.
 # As of docker 1.12, a failed healthcheck never results in the container being
 # restarted. Killing the main process is a way to make the restart policy kicks in.
-HEALTHCHECK --interval=5m CMD curl -m 30 --fail http://localhost:5000/health || killall python
+HEALTHCHECK --interval=5m --timeout=1m CMD curl -m 30 --fail http://localhost:5000/health || killall python
 
 CMD ["/bin/bash", "-c", "cd KafkaFeedProvider && python -u app.py"]
