@@ -34,6 +34,8 @@ import common.WskActorSystem
 import common.WskProps
 import common.WskTestHelpers
 import spray.json.DefaultJsonProtocol._
+import spray.json.JsArray
+import spray.json.JsObject
 import spray.json.pimpAny
 
 @RunWith(classOf[JUnitRunner])
@@ -58,9 +60,9 @@ class MessagingFeedTests
 
     val kafkaUtils = new KafkaUtils
 
-    behavior of "Message Hub"
+    behavior of "Message Hub feed"
 
-    it should "fire a trigger when a message is posted to the message hub" in withAssetCleaner(wskprops) {
+    it should "fire a trigger when a message is posted to message hub" in withAssetCleaner(wskprops) {
         val currentTime = s"${System.currentTimeMillis}"
 
         (wp, assetHelper) =>
@@ -85,28 +87,47 @@ class MessagingFeedTests
             // as a temporary length of time to wait for.
             Thread.sleep(2000)
 
+            // key to use for the produced message
+            val key = "TheKey"
+
             withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
                 "user" -> kafkaUtils("user").asInstanceOf[String].toJson,
                 "password" -> kafkaUtils("password").asInstanceOf[String].toJson,
                 "kafka_brokers_sasl" -> kafkaUtils("brokers").asInstanceOf[List[String]].toJson,
                 "topic" -> topic.toJson,
+                "key" -> key.toJson,
                 "value" -> currentTime.toJson))) {
                     _.response.success shouldBe true
                 }
 
+            println("Polling for activations")
             val activations = wsk.activation.pollFor(N = 2, Some(triggerName), retries = 30)
-            var triggerFired = false
             assert(activations.length > 0)
 
-            for (id <- activations) {
-                val activation = wsk.activation.waitForActivation(id)
-                if (activation.isRight) {
-                    // Check if the trigger is fired with the specific message, which is the current time
-                    // generated.
-                    if (activation.right.get.fields.get("response").toString.contains(currentTime))
-                        triggerFired = true
-                }
-            }
-            assert(triggerFired == true)
+            val matchingActivations = for {
+                id <- activations
+                activation = wsk.activation.waitForActivation(id)
+                if (activation.isRight && activation.right.get.fields.get("response").toString.contains(currentTime))
+            } yield activation.right.get
+
+            assert(matchingActivations.length == 1)
+
+            val activation = matchingActivations.head
+            activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
+
+            // assert that there exists a message in the activation which has the expected keys and values
+            val messages = messagesInActivation(activation, withMessageValue = currentTime)
+            assert(messages.length == 1)
+
+            val message = messages.head
+            message.getFieldPath("topic") shouldBe Some(topic.toJson)
+            message.getFieldPath("key") shouldBe Some(key.toJson)
+    }
+
+    def messagesInActivation(activation : JsObject, withMessageValue: String) : Array[JsObject] = {
+        val messages = activation.getFieldPath("response", "result", "messages").getOrElse(JsArray.empty).convertTo[Array[JsObject]]
+        messages.filter {
+            _.getFieldPath("value") == Some(withMessageValue.toJson)
+        }
     }
 }
