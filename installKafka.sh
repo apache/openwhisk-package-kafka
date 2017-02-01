@@ -51,6 +51,11 @@ $WSK_CLI -i --apihost "$EDGEHOST" action update messaging/kafkaFeed "$PACKAGE_HO
 echo Packaging KafkaProduce action zip
 
 action_zip="kafka_produce.zip"
+if [[ -f $action_zip ]]
+then
+    rm $action_zip
+fi
+
 cd $PACKAGE_HOME/action
 cp KafkaProduce/package.json .
 zip -r $action_zip lib KafkaProduce package.json

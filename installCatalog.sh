@@ -60,6 +60,11 @@ $WSK_CLI -i --apihost "$EDGEHOST" action update messaging/messageHubFeed "$PACKA
 echo Packaging MessageHubProduce action zip
 
 action_zip="mh_produce.zip"
+if [[ -f $action_zip ]]
+then
+    rm $action_zip
+fi
+
 cd $PACKAGE_HOME/action
 cp MessageHubProduce/package.json .
 zip -r $action_zip lib MessageHubProduce package.json
