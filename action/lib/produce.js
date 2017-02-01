@@ -24,12 +24,11 @@ function produceMessage(args, producerConfig) {
 
             var value = new Buffer(args.value);
 
-            var key = args.key;
             // if partition is set to -1, librdkafka will use the default partitioner
             var partition = args.partition ? args.partition : -1;
 
             console.log('Calling produce ' + args.topic + ' ' + value);
-            producer.produce(topic, partition, value, key);
+            producer.produce(topic, partition, value, args.key);
 
             //need to keep polling for a while to ensure the delivery reports are received
             var pollLoop = setInterval(function () {
