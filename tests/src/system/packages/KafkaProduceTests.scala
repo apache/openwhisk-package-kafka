@@ -62,7 +62,7 @@ class KafkaProduceTests
     def testMissingParameter(missingParam : String) = {
         var fullParamsMap = Map(
             "topic" -> topic.toJson,
-            "brokers" -> kafkaUtils("brokers").asInstanceOf[List[String]].toJson,
+            "brokers" -> kafkaUtils.getAsJson("brokers"),
             "value" -> "This will fail".toJson)
         var missingParamsMap = fullParamsMap.filterKeys(_ != missingParam)
 

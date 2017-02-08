@@ -59,10 +59,10 @@ class MessageHubProduceTests
 
     // these parameter values are 100% valid and should work as-is
     val validParameters = Map(
-        "user" -> kafkaUtils("user").asInstanceOf[String].toJson,
-        "password" -> kafkaUtils("password").asInstanceOf[String].toJson,
+        "user" -> kafkaUtils.getAsJson("user"),
+        "password" -> kafkaUtils.getAsJson("password"),
         "topic" -> topic.toJson,
-        "kafka_brokers_sasl" -> kafkaUtils("brokers").asInstanceOf[List[String]].toJson,
+        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
         "value" -> "Big Trouble is actually a really good Tim Allen movie. Seriously.".toJson)
 
     behavior of "Message Hub Produce action"

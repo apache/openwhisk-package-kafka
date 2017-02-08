@@ -27,6 +27,9 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 
 import scala.collection.mutable.ListBuffer
 
+import spray.json.DefaultJsonProtocol._
+import spray.json.pimpAny
+
 
 class KafkaUtils {
     lazy val messageHubProps = KafkaUtils.initializeMessageHub()
@@ -38,6 +41,13 @@ class KafkaUtils {
 
     def apply(key : String) = {
         this.messageHubProps.getOrElse(key, "")
+    }
+
+    def getAsJson(key : String) = {
+        key match {
+            case key if key == "brokers" => this(key).asInstanceOf[List[String]].toJson
+            case key => this(key).asInstanceOf[String].toJson
+        }
     }
 }
 

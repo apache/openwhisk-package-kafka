@@ -70,11 +70,11 @@ class MessagingFeedTests
             val feedCreationResult = assetHelper.withCleaner(wsk.trigger, triggerName) {
                 (trigger, _) =>
                     trigger.create(triggerName, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = Map(
-                        "user" -> kafkaUtils("user").asInstanceOf[String].toJson,
-                        "password" -> kafkaUtils("password").asInstanceOf[String].toJson,
-                        "api_key" -> kafkaUtils("api_key").asInstanceOf[String].toJson,
-                        "kafka_admin_url" -> kafkaUtils("kafka_admin_url").asInstanceOf[String].toJson,
-                        "kafka_brokers_sasl" -> kafkaUtils("brokers").asInstanceOf[List[String]].toJson,
+                        "user" -> kafkaUtils.getAsJson("user"),
+                        "password" -> kafkaUtils.getAsJson("password"),
+                        "api_key" -> kafkaUtils.getAsJson("api_key"),
+                        "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
+                        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
                         "topic" -> topic.toJson))
             }
 
@@ -92,9 +92,9 @@ class MessagingFeedTests
             val key = "TheKey"
 
             withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
-                "user" -> kafkaUtils("user").asInstanceOf[String].toJson,
-                "password" -> kafkaUtils("password").asInstanceOf[String].toJson,
-                "kafka_brokers_sasl" -> kafkaUtils("brokers").asInstanceOf[List[String]].toJson,
+                "user" -> kafkaUtils.getAsJson("user"),
+                "password" -> kafkaUtils.getAsJson("password"),
+                "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
                 "topic" -> topic.toJson,
                 "key" -> key.toJson,
                 "value" -> currentTime.toJson))) {
