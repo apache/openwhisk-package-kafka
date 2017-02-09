@@ -131,6 +131,11 @@ class ConsumerThread (Thread):
         else:
             self.parseAsJson = False
 
+        if "isBinaryData" in params:
+            self.parseAsBinary = params["isBinaryData"]
+        else:
+            self.parseAsBinary = False
+
         # always init consumer to None in case the consumer needs to shut down
         # before the KafkaConsumer is fully initialized/assigned
         self.consumer = None
@@ -349,13 +354,19 @@ class ConsumerThread (Thread):
         if self.parseAsJson:
             try:
                 parsed = json.loads(value)
-                logging.debug(
-                    '[{}] Successfully parsed a message as JSON.'.format(self.trigger))
+                logging.debug('[{}] Successfully parsed a message as JSON.'.format(self.trigger))
                 return parsed
             except ValueError:
                 # no big deal, just return the original value
-                logging.warn(
-                    '[{}] I was asked to parse a message as JSON, but I failed.'.format(self.trigger))
+                logging.warn('[{}] I was asked to parse a message as JSON, but I failed.'.format(self.trigger))
+                pass
+        elif self.parseAsBinary:
+            try:
+                parsed = value.encode("base64").strip()
+                logging.debug('[{}] Successfully encoded a binary message.'.format(self.trigger))
+                return parsed
+            except:
+                logging.warn('[{}] Unable to encode a binary message.'.format(self.trigger))
                 pass
 
         logging.debug('[{}] Returning un-parsed message'.format(self.trigger))

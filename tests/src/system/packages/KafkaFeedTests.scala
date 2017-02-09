@@ -81,4 +81,11 @@ class KafkaFeedTests
     runActionWithExpectedResult(actionName, "dat/missingPackageEndpoint.json", expectedOutput, false)
   }
 
+  it should "reject invocation when isJSONData and isBinaryData are both enable" in {
+    val expectedOutput = JsObject(
+      "error" -> JsString("isJSONData and isBinaryData cannot both be enabled.")
+    )
+
+    runActionWithExpectedResult(actionName, "dat/multipleValueTypes.json", expectedOutput, false)
+  }
 }

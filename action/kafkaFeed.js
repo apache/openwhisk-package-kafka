@@ -5,6 +5,7 @@ var request = require('request');
  *  @param {string} brokers - array of Kafka brokers
  *  @param {string} topic - topic to subscribe to
  *  @param {bool}   isJSONData - attempt to parse messages as JSON
+ *  @param {bool}   isBinaryData - attempt to encode message as Base64
  *  @param {string} endpoint - address to OpenWhisk deployment
  */
 function main(params) {
@@ -104,6 +105,12 @@ function validateParameters(rawParams) {
 
         validatedParams.isMessageHub = false;
         validatedParams.isJSONData = (typeof rawParams.isJSONData !== 'undefined' && rawParams.isJSONData && (rawParams.isJSONData === true || rawParams.isJSONData.toString().trim().toLowerCase() === 'true'));
+        validatedParams.isBinaryData = (typeof rawParams.isBinaryData !== 'undefined' && rawParams.isBinaryData && (rawParams.isBinaryData === true || rawParams.isBinaryData.toString().trim().toLowerCase() === 'true'));
+
+        if (validatedParams.isJSONData && validatedParams.isBinaryData) {
+            reject('isJSONData and isBinaryData cannot both be enabled.');
+            return;
+        }
 
         if (rawParams.topic && rawParams.topic.length > 0) {
             validatedParams.topic = rawParams.topic;
