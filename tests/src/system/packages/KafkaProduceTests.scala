@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package system.health
+package system.packages
 
 import system.utils.KafkaUtils
 
