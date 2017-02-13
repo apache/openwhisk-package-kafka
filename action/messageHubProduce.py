@@ -27,7 +27,12 @@ def main(params):
 
         print "Created producer"
 
-        producer.send(params['topic'], bytes(params['value']), key=bytes(params['key']))
+        # only use the key parameter if it is present
+        if 'key' in params:
+            producer.send(params['topic'], bytes(params['value']), key=bytes(params['key']))
+        else:
+            producer.send(params['topic'], bytes(params['value'])
+
         producer.flush()
 
         print  "Sent message"
