@@ -31,7 +31,7 @@ def main(params):
         if 'key' in params:
             producer.send(params['topic'], bytes(params['value']), key=bytes(params['key']))
         else:
-            producer.send(params['topic'], bytes(params['value'])
+            producer.send(params['topic'], bytes(params['value']))
 
         producer.flush()
 
