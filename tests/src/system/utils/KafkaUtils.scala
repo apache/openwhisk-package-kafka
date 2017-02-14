@@ -18,13 +18,6 @@ package system.utils
 
 import common.TestUtils
 
-import java.util.HashMap
-import java.util.Properties
-import javax.security.auth.login.Configuration
-import javax.security.auth.login.AppConfigurationEntry
-
-import org.apache.kafka.clients.producer.KafkaProducer;
-
 import scala.collection.mutable.ListBuffer
 
 import spray.json.DefaultJsonProtocol._
@@ -33,11 +26,6 @@ import spray.json.pimpAny
 
 class KafkaUtils {
     lazy val messageHubProps = KafkaUtils.initializeMessageHub()
-
-    def createProducer() : KafkaProducer[String, String] = {
-        // currently only supporting MH
-        new KafkaProducer[String, String](KafkaUtils.asKafkaProducerProps(this.messageHubProps))
-    }
 
     def apply(key : String) = {
         this.messageHubProps.getOrElse(key, "")
@@ -52,31 +40,6 @@ class KafkaUtils {
 }
 
 object KafkaUtils {
-    def asKafkaProducerProps(props : Map[String,Object]) : Properties = {
-        val requiredKeys = List("brokers",
-                                "user",
-                                "password",
-                                "key.serializer",
-                                "value.serializer",
-                                "security.protocol")
-
-        val propertyMap = props.filterKeys(
-            requiredKeys.contains(_)
-        ).map(
-            tuple =>
-                tuple match {
-                    // transform "brokers" key to "bootstrap.servers"
-                    case (k, v) if k == "brokers" => ("bootstrap.servers", v.asInstanceOf[List[String]].mkString(","))
-                    case _ => tuple
-                }
-        )
-
-        val kafkaProducerProps = new Properties()
-        for ((k, v) <- propertyMap) kafkaProducerProps.put(k, v)
-
-        kafkaProducerProps
-    }
-
     private def initializeMessageHub() = {
         // get the vcap stuff
         var credentials = TestUtils.getCredentials("message_hub")
@@ -100,23 +63,6 @@ object KafkaUtils {
 
         val brokers = ("brokers", brokerList.toList)
 
-        System.setProperty("java.security.auth.login.config", "")
-        setMessageHubSecurityConfiguration(user._2, password._2)
-
         Map(user, password, kafka_admin_url, api_key, brokers, security_protocol, keySerializer, valueSerializer)
-    }
-
-    private def setMessageHubSecurityConfiguration(user: String, password: String) = {
-        val map = new HashMap[String, String]()
-        map.put("serviceName", "kafka")
-        map.put("username", user)
-        map.put("password", password)
-        Configuration.setConfiguration(new Configuration()
-        {
-            def getAppConfigurationEntry(name: String): Array[AppConfigurationEntry] = Array(
-    	          new AppConfigurationEntry (
-    	              "com.ibm.messagehub.login.MessageHubLoginModule",
-     			          AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, map))
-        })
     }
 }
