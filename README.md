@@ -1,6 +1,6 @@
 This project is an OpenWhisk package that allows you to communicate with Kafka or IBM Message Hub instances.
 
-## Using the Message Hub package
+## Using the Messaging package
 This package allows you to create triggers that react when messages are posted to either an [IBM Message Hub](https://developer.ibm.com/messaging/message-hub/) instance, or to a generic Kafka instance. Since the parameters required for each of these situations are different, there are two separate feeds to handle them: `/messaging/messageHubFeed` and `messaging/kafkaFeed`.
 
 Additionally, two actions are included which allow you to produce messages to either Message Hub, or generic Kafka instances. These are, `/messaging/messageHubProduce` and `/messaging/kafkaProduce`, respectively.
