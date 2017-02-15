@@ -9,7 +9,7 @@ This package allows you to create triggers that react when messages are posted t
 
 Additionally, two actions are included which allow you to produce messages to either Message Hub, or generic Kafka instances. These are `/messaging/messageHubProduce`, and `/messaging/kafkaProduce` respectively.
 
-### Creating a Trigger that Listens to an IBM MessageHub Instance
+### Creating a Trigger that listens to an IBM MessageHub instance
 In order to create a trigger that reacts when messages are posted to a Message Hub instance, you need to use the feed named `messageHubFeed`. This feed supports the following parameters:
 <!-- I removed the "messaging" from the feed name above because as you show below in the sample and I verified in the code - you do not put "messaging" in front of the feed name - instead you put credentials - see sample below -->
 
@@ -31,7 +31,7 @@ However, if you want to create the trigger manually, it would look something lik
 wsk trigger create MyMessageHubTrigger -f /whisk.system/messaging/messageHubFeed -p kafka_brokers_sasl "[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka02-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka03-prod01.messagehub.services.us-south.bluemix.net:9093\"]" -p topic mytopic -p user <your Message Hub user> -p password <your Message Hub password> -p kafka_admin_url https://kafka-admin-prod01.messagehub.services.us-south.bluemix.net:443 -p isJSONData true
 ```
 
-### Creating a Trigger that Listens to a Generic Kafka Instance
+### Creating a Trigger that listens to a Generic Kafka instance
 In order to create a trigger that reacts when messages are posted to an unauthenticated Kafka instance, you need to use the feed named `messaging/kafkaFeed`. This feed supports the following parameters:
 
 |Name|Type|Description|
@@ -93,7 +93,7 @@ However, if the same message content is posted with `isJSONData` set to `false`,
 }
 ```
 
-### Messages are Batched
+### Messages are batched
 You will notice that the trigger payload contains an array of messages. This means that if you are producing messages to your messaging system very quickly, the feed will attempt to batch up the posted messages into a single firing of your trigger. This allows the messages to be posted to your trigger more rapidly and efficiently.
 
 Please keep in mind when coding actions that are fired by your trigger, that the number of messages in the payload is technically unbounded, but will always be greater than 0. Here is an example of a batched message (please note the change in the *offset* value):
@@ -132,7 +132,7 @@ Please keep in mind when coding actions that are fired by your trigger, that the
  }
  ```
 
-### Producing Messages to Message Hub using system provided action
+### Producing messages to Message Hub
 If you would like to use an OpenWhisk action to conveniently produce a message to Message Hub, you can use the `/messaging/messageHubProduce` action. This action takes the following parameters:
 
 |Name|Type|Description|
@@ -150,7 +150,7 @@ While the first three parameters can be automatically bound by using `wsk packag
 wsk action invoke /messaging/messageHubProduce -p kafka_brokers_sasl "[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka02-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka03-prod01.messagehub.services.us-south.bluemix.net:9093\"]" -p topic mytopic -p user <your Message Hub user> -p password <your Message Hub password> -p value "This is the content of my message"
 ```
 
-### Producing Messages to a Generic Kafka Instance using system provided action
+### Producing messages to a generic Kafka instance
 If you would like to use an OpenWhisk action to conveniently produce a message to a generic Kafka instance, you can use the `/messaging/kafkaProduce` action. This action takes the following parameters:
 
 |Name|Type|Description|
@@ -166,17 +166,13 @@ Here is an example of invoking the action with all required parameters:
 wsk action invoke /messaging/kafkaProduce -p brokers "[\"mykafkahost:9092\", \"mykafkahost:9093\"]" -p topic mytopic -p value "This is the content of my message"
 ```
 
-### Producing Messages to a Message Hub or Generic Kafka Instance using DIY action
-Before the time when OpenWhisk had built-in action to publish messages to and from Message Hub and Kafka developers used to accomplish this functionality using custom built actions using any of the OpenWhisk supported programming languages. This is still possible today and if, for some reason you are not satisfied with OpenWhisk provided Message Hub and Kafka feed and publish action, you can still develop and use your own.
+## Examples
 
-While creating such action, you can use Message Hub and Kafka Native API or Confluence REST API for Kafka. It is transparent to OpenWhisk which you use, just like with any other 3rd party API or library you decide to utilize in your OpenWhisk action.
+### Producing messages to a Message Hub or generic Kafka instances using DIY action
+Before the time when OpenWhisk had built-in action to publish messages to and from Message Hub and Kafka developers used to accomplish this functionality using custom built actions using any of the OpenWhisk supported programming languages. This is still possible today and if, for some reason you are not satisfied with OpenWhisk provided Message Hub and Kafka feed and publish action, you can still develop and use your own. While creating such action, you can use Message Hub and Kafka Native API or Confluence REST API for Kafka. It is transparent to OpenWhisk which you use, just like with any other 3rd party API or library you decide to utilize in your OpenWhisk action. This [sample project](https://github.com/IBM/ogs-data-processing-messagehub) demonstrates the use of OpenWhisk for sending and receiving IBM Message Hub and Kafka messages. 
 
-<!-- TODO - this sample will soon be updated to use OpenWhisk system action for publishing into Kafka. For now it publishes using DIY action -->
-This [sample project](https://github.com/IBM/ogs-data-processing-messagehub) demonstrates the use of OpenWhisk for sending and receiving IBM Message Hub and Kafka messages. The architecture is shown on the diagram below:
- 
-![Sample Architecture](/images/OpenWhisk-MessageHub-sample-architecture.png)
- 
-More complete example that integrates OpenWhisk with IBM Message Hub, Node Red, IBM Watson IoT, IBM Object Storage, IBM Data Science Experience (Spark) service can be [found here](https://medium.com/openwhisk/transit-flexible-pipeline-for-iot-data-with-bluemix-and-openwhisk-4824cf20f1e0).
+### Integrating OpenWhisk with IBM Message Hub, Node Red, IBM Watson IoT, IBM Object Storage, and IBM Data Science Experience
+Example that integrates OpenWhisk with IBM Message Hub, Node Red, IBM Watson IoT, IBM Object Storage, IBM Data Science Experience (Spark) service can be [found here](https://medium.com/openwhisk/transit-flexible-pipeline-for-iot-data-with-bluemix-and-openwhisk-4824cf20f1e0).
  
 ## Testing
 An OpenWhisk deployment is required in order for the automated test suite to be executed. To run tests locally, run ```$ ./gradlew tests:test -Dhost=<container_address> -Dport=<docker_port>``` from the project's root directory. Where ```<docker_address>``` is the IP address of the service's docker container, and ```<docker_port>``` is the port the docker container is listening on. In addition, ```OPENWHISK_HOME``` must be set to the root of the local OpenWhisk directory. Ex: ```export OPENWHISK_HOME=<openwhisk_directory>```.
