@@ -7,7 +7,8 @@ var request = require('request');
  *  @param {string} password - Kafka password
  *  @param {string} topic - topic to subscribe to
  *  @param {bool}   isJSONData - attempt to parse messages as JSON
- *  @param {bool}   isBinaryData - attempt to encode message as Base64
+ *  @param {bool}   isBinaryKey - encode key as Base64
+ *  @param {bool}   isBinaryValue - encode message as Base64
  *  @param {string} endpoint - address to OpenWhisk deployment
  */
 function main(params) {
@@ -143,10 +144,11 @@ function validateParameters(rawParams) {
 
         validatedParams.isMessageHub = true;
         validatedParams.isJSONData = (typeof rawParams.isJSONData !== 'undefined' && rawParams.isJSONData && (rawParams.isJSONData === true || rawParams.isJSONData.toString().trim().toLowerCase() === 'true'));
-        validatedParams.isBinaryData = (typeof rawParams.isBinaryData !== 'undefined' && rawParams.isBinaryData && (rawParams.isBinaryData === true || rawParams.isJSONData.toString().trim().toLowerCase() === 'true'));
+        validatedParams.isBinaryValue = (typeof rawParams.isBinaryValue !== 'undefined' && rawParams.isBinaryValue && (rawParams.isBinaryValue === true || rawParams.isJSONData.toString().trim().toLowerCase() === 'true'));
+        validatedParams.isBinaryKey = (typeof rawParams.isBinaryKey !== 'undefined' && rawParams.isBinaryKey && (rawParams.isBinaryKey === true || rawParams.isBinaryKey.toString().trim().toLowerCase() === 'true'));
 
-        if (validatedParams.isJSONData && validatedParams.isBinaryData) {
-            reject('isJSONData and isBinaryData cannot both be enabled.');
+        if (validatedParams.isJSONData && validatedParams.isBinaryValue) {
+            reject('isJSONData and isBinaryValue cannot both be enabled.');
             return;
         }
 

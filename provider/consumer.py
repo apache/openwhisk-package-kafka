@@ -127,14 +127,19 @@ class ConsumerThread (Thread):
         # handle the case where there may be existing triggers that do not
         # have the isJSONData field set
         if "isJSONData" in params:
-            self.parseAsJson = params["isJSONData"]
+            self.encodeValueAsJSON = params["isJSONData"]
         else:
-            self.parseAsJson = False
+            self.encodeValueAsJSON = False
 
-        if "isBinaryData" in params:
-            self.parseAsBinary = params["isBinaryData"]
+        if "isBinaryValue" in params:
+            self.encodeValueAsBase64 = params["isBinaryValue"]
         else:
-            self.parseAsBinary = False
+            self.encodeValueAsBase64 = False
+
+        if "isBinaryKey" in params:
+            self.encodeKeyAsBase64 = params["isBinaryKey"]
+        else:
+            self.encodeKeyAsBase64 = False
 
         # always init consumer to None in case the consumer needs to shut down
         # before the KafkaConsumer is fully initialized/assigned
@@ -293,11 +298,11 @@ class ConsumerThread (Thread):
             mappedMessages = []
             for message in messages:
                 fieldsToSend = {
-                    'value': self.__parseMessageIfNeeded(message.value()),
+                    'value': self.__encodeMessageIfNeeded(message.value()),
                     'topic': message.topic(),
                     'partition': message.partition(),
                     'offset': message.offset(),
-                    'key': message.key()
+                    'key': self.__encodeKeyIfNeeded(message.key())
                 }
                 mappedMessages.append(fieldsToSend)
 
@@ -350,17 +355,17 @@ class ConsumerThread (Thread):
         else:
             logging.info("[{}] Ignoring request to shutdown consumer for trigger as it is already shutting down".format(self.trigger))
 
-    def __parseMessageIfNeeded(self, value):
-        if self.parseAsJson:
+    def __encodeMessageIfNeeded(self, value):
+        if self.encodeValueAsJSON:
             try:
                 parsed = json.loads(value)
-                logging.debug('[{}] Successfully parsed a message as JSON.'.format(self.trigger))
+                logging.debug('[{}] Successfully encoded a message as JSON.'.format(self.trigger))
                 return parsed
             except ValueError:
                 # no big deal, just return the original value
-                logging.warn('[{}] I was asked to parse a message as JSON, but I failed.'.format(self.trigger))
+                logging.warn('[{}] I was asked to encode a message as JSON, but I failed.'.format(self.trigger))
                 pass
-        elif self.parseAsBinary:
+        elif self.encodeValueAsBase64:
             try:
                 parsed = value.encode("base64").strip()
                 logging.debug('[{}] Successfully encoded a binary message.'.format(self.trigger))
@@ -369,5 +374,19 @@ class ConsumerThread (Thread):
                 logging.warn('[{}] Unable to encode a binary message.'.format(self.trigger))
                 pass
 
-        logging.debug('[{}] Returning un-parsed message'.format(self.trigger))
+        logging.debug('[{}] Returning un-encoded message'.format(self.trigger))
         return value
+
+    def __encodeKeyIfNeeded(self, key):
+        if self.encodeKeyAsBase64:
+            try:
+                parsed = key.encode("base64").strip()
+                logging.debug('[{}] Successfully encoded a binary key.'.format(self.trigger))
+                return parsed
+            except:
+                logging.warn('[{}] Unable to encode a binary key.'.format(self.trigger))
+                pass
+
+        logging.debug('[{}] Returning un-encoded message'.format(self.trigger))
+        return key
+

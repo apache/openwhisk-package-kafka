@@ -11,5 +11,5 @@
   "triggerName": "/_/someTrigger",
   "lifecycleEvent": "CREATE",
   "isJSONData": true,
-  "isBinaryData": true
+  "isBinaryValue": true
 }

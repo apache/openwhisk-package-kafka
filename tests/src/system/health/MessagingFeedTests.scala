@@ -142,7 +142,8 @@ class MessagingFeedTests
                         "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
                         "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
                         "topic" -> topic.toJson,
-                        "isBinaryData" -> JsBoolean(true)))
+                        "isBinaryKey" -> JsBoolean(true),
+                        "isBinaryValue" -> JsBoolean(true)))
             }
 
             withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
@@ -158,6 +159,7 @@ class MessagingFeedTests
             // key to use for the produced message
             val key = "TheKey"
             val encodedCurrentTime = new BASE64Encoder().encode(currentTime.getBytes("utf-8"))
+            val encodedKey = new BASE64Encoder().encode(key.getBytes("utf-8"))
 
             withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
                 "user" -> kafkaUtils.getAsJson("user"),
@@ -191,7 +193,7 @@ class MessagingFeedTests
 
             val message = messages.head
             message.getFieldPath("topic") shouldBe Some(topic.toJson)
-            message.getFieldPath("key") shouldBe Some(key.toJson)
+            message.getFieldPath("key") shouldBe Some(encodedKey.toJson)
     }
 
     def messagesInActivation(activation : JsObject, withMessageValue: String) : Array[JsObject] = {
