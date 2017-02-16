@@ -36,6 +36,9 @@ import common.WskTestHelpers
 import spray.json.DefaultJsonProtocol._
 import spray.json.pimpAny
 
+import java.util.Base64
+import java.nio.charset.StandardCharsets
+
 @RunWith(classOf[JUnitRunner])
 class MessageHubProduceTests
     extends FlatSpec
@@ -53,6 +56,7 @@ class MessageHubProduceTests
     val wsk = new Wsk()
 
     val messagingPackage = "/whisk.system/messaging"
+    val messageHubFeed = "messageHubFeed"
     val messageHubProduce = "messageHubProduce"
 
     val kafkaUtils = new KafkaUtils
@@ -115,5 +119,133 @@ class MessageHubProduceTests
                 activation.response.success shouldBe false
                 activation.response.result.get.toString should include("No brokers available")
         }
+    }
+
+    it should "Reject trying to decode a non-base64 key" in {
+        val badKeyParams = validParameters + ("key" -> "?".toJson) + ("base64DecodeKey" -> true.toJson)
+
+        withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", badKeyParams)) {
+            activation =>
+                activation.response.success shouldBe false
+                activation.response.result.get.toString should include("key parameter is not Base64 encoded")
+        }
+    }
+
+    it should "Reject trying to decode a non-base64 value" in {
+        val badValueParams = validParameters + ("value" -> "?".toJson) + ("base64DecodeValue" -> true.toJson)
+
+        withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", badValueParams)) {
+            activation =>
+                activation.response.success shouldBe false
+                activation.response.result.get.toString should include("value parameter is not Base64 encoded")
+        }
+    }
+
+    it should "Post a message with a binary value" in withAssetCleaner(wskprops) {
+        // create trigger
+        val currentTime = s"${System.currentTimeMillis}"
+
+        (wp, assetHelper) =>
+            val triggerName = s"/_/binaryValueTrigger-$currentTime"
+            val feedCreationResult = assetHelper.withCleaner(wsk.trigger, triggerName) {
+                (trigger, _) =>
+                    trigger.create(triggerName, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = Map(
+                        "user" -> kafkaUtils.getAsJson("user"),
+                        "password" -> kafkaUtils.getAsJson("password"),
+                        "api_key" -> kafkaUtils.getAsJson("api_key"),
+                        "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
+                        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+                        "topic" -> topic.toJson))
+            }
+
+            withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
+                activation =>
+                    // should be successful
+                    activation.response.success shouldBe true
+            }
+
+            // produce message
+            val decodedMessage = "This will be base64 encoded"
+            val encodedMessage = Base64.getEncoder.encodeToString(decodedMessage.getBytes(StandardCharsets.UTF_8))
+            val base64ValueParams = validParameters + ("base64DecodeValue" -> true.toJson) + ("value" -> encodedMessage.toJson)
+
+            withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", base64ValueParams)) {
+                activation =>
+                    activation.response.success shouldBe true
+            }
+
+            // verify trigger fired
+            println("Polling for activations")
+            val activations = wsk.activation.pollFor(N = 2, Some(triggerName), retries = 30)
+            assert(activations.length > 0)
+
+            val matchingActivations = for {
+                id <- activations
+                activation = wsk.activation.waitForActivation(id)
+                if (activation.isRight && activation.right.get.fields.get("response").toString.contains(decodedMessage))
+            } yield activation.right.get
+
+            assert(matchingActivations.length == 1)
+
+            val activation = matchingActivations.head
+            activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
+
+            // assert that there exists a message in the activation which has the expected keys and values
+            val messages = KafkaUtils.messagesInActivation(activation, field = "value", value = decodedMessage)
+            assert(messages.length == 1)
+    }
+
+    it should "Post a message with a binary key" in withAssetCleaner(wskprops) {
+        // create trigger
+        val currentTime = s"${System.currentTimeMillis}"
+
+        (wp, assetHelper) =>
+            val triggerName = s"/_/binaryKeyTrigger-$currentTime"
+            val feedCreationResult = assetHelper.withCleaner(wsk.trigger, triggerName) {
+                (trigger, _) =>
+                    trigger.create(triggerName, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = Map(
+                        "user" -> kafkaUtils.getAsJson("user"),
+                        "password" -> kafkaUtils.getAsJson("password"),
+                        "api_key" -> kafkaUtils.getAsJson("api_key"),
+                        "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
+                        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+                        "topic" -> topic.toJson))
+            }
+
+            withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
+                activation =>
+                    // should be successful
+                    activation.response.success shouldBe true
+            }
+
+            // produce message
+            val decodedKey = "This will be base64 encoded"
+            val encodedKey = Base64.getEncoder.encodeToString(decodedKey.getBytes(StandardCharsets.UTF_8))
+            val base64ValueParams = validParameters + ("base64DecodeKey" -> true.toJson) + ("key" -> encodedKey.toJson)
+
+            withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", base64ValueParams)) {
+                activation =>
+                    activation.response.success shouldBe true
+            }
+
+            // verify trigger fired
+            println("Polling for activations")
+            val activations = wsk.activation.pollFor(N = 2, Some(triggerName), retries = 30)
+            assert(activations.length > 0)
+
+            val matchingActivations = for {
+                id <- activations
+                activation = wsk.activation.waitForActivation(id)
+                if (activation.isRight && activation.right.get.fields.get("response").toString.contains(decodedKey))
+            } yield activation.right.get
+
+            assert(matchingActivations.length == 1)
+
+            val activation = matchingActivations.head
+            activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
+
+            // assert that there exists a message in the activation which has the expected keys and values
+            val messages = KafkaUtils.messagesInActivation(activation, field = "key", value = decodedKey)
+            assert(messages.length == 1)
     }
 }

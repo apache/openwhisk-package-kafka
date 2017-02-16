@@ -6,6 +6,8 @@ def main(params):
     validationResult = validateParams(params)
     if validationResult[0] != True:
         return {'error': validationResult[1]}
+    else:
+        validatedParams = validationResult[1]
 
     sasl_mechanism = 'PLAIN'
     security_protocol = 'SASL_SSL'
@@ -18,9 +20,9 @@ def main(params):
     try:
         producer = KafkaProducer(
             api_version_auto_timeout_ms=15000,
-            bootstrap_servers=params['kafka_brokers_sasl'],
-            sasl_plain_username=params['user'],
-            sasl_plain_password=params['password'],
+            bootstrap_servers=validatedParams['kafka_brokers_sasl'],
+            sasl_plain_username=validatedParams['user'],
+            sasl_plain_password=validatedParams['password'],
             security_protocol=security_protocol,
             ssl_context=context,
             sasl_mechanism=sasl_mechanism)
@@ -28,10 +30,11 @@ def main(params):
         print "Created producer"
 
         # only use the key parameter if it is present
-        if 'key' in params:
-            producer.send(params['topic'], bytes(params['value']), key=bytes(params['key']))
+        if 'key' in validatedParams:
+            messageKey = validatedParams['key']
+            producer.send(validatedParams['topic'], bytes(validatedParams['value']), key=bytes(messageKey))
         else:
-            producer.send(params['topic'], bytes(params['value']))
+            producer.send(validatedParams['topic'], bytes(validatedParams['value']))
 
         producer.flush()
 
@@ -45,6 +48,8 @@ def main(params):
     return {"success": True}
 
 def validateParams(params):
+    validatedParams = params.copy()
+
     requiredParams = ['kafka_brokers_sasl', 'user', 'password', 'topic', 'value']
     actualParams = params.keys()
 
@@ -56,5 +61,21 @@ def validateParams(params):
 
     if len(missingParams) > 0:
         return (False, "You must supply all of the following parameters: {}".format(', '.join(missingParams)))
-    else:
-        return (True, "Params all check out.")
+
+    if 'base64DecodeValue' in params and params['base64DecodeValue'] == True:
+        decodedValue = params['value'].decode('base64').strip()
+        if len(decodedValue) == 0:
+            return (False, "value parameter is not Base64 encoded")
+        else:
+            # make use of the decoded value so we don't have to decode it again later
+            validatedParams['value'] = decodedValue
+
+    if 'base64DecodeKey' in params and params['base64DecodeKey'] == True:
+        decodedKey = params['key'].decode('base64').strip()
+        if len(decodedKey) == 0:
+            return (False, "key parameter is not Base64 encoded")
+        else:
+            # make use of the decoded key so we don't have to decode it again later
+            validatedParams['key'] = decodedKey
+
+    return (True, validatedParams)
