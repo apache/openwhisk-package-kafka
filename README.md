@@ -21,7 +21,7 @@ While this list of parameters may seem daunting, they can be automatically set f
 
 1. Create an instance of Message Hub service under your current organization and space that you are using for OpenWhisk.
 
-2. Verify that the the topic you want to listen it already exists in Message Hub or create a new topic to listen for messages, like `mytopic`.
+2. Verify that the the topic you want to listen to already exists in Message Hub or create a new topic, for example `mytopic`.
 
 3. Refresh the packages in your namespace. The refresh automatically creates a package binding for the Message Hub service instance that you created.
 
@@ -43,7 +43,7 @@ While this list of parameters may seem daunting, they can be automatically set f
 
   Your package binding now contains the credentials associated with your Message Hub instance.
 
-4. Now all you need is to create a Trigger to be fire when new messages are posted to your Message Hub.
+4. Now all you need to do is create a Trigger that will be fired when new messages are posted to your Message Hub topic.
 
   ```
   $ wsk trigger create MyMessageHubTrigger -f /myBluemixOrg_myBluemixSpace/Bluemix_Message_Hub_Credentials-1/messageHubFeed -p topic mytopic
@@ -53,12 +53,17 @@ While this list of parameters may seem daunting, they can be automatically set f
 
 If you're not using OpenWhisk in Bluemix or if you want to set up your Message Hub outside of Bluemix, you must manually create a package binding for your Message Hub service. You need the Message Hub service credentials and connection information.
 
-- Create a package binding that is configured for your Message Hub service.
+1. Create a package binding that is configured for your Message Hub service.
 
   ```
-  $ wsk trigger create MyMessageHubTrigger -f /whisk.system/messaging/messageHubFeed -p kafka_brokers_sasl "[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka02-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka03-prod01.messagehub.services.us-south.bluemix.net:9093\"]" -p topic mytopic -p user <your Message Hub user> -p password <your Message Hub password> -p kafka_admin_url https://kafka-admin-prod01.messagehub.services.us-south.bluemix.net:443 -p isJSONData true
+  $ wsk package bind /whisk.system/messaging myMessageHub -p kafka_brokers_sasl "[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka02-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka03-prod01.messagehub.services.us-south.bluemix.net:9093\"]" -p user <your Message Hub user> -p password <your Message Hub password> -p kafka_admin_url https://kafka-admin-prod01.messagehub.services.us-south.bluemix.net:443
   ```
 
+2. Now you can create a Trigger using your new package that will be fired when new messages are posted to your Message Hub topic.
+
+  ```
+  $ wsk trigger create MyMessageHubTrigger -f myMessageHub/messageHubFeed -p topic mytopic -p isJSONData true
+  ```
 
 ### Creating a Trigger that Listens to a Generic Kafka Instance
 In order to create a trigger that reacts when messages are posted to an unauthenticated Kafka instance, you need to use the feed named `messaging/kafkaFeed`. This feed supports the following parameters:
@@ -71,7 +76,7 @@ In order to create a trigger that reacts when messages are posted to an unauthen
 
 Example:
 ```
-wsk trigger create MyKafkaTrigger -f /whisk.system/messaging/kafkaFeed -p brokers "[\"mykafkahost:9092\", \"mykafkahost:9093\"]" -p topic mytopic -p isJSONData true
+$ wsk trigger create MyKafkaTrigger -f /whisk.system/messaging/kafkaFeed -p brokers "[\"mykafkahost:9092\", \"mykafkahost:9093\"]" -p topic mytopic -p isJSONData true
 ```
 
 ### Listening for messages
@@ -88,7 +93,7 @@ In Kafka terms, these fields should be self-evident. However, the `value` requir
 
 For example, if a message of `{"title": "Some string", "amount": 5, "isAwesome": true}` is posted with `isJSONData` set to `true`, the trigger payload might look something like this:
 
-```
+```json
 {
   "messages": [
       {
@@ -107,7 +112,7 @@ For example, if a message of `{"title": "Some string", "amount": 5, "isAwesome":
 ```
 However, if the same message content is posted with `isJSONData` set to `false`, the trigger payload would look like this:
 
-```
+```json
 {
   "messages": [
     {
