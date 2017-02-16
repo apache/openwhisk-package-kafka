@@ -1,7 +1,7 @@
 This project is an OpenWhisk package that allows you to communicate with Kafka or IBM Message Hub instances.
 
-## Usage
-This package allows you to create triggers that react when messages are posted to either an IBM Message Hub instance, or to a generic Kafka instance. Since the parameters required for each of these situations are different, there are two separate feeds to handle them: `/messaging/messageHubFeed` and `messaging/kafkaFeed`.
+## Using the Messaging package
+This package allows you to create triggers that react when messages are posted to either an [IBM Message Hub](https://developer.ibm.com/messaging/message-hub/) instance, or to a generic Kafka instance. Since the parameters required for each of these situations are different, there are two separate feeds to handle them: `/messaging/messageHubFeed` and `messaging/kafkaFeed`.
 
 Additionally, two actions are included which allow you to produce messages to either Message Hub, or generic Kafka instances. These are, `/messaging/messageHubProduce` and `/messaging/kafkaProduce`, respectively.
 
@@ -19,12 +19,51 @@ In order to create a trigger that reacts when messages are posted to a Message H
 
 While this list of parameters may seem daunting, they can be automatically set for you by using the package refresh CLI command:
 
-```wsk package refresh```
+1. Create an instance of Message Hub service under your current organization and space that you are using for OpenWhisk.
 
-However, if you want to create the trigger manually, it would look something like:
-```
-wsk trigger create MyMessageHubTrigger -f /whisk.system/messaging/messageHubFeed -p kafka_brokers_sasl "[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka02-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka03-prod01.messagehub.services.us-south.bluemix.net:9093\"]" -p topic mytopic -p user <your Message Hub user> -p password <your Message Hub password> -p kafka_admin_url https://kafka-admin-prod01.messagehub.services.us-south.bluemix.net:443 -p isJSONData true
-```
+2. Verify that the the topic you want to listen to already exists in Message Hub or create a new topic, for example `mytopic`.
+
+3. Refresh the packages in your namespace. The refresh automatically creates a package binding for the Message Hub service instance that you created.
+
+  ```
+  $ wsk package refresh
+  ```
+  ```
+  created bindings:
+  Bluemix_Message_Hub_Credentials-1
+  ```
+
+  ```
+  $ wsk package list
+  ```
+  ```
+  packages
+  /myBluemixOrg_myBluemixSpace/Bluemix_Message_Hub_Credentials-1 private
+  ```
+
+  Your package binding now contains the credentials associated with your Message Hub instance.
+
+4. Now all you need to do is create a Trigger that will be fired when new messages are posted to your Message Hub topic.
+
+  ```
+  $ wsk trigger create MyMessageHubTrigger -f /myBluemixOrg_myBluemixSpace/Bluemix_Message_Hub_Credentials-1/messageHubFeed -p topic mytopic
+  ```
+
+### Setting up a Message Hub package outside Bluemix
+
+If you're not using OpenWhisk in Bluemix or if you want to set up your Message Hub outside of Bluemix, you must manually create a package binding for your Message Hub service. You need the Message Hub service credentials and connection information.
+
+1. Create a package binding that is configured for your Message Hub service.
+
+  ```
+  $ wsk package bind /whisk.system/messaging myMessageHub -p kafka_brokers_sasl "[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka02-prod01.messagehub.services.us-south.bluemix.net:9093\", \"kafka03-prod01.messagehub.services.us-south.bluemix.net:9093\"]" -p user <your Message Hub user> -p password <your Message Hub password> -p kafka_admin_url https://kafka-admin-prod01.messagehub.services.us-south.bluemix.net:443
+  ```
+
+2. Now you can create a Trigger using your new package that will be fired when new messages are posted to your Message Hub topic.
+
+  ```
+  $ wsk trigger create MyMessageHubTrigger -f myMessageHub/messageHubFeed -p topic mytopic -p isJSONData true
+  ```
 
 ### Creating a Trigger that Listens to a Generic Kafka Instance
 In order to create a trigger that reacts when messages are posted to an unauthenticated Kafka instance, you need to use the feed named `messaging/kafkaFeed`. This feed supports the following parameters:
@@ -37,10 +76,10 @@ In order to create a trigger that reacts when messages are posted to an unauthen
 
 Example:
 ```
-wsk trigger create MyKafkaTrigger -f /whisk.system/messaging/kafkaFeed -p brokers "[\"mykafkahost:9092\", \"mykafkahost:9093\"]" -p topic mytopic -p isJSONData true
+$ wsk trigger create MyKafkaTrigger -f /whisk.system/messaging/kafkaFeed -p brokers "[\"mykafkahost:9092\", \"mykafkahost:9093\"]" -p topic mytopic -p isJSONData true
 ```
 
-### Ok, what happens now?
+### Listening for messages
 After creating a trigger, the system will monitor the specified topic in your messaging service. When new messages are posted, the trigger will be fired.
 
 The payload of that trigger will contain a `messages` field which is an array of messages that have been posted since the last time your trigger fired. Each message object in the array will contain the following fields:
@@ -50,41 +89,40 @@ The payload of that trigger will contain a `messages` field which is an array of
 - key
 - value
 
-In Kafka terms, these fields should be self-evident. However, the `value` requires special consideration. If the `isJSONData` parameter was set `false` (or not set at all) when the trigger was created, the `value` field will be the raw value of the posted message. However, if `isJSONData` was set to `true` when the trigger was created, the system will make attempt to parse this value as a JSON object, on a best-effort basis. If parsing is successful, then the `value` in the trigger payload will be the resulting JSON object.
+In Kafka terms, these fields should be self-evident. However, the `value` requires special consideration. If the `isJSONData` parameter was set `false` (or not set at all) when the trigger was created, the `value` field will be the raw value of the posted message. However, if `isJSONData` was set to `true` when the trigger was created, the system will attempt to parse this value as a JSON object, on a best-effort basis. If parsing is successful, then the `value` in the trigger payload will be the resulting JSON object.
 
 For example, if a message of `{"title": "Some string", "amount": 5, "isAwesome": true}` is posted with `isJSONData` set to `true`, the trigger payload might look something like this:
 
-```JSON
+```json
 {
-    "messages": [
-        {
-            "partition": 0,
-            "key": null,
-            "offset": 421760,
-            "topic": "mytopic",
-            "value": {
-                "amount": 5,
-                "isAwesome": true,
-                "title": "Some string"
-            }
+  "messages": [
+      {
+        "partition": 0,
+        "key": null,
+        "offset": 421760,
+        "topic": "mytopic",
+        "value": {
+            "amount": 5,
+            "isAwesome": true,
+            "title": "Some string"
         }
-    ]
+      }
+  ]
 }
 ```
-
 However, if the same message content is posted with `isJSONData` set to `false`, the trigger payload would look like this:
 
-```JSON
+```json
 {
-    "messages": [
-        {
-            "partition": 0,
-            "key": null,
-            "offset": 421761,
-            "topic": "mytopic",
-            "value": "{\"title\": \"Some string\", \"amount\": 5, \"isAwesome\": true}"
-        }
-    ]
+  "messages": [
+    {
+      "partition": 0,
+      "key": null,
+      "offset": 421761,
+      "topic": "mytopic",
+      "value": "{\"title\": \"Some string\", \"amount\": 5, \"isAwesome\": true}"
+    }
+  ]
 }
 ```
 
