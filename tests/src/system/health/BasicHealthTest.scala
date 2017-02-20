@@ -36,10 +36,9 @@ import common.WskTestHelpers
 import spray.json.DefaultJsonProtocol._
 import spray.json.pimpAny
 
-import sun.misc.BASE64Encoder
 
 @RunWith(classOf[JUnitRunner])
-class MessagingFeedTests
+class BasicHealthTest
     extends FlatSpec
     with Matchers
     with WskActorSystem
