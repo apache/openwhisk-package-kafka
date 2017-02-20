@@ -10,8 +10,7 @@ This package allows you to create triggers that react when messages are posted t
 Additionally, two actions are included which allow you to produce messages to either Message Hub, or generic Kafka instances. These are `/messaging/messageHubProduce`, and `/messaging/kafkaProduce` respectively.
 
 ### Creating a Trigger that listens to an IBM MessageHub instance
-In order to create a trigger that reacts when messages are posted to a Message Hub instance, you need to use the feed named `messageHubFeed`. This feed supports the following parameters:
-<!-- I removed the "messaging" from the feed name above because as you show below in the sample and I verified in the code - you do not put "messaging" in front of the feed name - instead you put credentials - see sample below -->
+In order to create a trigger that reacts when messages are posted to a Message Hub instance, you need to use the feed named `/messaging/messageHubFeed`. This feed action supports the following parameters:
 
 |Name|Type|Description|
 |---|---|---|
@@ -104,7 +103,7 @@ As an example, if `isBinaryKey` was set to `true` when the trigger was created, 
 
 For example, if a `key` of `Some key` is posted with `isBinaryKey` set to `true`, the trigger payload will resemble the below:
 
-```JSON
+```json
 {
     "messages": [
         {
@@ -122,7 +121,7 @@ If the `isJSONData` parameter was set to `false` (or not set at all) when the tr
 
 For example, if a message of `{"title": "Some string", "amount": 5, "isAwesome": true}` is posted with `isJSONData` set to `true`, the trigger payload might look something like this:
 
-```JSON
+```json
 {
   "messages": [
     {
@@ -141,7 +140,7 @@ For example, if a message of `{"title": "Some string", "amount": 5, "isAwesome":
 ```
 However, if the same message content is posted with `isJSONData` set to `false`, the trigger payload would look like this:
 
-```JSON
+```json
 {
   "messages": [
     {
@@ -159,7 +158,7 @@ Similar to `isJSONData`, if `isBinaryValue` was set to `true` during trigger cre
 
 For example, if a `value` of `Some data` is posted with `isBinaryValue` set to `true`, the trigger payload might look something like this:
 
-```JSON
+```json
 {
   "messages": [
     {
@@ -173,12 +172,28 @@ For example, if a `value` of `Some data` is posted with `isBinaryValue` set to `
 }
 ```
 
+If the same message is posted without `isBinaryData` set to `true`, the trigger payload would resemble the below example:
+
+```json
+{
+  "messages": [
+    {
+      "partition": 0,
+      "key": null,
+      "offset": 421760,
+      "topic": "mytopic",
+      "value": "Some data"
+    }
+  ]
+}
+```
+
 ### Messages are batched
 You will notice that the trigger payload contains an array of messages. This means that if you are producing messages to your messaging system very quickly, the feed will attempt to batch up the posted messages into a single firing of your trigger. This allows the messages to be posted to your trigger more rapidly and efficiently.
 
 Please keep in mind when coding actions that are fired by your trigger, that the number of messages in the payload is technically unbounded, but will always be greater than 0. Here is an example of a batched message (please note the change in the *offset* value):
  
- ```
+ ```json
  {
    "messages": [
        {
