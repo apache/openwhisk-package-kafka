@@ -15,9 +15,9 @@ In order to create a trigger that reacts when messages are posted to a Message H
 |password|String|Your Message Hub password|
 |topic|String|The topic you would like the trigger to listen to|
 |kafka_admin_url|URL String|The URL of the Message Hub admin REST interface|
-|isJSONData|Boolean (Optional - default=false)|When set to `true` this will cause the provider to attempt to parse the message content as JSON before passing it along as the trigger payload.|
-|isBinaryKey|Boolean (Optional - default=false)|When set to `true` this will cause the provider to encode the key content as Base64 before passing it along as the trigger payload.|
-|isBinaryValue|Boolean (Optional - default=false)|When set to `true` this will cause the provider to encode the message content as Base64 before passing it along as the trigger payload.|
+|isJSONData|Boolean (Optional - default=false)|When set to `true` this will cause the provider to attempt to parse the message value as JSON before passing it along as the trigger payload.|
+|isBinaryKey|Boolean (Optional - default=false)|When set to `true` this will cause the provider to encode the key value as Base64 before passing it along as the trigger payload.|
+|isBinaryValue|Boolean (Optional - default=false)|When set to `true` this will cause the provider to encode the message value as Base64 before passing it along as the trigger payload.|
 
 While this list of parameters may seem daunting, they can be automatically set for you by using the package refresh CLI command:
 
@@ -74,9 +74,9 @@ In order to create a trigger that reacts when messages are posted to an unauthen
 |---|---|---|
 |brokers|JSON Array of Strings|This parameter is an array of `<host>:<port>` strings which comprise the brokers in your Message Hub instance|
 |topic|String|The topic you would like the trigger to listen to|
-|isJSONData|Boolean (Optional - default=false)|When set to `true` this will cause the provider to attempt to parse the message content as JSON before passing it along as the trigger payload.|
-|isBinaryKey|Boolean (Optional - default=false)|When set to `true` this will cause the provider to encode the key content as Base64 before passing it along as the trigger payload.|
-|isBinaryValue|Boolean (Optional - default=false)|When set to `true` this will cause the provider to encode the message content as Base64 before passing it along as the trigger payload.|
+|isJSONData|Boolean (Optional - default=false)|When set to `true` this will cause the provider to attempt to parse the message value as JSON before passing it along as the trigger payload.|
+|isBinaryKey|Boolean (Optional - default=false)|When set to `true` this will cause the provider to encode the key value as Base64 before passing it along as the trigger payload.|
+|isBinaryValue|Boolean (Optional - default=false)|When set to `true` this will cause the provider to encode the message value as Base64 before passing it along as the trigger payload.|
 
 Example:
 ```
