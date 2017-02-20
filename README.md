@@ -15,7 +15,9 @@ In order to create a trigger that reacts when messages are posted to a Message H
 |password|String|Your Message Hub password|
 |topic|String|The topic you would like the trigger to listen to|
 |kafka_admin_url|URL String|The URL of the Message Hub admin REST interface|
-|isJSONData|Boolean (Optional - default=false)|When set to `true` this will cause the feed to attempt the message content as JSON before passing it along as the trigger payload.|
+|isJSONData|Boolean (Optional - default=false)|When set to `true` this will cause the provider to attempt to parse the message value as JSON before passing it along as the trigger payload.|
+|isBinaryKey|Boolean (Optional - default=false)|When set to `true` this will cause the provider to encode the key value as Base64 before passing it along as the trigger payload.|
+|isBinaryValue|Boolean (Optional - default=false)|When set to `true` this will cause the provider to encode the message value as Base64 before passing it along as the trigger payload.|
 
 While this list of parameters may seem daunting, they can be automatically set for you by using the package refresh CLI command:
 
@@ -72,7 +74,9 @@ In order to create a trigger that reacts when messages are posted to an unauthen
 |---|---|---|
 |brokers|JSON Array of Strings|This parameter is an array of `<host>:<port>` strings which comprise the brokers in your Message Hub instance|
 |topic|String|The topic you would like the trigger to listen to|
-|isJSONData|Boolean (Optional - default=false)|When set to `true` this will cause the feed to attempt the message content as JSON before passing it along as the trigger payload.|
+|isJSONData|Boolean (Optional - default=false)|When set to `true` this will cause the provider to attempt to parse the message value as JSON before passing it along as the trigger payload.|
+|isBinaryKey|Boolean (Optional - default=false)|When set to `true` this will cause the provider to encode the key value as Base64 before passing it along as the trigger payload.|
+|isBinaryValue|Boolean (Optional - default=false)|When set to `true` this will cause the provider to encode the message value as Base64 before passing it along as the trigger payload.|
 
 Example:
 ```
@@ -89,30 +93,51 @@ The payload of that trigger will contain a `messages` field which is an array of
 - key
 - value
 
-In Kafka terms, these fields should be self-evident. However, the `value` requires special consideration. If the `isJSONData` parameter was set `false` (or not set at all) when the trigger was created, the `value` field will be the raw value of the posted message. However, if `isJSONData` was set to `true` when the trigger was created, the system will attempt to parse this value as a JSON object, on a best-effort basis. If parsing is successful, then the `value` in the trigger payload will be the resulting JSON object.
+In Kafka terms, these fields should be self-evident. However, `key` has an optional feature `isBinaryKey` that allows the `key` to transmit binary data. Additionally, the `value` requires special consideration. Optional fields `isJSONData` and `isBinaryValue` are available to handle JSON and binary messages. These fields, `isJSONData` and `isBinaryValue`, cannot be used in conjunction with each other.
+
+As an example, if `isBinaryKey` was set to `true` when the trigger was created, the `key` will be encoded as a Base64 string when returned from they payload of a fired trigger.
+
+For example, if a `key` of `Some key` is posted with `isBinaryKey` set to `true`, the trigger payload will resemble the below:
+
+```JSON
+{
+    "messages": [
+        {
+            "partition": 0,
+            "key": "U29tZSBrZXk=",
+            "offset": 421760,
+            "topic": "mytopic",
+            "value": "Some value"
+        }
+    ]
+}
+```
+
+If the `isJSONData` parameter was set to `false` (or not set at all) when the trigger was created, the `value` field will be the raw value of the posted message. However, if `isJSONData` was set to `true` when the trigger was created, the system will attempt to parse this value as a JSON object, on a best-effort basis. If parsing is successful, then the `value` in the trigger payload will be the resulting JSON object.
+>>>>>>> Support Binary Message Payloads
 
 For example, if a message of `{"title": "Some string", "amount": 5, "isAwesome": true}` is posted with `isJSONData` set to `true`, the trigger payload might look something like this:
 
-```json
+```JSON
 {
   "messages": [
-      {
-        "partition": 0,
-        "key": null,
-        "offset": 421760,
-        "topic": "mytopic",
-        "value": {
-            "amount": 5,
-            "isAwesome": true,
-            "title": "Some string"
-        }
+    {
+      "partition": 0,
+      "key": null,
+      "offset": 421760,
+      "topic": "mytopic",
+      "value": {
+          "amount": 5,
+          "isAwesome": true,
+          "title": "Some string"
       }
+    }
   ]
 }
 ```
 However, if the same message content is posted with `isJSONData` set to `false`, the trigger payload would look like this:
 
-```json
+```JSON
 {
   "messages": [
     {
@@ -125,6 +150,39 @@ However, if the same message content is posted with `isJSONData` set to `false`,
   ]
 }
 ```
+
+Similar to `isJSONData`, if `isBinaryValue` was set to `true` during trigger creation, the resultant `value` in the trigger payload will be encoded as a Base64 string.
+
+For example, if a `value` of `Some data` is posted with `isBinaryValue` set to `true`, the trigger payload might look something like this:
+
+```JSON
+{
+  "messages": [
+    {
+      "partition": 0,
+      "key": null,
+      "offset": 421760,
+      "topic": "mytopic",
+      "value": "U29tZSBkYXRh"
+    }
+  ]
+}
+```
+
+If the same message is posted without `isBinaryData` set to `true`, the trigger payload would resemble the below example:
+
+```JSON
+{
+  "messages": [
+    {
+      "partition": 0,
+      "key": null,
+      "offset": 421760,
+      "topic": "mytopic",
+      "value": "Some data"
+    }
+  ]
+}
 
 ### Messages are Batched
 You will notice that the trigger payload contains an array of messages. This means that if you are producing messages to your messaging system very quickly, the feed will attempt to batch up the posted messages into a single firing of your trigger. This allows the messages to be posted to your trigger more rapidly and efficiently.

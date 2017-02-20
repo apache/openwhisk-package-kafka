@@ -5,6 +5,8 @@ var request = require('request');
  *  @param {string} brokers - array of Kafka brokers
  *  @param {string} topic - topic to subscribe to
  *  @param {bool}   isJSONData - attempt to parse messages as JSON
+ *  @param {bool}   isBinaryKey - encode message as Base64
+ *  @param {bool}   isBinaryValue - encode key as Base64
  *  @param {string} endpoint - address to OpenWhisk deployment
  */
 function main(params) {
@@ -103,7 +105,14 @@ function validateParameters(rawParams) {
         var validatedParams = {};
 
         validatedParams.isMessageHub = false;
-        validatedParams.isJSONData = (typeof rawParams.isJSONData !== 'undefined' && rawParams.isJSONData && (rawParams.isJSONData === true || rawParams.isJSONData.toString().trim().toLowerCase() === 'true'));
+        validatedParams.isJSONData = getBooleanFromArgs(rawParams, 'isJSONData');
+        validatedParams.isBinaryValue = getBooleanFromArgs(rawParams, 'isBinaryValue');
+        validatedParams.isBinaryKey = getBooleanFromArgs(rawParams, 'isBinaryKey');
+
+        if (validatedParams.isJSONData && validatedParams.isBinaryValue) {
+            reject('isJSONData and isBinaryValue cannot both be enabled.');
+            return;
+        }
 
         if (rawParams.topic && rawParams.topic.length > 0) {
             validatedParams.topic = rawParams.topic;
@@ -123,6 +132,10 @@ function validateParameters(rawParams) {
     });
 
     return promise;
+}
+
+function getBooleanFromArgs(args, key) {
+  return (typeof args[key] !== 'undefined' && args[key] && (args[key] === true || args[key].toString().trim().toLowerCase() === 'true'));
 }
 
 function isNonEmptyArray(obj) {

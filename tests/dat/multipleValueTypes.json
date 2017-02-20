@@ -9,5 +9,7 @@
   "api_key": "someKey",
   "package_endpoint": "someEndpoint",
   "triggerName": "/_/someTrigger",
-  "lifecycleEvent": "CREATE"
+  "lifecycleEvent": "CREATE",
+  "isJSONData": true,
+  "isBinaryValue": true
 }
