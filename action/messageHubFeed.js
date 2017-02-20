@@ -143,9 +143,9 @@ function validateParameters(rawParams) {
         var validatedParams = {};
 
         validatedParams.isMessageHub = true;
-        validatedParams.isJSONData = (typeof rawParams.isJSONData !== 'undefined' && rawParams.isJSONData && (rawParams.isJSONData === true || rawParams.isJSONData.toString().trim().toLowerCase() === 'true'));
-        validatedParams.isBinaryValue = (typeof rawParams.isBinaryValue !== 'undefined' && rawParams.isBinaryValue && (rawParams.isBinaryValue === true || rawParams.isJSONData.toString().trim().toLowerCase() === 'true'));
-        validatedParams.isBinaryKey = (typeof rawParams.isBinaryKey !== 'undefined' && rawParams.isBinaryKey && (rawParams.isBinaryKey === true || rawParams.isBinaryKey.toString().trim().toLowerCase() === 'true'));
+        validatedParams.isJSONData = getBooleanFromArgs(rawParams, 'isJSONData');
+        validatedParams.isBinaryValue = getBooleanFromArgs(rawParams, 'isBinaryValue');
+        validatedParams.isBinaryKey = getBooleanFromArgs(rawParams, 'isBinaryKey');
 
         if (validatedParams.isJSONData && validatedParams.isBinaryValue) {
             reject('isJSONData and isBinaryValue cannot both be enabled.');
@@ -210,6 +210,10 @@ function validateBrokerParam(brokerParam) {
     } else {
         return undefined;
     }
+}
+
+function getBooleanFromArgs(args, key) {
+  return (typeof args[key] !== 'undefined' && args[key] && (args[key] === true || args[key].toString().trim().toLowerCase() === 'true'));
 }
 
 function isNonEmptyArray(obj) {
