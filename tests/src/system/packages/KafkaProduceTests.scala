@@ -52,12 +52,22 @@ class KafkaProduceTests
     implicit val wskprops = WskProps()
     val wsk = new Wsk()
 
-    val messagingPackage = "/whisk.system/messaging"
-    val messageHubProduce = "kafkaProduce"
+    val actionName = "kafkaProduceAction"
+    val actionFile = "../action/kafkaProduce.py"
 
     val kafkaUtils = new KafkaUtils
 
     behavior of "Kafka Produce action"
+
+    override def beforeAll() {
+      wsk.action.create(actionName, Some(actionFile))
+      super.beforeAll()
+    }
+
+    override def afterAll()  {
+      wsk.action.delete(actionName)
+      super.afterAll()
+    }
 
     def testMissingParameter(missingParam : String) = {
         var fullParamsMap = Map(
@@ -66,7 +76,7 @@ class KafkaProduceTests
             "value" -> "This will fail".toJson)
         var missingParamsMap = fullParamsMap.filterKeys(_ != missingParam)
 
-        withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", missingParamsMap)) {
+        withActivation(wsk.activation, wsk.action.invoke(actionName, missingParamsMap)) {
             activation =>
                 activation.response.success shouldBe false
                 activation.response.result.get.toString should include(missingParam)
