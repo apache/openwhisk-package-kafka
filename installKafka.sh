@@ -4,7 +4,7 @@
 # automatically
 #
 # To run this command
-# ./installCatalog.sh  <AUTH> <APIHOST> <KAFKA_TRIGGER_HOST> <KAFKA_TRIGGER_PORT>
+# ./installKafka.sh  <AUTH> <EDGEHOST> <KAFKA_TRIGGER_HOST> <KAFKA_TRIGGER_PORT> <APIHOST>
 # AUTH and APIHOST are found in $HOME/.wskprops
 
 set -e
