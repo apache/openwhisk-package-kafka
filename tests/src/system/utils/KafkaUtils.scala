@@ -28,7 +28,11 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import scala.collection.mutable.ListBuffer
 
 import spray.json.DefaultJsonProtocol._
+import spray.json.JsObject
+import spray.json.JsArray
 import spray.json.pimpAny
+
+import whisk.utils.JsHelpers
 
 
 class KafkaUtils {
@@ -75,6 +79,13 @@ object KafkaUtils {
         for ((k, v) <- propertyMap) kafkaProducerProps.put(k, v)
 
         kafkaProducerProps
+    }
+
+    def messagesInActivation(activation : JsObject, field: String, value: String) : Array[JsObject] = {
+        val messages = JsHelpers.getFieldPath(activation, "response", "result", "messages").getOrElse(JsArray.empty).convertTo[Array[JsObject]]
+        messages.filter {
+            JsHelpers.getFieldPath(_, field) == Some(value.toJson)
+        }
     }
 
     private def initializeMessageHub() = {

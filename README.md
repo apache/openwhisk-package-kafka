@@ -192,7 +192,7 @@ If the same message is posted without `isBinaryData` set to `true`, the trigger 
 You will notice that the trigger payload contains an array of messages. This means that if you are producing messages to your messaging system very quickly, the feed will attempt to batch up the posted messages into a single firing of your trigger. This allows the messages to be posted to your trigger more rapidly and efficiently.
 
 Please keep in mind when coding actions that are fired by your trigger, that the number of messages in the payload is technically unbounded, but will always be greater than 0. Here is an example of a batched message (please note the change in the *offset* value):
- 
+
  ```json
  {
    "messages": [
@@ -238,6 +238,8 @@ If you would like to use an OpenWhisk action to conveniently produce a message t
 |topic|String|The topic you would like the trigger to listen to|
 |value|String|The value for the message you would like to produce|
 |key|String (Optional)|The key for the message you would like to produce|
+|base64DecodeValue|Boolean (Optional - default=false)|If true, the message will be produced with a Base64 decoded version of the value parameter|
+|base64DecodeKey|Boolean (Optional - default=false)|If true, the message will be produced with a Base64 decoded version of the key parameter|
 
 While the first three parameters can be automatically bound by using `wsk package refresh`, here is an example of invoking the action with all required parameters:
 
@@ -254,6 +256,8 @@ If you would like to use an OpenWhisk action to conveniently produce a message t
 |topic|String|The topic you would like the trigger to listen to|
 |value|String|The value for the message you would like to produce|
 |key|String (Optional)|The key for the message you would like to produce|
+|base64DecodeValue|Boolean (Optional - default=false)|If true, the message will be produced with a Base64 decoded version of the value parameter|
+|base64DecodeKey|Boolean (Optional - default=false)|If true, the message will be produced with a Base64 decoded version of the key parameter|
 
 Here is an example of invoking the action with all required parameters:
 
@@ -261,14 +265,16 @@ Here is an example of invoking the action with all required parameters:
 wsk action invoke /messaging/kafkaProduce -p brokers "[\"mykafkahost:9092\", \"mykafkahost:9093\"]" -p topic mytopic -p value "This is the content of my message"
 ```
 
-## Examples
+## Producing Messages with Binary Content
+You may find that you want to use one of the above actions to produce a message that has a key and/or value that is binary data. The problem is that invoking an OpenWhisk action inherently involves a REST call to the OpenWhisk server, which may require any binary parameter values of the action invocation to be Base64 encoded. How to handle this?
 
-### Producing messages to a Message Hub or generic Kafka instances using DIY action
-Before the time when OpenWhisk had built-in action to publish messages to and from Message Hub and Kafka developers used to accomplish this functionality using custom built actions using any of the OpenWhisk supported programming languages. This is still possible today and if, for some reason you are not satisfied with OpenWhisk provided Message Hub and Kafka feed and publish action, you can still develop and use your own. While creating such action, you can use Message Hub and Kafka Native API or Confluence REST API for Kafka. It is transparent to OpenWhisk which you use, just like with any other 3rd party API or library you decide to utilize in your OpenWhisk action. This [sample project](https://github.com/IBM/ogs-data-processing-messagehub) demonstrates the use of OpenWhisk for sending and receiving IBM Message Hub and Kafka messages. 
+The action caller (you, or your code) must first Base64 encode the data, for example, the value of the message you want to produce. Pass this encoded data as the `value` parameter to the produce action. However, to ensure that the produced message's value contains the original bytes, you must also set the `base64DecodeValue` parameter to `true`. This will cause the produce action to first Base64 decode the `value` parameter before producing the message. The same procedure applies to producing messages with a binary key, using the `base64DecodeKey` parameter set to `true` in conjunction with a Base64 encoded `key` parameter.
+
+## Examples
 
 ### Integrating OpenWhisk with IBM Message Hub, Node Red, IBM Watson IoT, IBM Object Storage, and IBM Data Science Experience
 Example that integrates OpenWhisk with IBM Message Hub, Node Red, IBM Watson IoT, IBM Object Storage, IBM Data Science Experience (Spark) service can be [found here](https://medium.com/openwhisk/transit-flexible-pipeline-for-iot-data-with-bluemix-and-openwhisk-4824cf20f1e0).
- 
+
 ## Testing
 An OpenWhisk deployment is required in order for the automated test suite to be executed. To run tests locally, run ```$ ./gradlew tests:test -Dhost=<container_address> -Dport=<docker_port>``` from the project's root directory. Where ```<docker_address>``` is the IP address of the service's docker container, and ```<docker_port>``` is the port the docker container is listening on. In addition, ```OPENWHISK_HOME``` must be set to the root of the local OpenWhisk directory. Ex: ```export OPENWHISK_HOME=<openwhisk_directory>```.
 
