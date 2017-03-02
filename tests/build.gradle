@@ -36,10 +36,16 @@ def commonConfiguration = {
 
 test {
   configure commonConfiguration
+  exclude 'system/stress/**'
 }
 
 task testWithoutCredentials(type: Test) {
   configure commonConfiguration
+}
+
+task stress(type: Test) {
+  configure commonConfiguration
+  include 'system/stress/**'
 }
 
 dependencies {
