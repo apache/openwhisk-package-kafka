@@ -237,7 +237,8 @@ class ConsumerThread (Thread):
             config = {'metadata.broker.list': ','.join(self.brokers),
                         'group.id': self.trigger,
                         'default.topic.config': {'auto.offset.reset': 'latest'},
-                        'enable.auto.commit': False
+                        'enable.auto.commit': False,
+                        'api.version.request': True
                     }
 
             if self.isMessageHub:
