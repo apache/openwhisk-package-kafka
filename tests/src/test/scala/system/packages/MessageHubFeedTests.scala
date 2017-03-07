@@ -173,7 +173,7 @@ class MessageHubFeedTests
               "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
               "topic" -> topic.toJson,
               "key" -> key.toJson,
-              "value" -> currentTime.toJson))) {
+              "value" -> currentTime.toJson), blocking=true)) {
               _.response.success shouldBe true
           }
 
