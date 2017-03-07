@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package  system.packages
+package system.packages
 
 import spray.json._
 
