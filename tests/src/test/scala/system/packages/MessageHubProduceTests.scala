@@ -147,6 +147,8 @@ class MessageHubProduceTests
 
         (wp, assetHelper) =>
             val triggerName = s"/_/binaryValueTrigger-$currentTime"
+            println(s"Creating trigger ${triggerName}")
+
             val feedCreationResult = assetHelper.withCleaner(wsk.trigger, triggerName) {
                 (trigger, _) =>
                     trigger.create(triggerName, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = Map(
@@ -176,7 +178,7 @@ class MessageHubProduceTests
 
             // verify trigger fired
             println("Polling for activations")
-            val activations = wsk.activation.pollFor(N = 2, Some(triggerName), retries = 30)
+            val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = 60)
             assert(activations.length > 0)
 
             val matchingActivations = for {
@@ -201,6 +203,8 @@ class MessageHubProduceTests
 
         (wp, assetHelper) =>
             val triggerName = s"/_/binaryKeyTrigger-$currentTime"
+            println(s"Creating trigger ${triggerName}")
+
             val feedCreationResult = assetHelper.withCleaner(wsk.trigger, triggerName) {
                 (trigger, _) =>
                     trigger.create(triggerName, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = Map(
@@ -230,7 +234,7 @@ class MessageHubProduceTests
 
             // verify trigger fired
             println("Polling for activations")
-            val activations = wsk.activation.pollFor(N = 2, Some(triggerName), retries = 30)
+            val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = 60)
             assert(activations.length > 0)
 
             val matchingActivations = for {
