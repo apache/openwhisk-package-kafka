@@ -1,30 +1,32 @@
-# Copyright 2016 IBM Corp. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+"""Flask application.
 
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+"""
 import logging
 import os
 import requests
-import sys
 import urllib
 import uuid
 
-from datetime import datetime
 from flask import Flask, jsonify, request
 from consumer import Consumer
 from consumercollection import ConsumerCollection
 from database import Database
-from threading import Lock
 from thedoctor import TheDoctor
 from urlparse import urlparse
 from health import generateHealthReport
@@ -42,7 +44,8 @@ consumers = ConsumerCollection()
 def postTrigger(namespace, trigger):
     body = request.get_json(force=True, silent=True)
     triggerFQN = '/' + namespace + '/' + trigger
-    expectedRoute = urllib.quote('/namespaces/' + namespace + '/triggers/' + trigger)
+    expectedRoute = urllib.quote('/namespaces/' + namespace +
+                                 '/triggers/' + trigger)
     missing = getMissingPostFields(body)
 
     if consumers.hasConsumerForTrigger(triggerFQN):
@@ -60,60 +63,75 @@ def postTrigger(namespace, trigger):
         response.status_code = 400
         return response
     elif not body["triggerURL"].endswith(expectedRoute):
-        logging.warn("[{}] Trigger and namespace from route must correspond to triggerURL".format(triggerFQN))
+        logging.warn("[{}] Trigger and namespace from route must "
+                     "correspond to triggerURL".format(triggerFQN))
         response = jsonify({
             'success': False,
-            'error': "trigger and namespace from route must correspond to triggerURL"
+            'error': "trigger and namespace from route must "
+                     "correspond to triggerURL"
         })
         response.status_code = 409
     elif not body["isMessageHub"] and not enable_generic_kafka:
         # Generic Kafka triggers has been disabled
-        logging.warn("[{}] Attempt to create generic kafka trigger while function is disabled".format(triggerFQN))
+        logging.warn("[{}] Attempt to create generic kafka trigger "
+                     "while function is disabled".format(triggerFQN))
         response = jsonify({
             'success': False,
             'error': "only triggers for Message Hub instances are allowed."
         })
         response.status_code = 403
     else:
-        logging.info("[{}] Ensuring user has access rights to post a trigger".format(triggerFQN))
+        logging.info("[{}] Ensuring user has access rights to post "
+                     "a trigger".format(triggerFQN))
 
         try:
-            trigger_get_response = requests.get(body["triggerURL"], verify=check_ssl)
+            trigger_get_response = requests.get(body["triggerURL"],
+                                                verify=check_ssl)
         except:
             triggerURL = urlparse(body["triggerURL"])
 
-            if triggerURL.port != None:
-                triggerAddress = "{}:{}".format(triggerURL.hostname, triggerURL.port)
+            if triggerURL.port is not None:
+                triggerAddress = "{}:{}".format(triggerURL.hostname,
+                                                triggerURL.port)
             else:
                 triggerAddress = "{}".format(triggerURL.hostname)
 
-            logging.warn("[{}] Failed to communicate with OpenWhisk server ({}) for authentication".format(triggerFQN, triggerAddress))
+            logging.warn("[{}] Failed to communicate with "
+                         "OpenWhisk server ({}) for "
+                         "authentication".format(triggerFQN, triggerAddress))
             response = jsonify({
                 'success': False,
-                'error': "failed to communicate with OpenWhisk server ({}) for authentication.".format(triggerAddress)
+                'error': "failed to communicate with "
+                         "OpenWhisk server ({}) for "
+                         "authentication.".format(triggerAddress)
             })
             response.status_code = 500
             return response
 
         trigger_get_status_code = trigger_get_response.status_code
-        logging.info("[{}] Repsonse status code from trigger authorization {}".format(triggerFQN,
-                                                                                      trigger_get_status_code))
+        logging.info("[{}] Repsonse status code from trigger "
+                     "authorization {}".format(triggerFQN,
+                                               trigger_get_status_code))
         if trigger_get_status_code == 200:
-            logging.info("[{}] User authenticated. About to create consumer {}".format(triggerFQN, str(body)))
+            logging.info("[{}] User authenticated. About to "
+                         "create consumer {}".format(triggerFQN, str(body)))
             createAndRunConsumer(triggerFQN, body)
             logging.info("[{}] Finished creating consumer.".format(triggerFQN))
             response = jsonify({'success': True})
             response.status_code = trigger_get_status_code
         elif trigger_get_status_code == 401:
-            logging.warn("[{}] User not authorized to post trigger".format(triggerFQN))
+            logging.warn("[{}] User not authorized to "
+                         "post trigger".format(triggerFQN))
             response = jsonify({
                 'success': False,
                 'error': 'not authorized'
             })
             response.status_code = trigger_get_status_code
         else:
-            logging.warn("[{}] Trigger authentication request failed with error code {}".format(triggerFQN,
-                trigger_get_status_code))
+            logging.warn("[{}] Trigger authentication "
+                         "request failed "
+                         "with error code {}".format(triggerFQN,
+                                                     trigger_get_status_code))
             response = jsonify({'success': False})
             response.status_code = trigger_get_status_code
 
@@ -127,7 +145,7 @@ def deleteTrigger(namespace, trigger):
 
     triggerFQN = '/' + namespace + '/' + trigger
     consumer = consumers.getConsumerForTrigger(triggerFQN)
-    if consumer != None:
+    if consumer is not None:
         if authorizedForTrigger(auth, consumer):
             consumer.shutdown()
             response = jsonify({'success': True})
@@ -145,7 +163,8 @@ def deleteTrigger(namespace, trigger):
 def testRoute():
     return jsonify('Hi!')
 
-#TODO call TheDoctor.isAlive() and report on that
+
+# TODO call TheDoctor.isAlive() and report on that
 @app.route('/health')
 def healthRoute():
     return jsonify(generateHealthReport(consumers))
@@ -154,15 +173,17 @@ def healthRoute():
 def authorizedForTrigger(auth, consumer):
     triggerURL = urlparse(consumer.triggerURL)
 
-    return (auth != None and consumer != None and triggerURL.username == auth.username and triggerURL.password == auth.password)
+    return (auth is not None and consumer is not None and
+            triggerURL.username == auth.username and
+            triggerURL.password == auth.password)
 
 
 def createAndRunConsumer(triggerFQN, params, record=True):
-    if app.config['TESTING'] == True:
+    if app.config['TESTING'] is True:
         logging.debug("Just testing")
     else:
         # generate a random uuid for new triggers
-        if not 'uuid' in params:
+        if 'uuid' not in params:
             params['uuid'] = str(uuid.uuid4())
 
         consumer = Consumer(triggerFQN, params)
@@ -188,7 +209,7 @@ def getMissingPostFields(fields):
         missing.extend(requiredFields)
     else:
         # Message Hub also requires 'username' and 'password fields'
-        if 'isMessageHub' in fields and fields['isMessageHub'] == True:
+        if 'isMessageHub' in fields and fields['isMessageHub'] is True:
             requiredFields.extend(['username', 'password'])
 
         missing.extend([i for i in requiredFields if i not in fields])
@@ -205,7 +226,8 @@ def main():
 
     # Make sure we log to the console
     streamHandler = logging.StreamHandler()
-    formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] [??] [kafkatriggers] %(message)s')
+    formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] '
+                                  '[??] [kafkatriggers] %(message)s')
     streamHandler.setFormatter(formatter)
     logger.addHandler(streamHandler)
 
@@ -222,10 +244,13 @@ def main():
     logging.info('check_ssl is {} {}'.format(check_ssl, type(check_ssl)))
 
     generic_kafka = os.getenv('GENERIC_KAFKA', 'True')
-    logging.debug('GENERIC_KAFKA is {} {}'.format(generic_kafka, type(generic_kafka)))
+    logging.debug('GENERIC_KAFKA is {} {}'.format(generic_kafka,
+                                                  type(generic_kafka)))
     global enable_generic_kafka
     enable_generic_kafka = (generic_kafka == 'True')
-    logging.info('enable_generic_kafka is {} {}'.format(enable_generic_kafka, type(enable_generic_kafka)))
+    logging.info('enable_generic_kafka is '
+                 '{} {}'.format(enable_generic_kafka,
+                                type(enable_generic_kafka)))
 
     database.migrate()
 
