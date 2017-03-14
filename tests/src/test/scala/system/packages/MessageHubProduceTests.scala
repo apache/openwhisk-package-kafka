@@ -59,6 +59,8 @@ class MessageHubProduceTests
     val messageHubFeed = "messageHubFeed"
     val messageHubProduce = "messageHubProduce"
 
+    val consumerInitTime = 10000 // ms
+
     val kafkaUtils = new KafkaUtils
 
     // these parameter values are 100% valid and should work as-is
@@ -166,6 +168,10 @@ class MessageHubProduceTests
                     activation.response.success shouldBe true
             }
 
+            // It takes a moment for the consumer to fully initialize.
+            println("Giving the consumer a moment to get ready")
+            Thread.sleep(consumerInitTime)
+
             // produce message
             val decodedMessage = "This will be base64 encoded"
             val encodedMessage = Base64.getEncoder.encodeToString(decodedMessage.getBytes(StandardCharsets.UTF_8))
@@ -221,6 +227,10 @@ class MessageHubProduceTests
                     // should be successful
                     activation.response.success shouldBe true
             }
+
+            // It takes a moment for the consumer to fully initialize.
+            println("Giving the consumer a moment to get ready")
+            Thread.sleep(consumerInitTime)
 
             // produce message
             val decodedKey = "This will be base64 encoded"
