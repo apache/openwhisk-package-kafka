@@ -57,6 +57,8 @@ class BasicHealthTest
     val messageHubFeed = "messageHubFeed"
     val messageHubProduce = "messageHubProduce"
 
+    val consumerInitTime = 10000 // ms
+
     val kafkaUtils = new KafkaUtils
 
     behavior of "Message Hub feed"
@@ -85,9 +87,9 @@ class BasicHealthTest
                     activation.response.success shouldBe true
             }
 
-            // It takes a moment for the consumer to fully initialize. We choose 4 seconds
-            // as a temporary length of time to wait for.
-            Thread.sleep(4000)
+            // It takes a moment for the consumer to fully initialize.
+            println("Giving the consumer a moment to get ready")
+            Thread.sleep(consumerInitTime)
 
             // key to use for the produced message
             val key = "TheKey"
