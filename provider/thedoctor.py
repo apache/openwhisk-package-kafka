@@ -1,3 +1,22 @@
+"""TheDoctor.
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+"""
 import logging
 import time
 
@@ -5,8 +24,10 @@ from consumer import Consumer
 from consumercollection import ConsumerCollection
 from threading import Thread
 
+
 class TheDoctor (Thread):
-    # maximum time to allow a consumer to not successfully poll() before restarting
+    # maximum time to allow a consumer to not successfully poll()
+    # before restarting
     poll_timeout_seconds = 20
 
     # interval between the Doctor making rounds
@@ -19,28 +40,40 @@ class TheDoctor (Thread):
         self.consumerCollection = consumerCollection
 
     def run(self):
-        logging.info('[Doctor] The Doctor is in!')
+        logging.info("[Doctor] The Doctor is in!")
 
         while True:
             consumers = self.consumerCollection.getCopyForRead()
 
             for consumerId in consumers:
                 consumer = consumers[consumerId]
-                logging.debug('[Doctor] [{}] Consumer is in state: {}'.format(consumerId, consumer.currentState()))
+                logging.debug("[Doctor] [{}] Consumer is in state: "
+                              "{}".format(consumerId,
+                                          consumer.currentState()))
 
-                if consumer.currentState() is Consumer.State.Dead and consumer.desiredState() is Consumer.State.Running:
+                if(consumer.currentState() is Consumer.State.Dead and
+                   consumer.desiredState() is Consumer.State.Running):
                     # well this is unexpected...
-                    logging.error('[Doctor][{}] Consumer is dead, but should be alive!'.format(consumerId))
+                    logging.error("[Doctor][{}] Consumer is dead, but "
+                                  "should be alive!".format(consumerId))
                     consumer.restart()
-                elif consumer.currentState() is Consumer.State.Dead and consumer.desiredState() is Consumer.State.Dead:
+                elif(consumer.currentState() is Consumer.State.Dead and
+                     consumer.desiredState() is Consumer.State.Dead):
                     # Bring out yer dead...
-                    logging.info('[{}] Removing dead consumer from the collection.'.format(consumer.trigger))
-                    self.consumerCollection.removeConsumerForTrigger(consumer.trigger)
-                elif consumer.secondsSinceLastPoll() > self.poll_timeout_seconds and consumer.desiredState() is Consumer.State.Running:
-                    # there seems to be an issue with the kafka-python client where it gets into an
-                    # error-handling loop. This causes poll() to never complete, but also does not
-                    # throw an exception.
-                    logging.error('[Doctor][{}] Consumer timed-out, but should be alive! Restarting consumer.'.format(consumerId))
+                    logging.info("[{}] Removing dead consumer from the "
+                                 "collection.".format(consumer.trigger))
+                    self.consumerCollection.removeConsumerForTrigger(
+                        consumer.trigger)
+                elif(consumer.secondsSinceLastPoll() >
+                     self.poll_timeout_seconds and
+                     consumer.desiredState() is Consumer.State.Running):
+                    # there seems to be an issue with the kafka-python
+                    # client where it gets into an error-handling loop.
+                    # This causes poll() to never complete, but also does
+                    # not throw an exception.
+                    logging.error("[Doctor][{}] Consumer timed-out, "
+                                  "but should be alive! Restarting "
+                                  "consumer.".format(consumerId))
                     consumer.restart()
 
             time.sleep(self.sleepy_time_seconds)
