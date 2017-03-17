@@ -30,6 +30,9 @@ class Database:
     client = Cloudant(username, password, account=username)
     client.connect()
 
+    filters_design_doc_id = '_design/filters'
+    only_triggers_view_id = 'only-triggers'
+
     if dbname in client.all_dbs():
         logging.info('Database exists - connecting to it.')
         database = client[dbname]
@@ -70,28 +73,35 @@ class Database:
     def triggers(self):
         allDocs = []
 
-        logging.info('Fetching all documents from DB')
-        for document in Result(self.database.all_docs, include_docs=True):
+        logging.info('Fetching all triggers from DB')
+        for document in self.database.get_view_result(self.filters_design_doc_id, self.only_triggers_view_id, include_docs=True):
             allDocs.append(document['doc'])
 
-        logging.info('Successfully retrieved {} documents'.format(len(allDocs)))
+        logging.info('Successfully retrieved {} triggers'.format(len(allDocs)))
         return allDocs
 
     def migrate(self):
         logging.info('Starting DB migration')
 
-        for trigger in Result(self.database.all_docs, include_docs=True):
-            if 'uuid' not in trigger['doc']:
-                logging.info('[{}] Does not have a UUID. Generating one...'.format(trigger['id']));
+        filtersDesignDoc = self.database.get_design_document(self.filters_design_doc_id)
 
-                # this little dance seems odd to me. trigger does not have a .save() method,
-                # so I am left to fetch the document this way:
-                doc = self.database[trigger['id']]
-                doc['uuid'] = str(uuid.uuid4())
-                doc.save()
+        if not filtersDesignDoc.exists():
+            logging.info('Creating the design doc')
 
-                logging.info('[{}] Now has UUID {}'.format(trigger['id'], doc['uuid']))
-            else:
-                logging.debug('[{}] Already has UUID'.format(trigger['id']));
+            # create only-triggers view
+            self.database.create_document({
+                '_id': self.filters_design_doc_id,
+                'views': {
+                    self.only_triggers_view_id: {
+                        'map': """function (doc) {
+                                    if(doc.triggerURL) {
+                                        emit(doc._id, 1);
+                                    }
+                                }"""
+                    }
+                }
+            });
+        else:
+            logging.info("design doc already exists")
 
         logging.info('Database migration complete')

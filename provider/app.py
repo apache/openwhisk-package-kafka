@@ -177,7 +177,11 @@ def restoreTriggers():
     for triggerDoc in database.triggers():
         triggerFQN = triggerDoc['_id']
         logging.debug('Restoring trigger {}'.format(triggerFQN))
-        createAndRunConsumer(triggerFQN, triggerDoc, record=False)
+
+        try:
+            createAndRunConsumer(triggerFQN, triggerDoc, record=False)
+        except:
+            logging.warn('Skipping consumer due to caught exception: {}'.format(triggerDoc))
 
 
 def getMissingPostFields(fields):
