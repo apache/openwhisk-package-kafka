@@ -36,6 +36,8 @@ import common.WskTestHelpers
 import spray.json.DefaultJsonProtocol._
 import spray.json.pimpAny
 
+import whisk.utils.retry;
+
 
 @RunWith(classOf[JUnitRunner])
 class BasicHealthTest
@@ -91,40 +93,44 @@ class BasicHealthTest
             println("Giving the consumer a moment to get ready")
             Thread.sleep(consumerInitTime)
 
-            // key to use for the produced message
-            val key = "TheKey"
+            retry({
+                // key to use for the produced message
+                val key = "TheKey"
 
-            withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
-                "user" -> kafkaUtils.getAsJson("user"),
-                "password" -> kafkaUtils.getAsJson("password"),
-                "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
-                "topic" -> topic.toJson,
-                "key" -> key.toJson,
-                "value" -> currentTime.toJson))) {
-                    _.response.success shouldBe true
-                }
+                println("Producing a message")
+                withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
+                    "user" -> kafkaUtils.getAsJson("user"),
+                    "password" -> kafkaUtils.getAsJson("password"),
+                    "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+                    "topic" -> topic.toJson,
+                    "key" -> key.toJson,
+                    "value" -> currentTime.toJson))) {
+                        _.response.success shouldBe true
+                    }
 
-            println("Polling for activations")
-            val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = 60)
-            assert(activations.length > 0)
+                println("Polling for activations")
+                val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = 30)
+                assert(activations.length > 0)
 
-            val matchingActivations = for {
-                id <- activations
-                activation = wsk.activation.waitForActivation(id)
-                if (activation.isRight && activation.right.get.fields.get("response").toString.contains(currentTime))
-            } yield activation.right.get
+                println("Validating content of activation(s)")
+                val matchingActivations = for {
+                    id <- activations
+                    activation = wsk.activation.waitForActivation(id)
+                    if (activation.isRight && activation.right.get.fields.get("response").toString.contains(currentTime))
+                } yield activation.right.get
 
-            assert(matchingActivations.length == 1)
+                assert(matchingActivations.length == 1)
 
-            val activation = matchingActivations.head
-            activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
+                val activation = matchingActivations.head
+                activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
 
-            // assert that there exists a message in the activation which has the expected keys and values
-            val messages = KafkaUtils.messagesInActivation(activation, field="value", value=currentTime)
-            assert(messages.length == 1)
+                // assert that there exists a message in the activation which has the expected keys and values
+                val messages = KafkaUtils.messagesInActivation(activation, field="value", value=currentTime)
+                assert(messages.length == 1)
 
-            val message = messages.head
-            message.getFieldPath("topic") shouldBe Some(topic.toJson)
-            message.getFieldPath("key") shouldBe Some(key.toJson)
+                val message = messages.head
+                message.getFieldPath("topic") shouldBe Some(topic.toJson)
+                message.getFieldPath("key") shouldBe Some(key.toJson)
+            }, N = 3)
     }
 }
