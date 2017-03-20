@@ -27,7 +27,7 @@ from service import Service
 app = Flask(__name__)
 app.debug = False
 
-database = Database()
+database = None
 consumers = ConsumerCollection()
 
 
@@ -71,6 +71,8 @@ def main():
     enable_generic_kafka = (generic_kafka == 'True')
     logging.info('enable_generic_kafka is {} {}'.format(enable_generic_kafka, type(enable_generic_kafka)))
 
+    global database
+    database = Database()
     database.migrate()
 
     TheDoctor(consumers).start()
