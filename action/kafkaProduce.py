@@ -1,4 +1,5 @@
 import ssl
+import base64
 from kafka import KafkaProducer
 from kafka.errors import NoBrokersAvailable
 
@@ -16,18 +17,18 @@ def main(params):
             api_version_auto_timeout_ms=15000,
             bootstrap_servers=brokers)
 
-        print "Created producer"
+        print("Created producer")
 
         # only use the key parameter if it is present
         if 'key' in validatedParams:
             messageKey = validatedParams['key']
-            producer.send(validatedParams['topic'], bytes(validatedParams['value']), key=bytes(messageKey))
+            producer.send(validatedParams['topic'], bytes(validatedParams['value'], 'utf-8'), key=bytes(messageKey, 'utf-8'))
         else:
-            producer.send(validatedParams['topic'], bytes(validatedParams['value']))
+            producer.send(validatedParams['topic'], bytes(validatedParams['value'], 'utf-8'))
 
         producer.flush()
 
-        print  "Sent message"
+        print("Sent message")
     except NoBrokersAvailable:
         # this exception's message is a little too generic
         return {'error': 'No brokers available. Check that your supplied brokers are correct and available.'}
@@ -39,8 +40,6 @@ def main(params):
 def validateParams(params):
     validatedParams = params.copy()
     requiredParams = ['brokers', 'topic', 'value']
-    actualParams = params.keys()
-
     missingParams = []
 
     for requiredParam in requiredParams:
@@ -51,19 +50,21 @@ def validateParams(params):
         return (False, "You must supply all of the following parameters: {}".format(', '.join(missingParams)))
 
     if 'base64DecodeValue' in params and params['base64DecodeValue'] == True:
-        decodedValue = params['value'].decode('base64').strip()
-        if len(decodedValue) == 0:
+        try:
+            validatedParams['value'] = base64.b64decode(params['value']).decode('utf-8')
+
+            if len(validatedParams['value']) == 0:
+                raise Exception
+        except:
             return (False, "value parameter is not Base64 encoded")
-        else:
-            # make use of the decoded value so we don't have to decode it again later
-            validatedParams['value'] = decodedValue
 
     if 'base64DecodeKey' in params and params['base64DecodeKey'] == True:
-        decodedKey = params['key'].decode('base64').strip()
-        if len(decodedKey) == 0:
+        try:
+            validatedParams['key'] = base64.b64decode(params['key']).decode('utf-8')
+
+            if len(validatedParams['key']) == 0:
+                raise Exception
+        except:
             return (False, "key parameter is not Base64 encoded")
-        else:
-            # make use of the decoded key so we don't have to decode it again later
-            validatedParams['key'] = decodedKey
 
     return (True, validatedParams)
