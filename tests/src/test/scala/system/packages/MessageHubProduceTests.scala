@@ -114,7 +114,7 @@ class MessageHubProduceTests
     }
 
     it should "Reject with bad broker list" in {
-        val badBrokerParams = validParameters + ("kafka_brokers_sasl" -> List("localhost:8080").toJson)
+        val badBrokerParams = validParameters + ("kafka_brokers_sasl" -> List("localhost:0000").toJson)
 
         withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", badBrokerParams)) {
             activation =>
