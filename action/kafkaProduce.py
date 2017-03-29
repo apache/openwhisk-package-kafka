@@ -52,19 +52,19 @@ def validateParams(params):
     if 'base64DecodeValue' in params and params['base64DecodeValue'] == True:
         try:
             validatedParams['value'] = base64.b64decode(params['value']).decode('utf-8')
-
-            if len(validatedParams['value']) == 0:
-                raise Exception
         except:
+            return (False, "value parameter is not Base64 encoded")
+
+        if len(validatedParams['value']) == 0:
             return (False, "value parameter is not Base64 encoded")
 
     if 'base64DecodeKey' in params and params['base64DecodeKey'] == True:
         try:
             validatedParams['key'] = base64.b64decode(params['key']).decode('utf-8')
-
-            if len(validatedParams['key']) == 0:
-                raise Exception
         except:
+            return (False, "key parameter is not Base64 encoded")
+
+        if len(validatedParams['key']) == 0:
             return (False, "key parameter is not Base64 encoded")
 
     return (True, validatedParams)
