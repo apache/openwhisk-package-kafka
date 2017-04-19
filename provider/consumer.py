@@ -320,14 +320,13 @@ class ConsumerThread (Thread):
                     status_code = response.status_code
                     logging.info("[{}] Repsonse status code {}".format(self.trigger, status_code))
 
-                    # Manually commit offset if the trigger was fired successfully. Retry firing the trigger if the
-                    # service was unavailable (503), an internal server error occurred (500), the request timed out
-                    # (408), or the request was throttled (429).
+                    # Manually commit offset if the trigger was fired successfully. Retry firing the trigger
+                    # for a select set of status codes
                     if status_code == 200:
                         logging.info("[{}] Fired trigger with activation {}".format(self.trigger, response.json()['activationId']))
                         self.consumer.commit()
                         retry = False
-                    elif status_code not in [503, 500, 408, 429]:
+                    elif status_code not in [408, 429, 500, 502, 503, 504]:
                         logging.error('[{}] Error talking to OpenWhisk, status code {}'.format(self.trigger, status_code))
 
                         # abandon all hope?
