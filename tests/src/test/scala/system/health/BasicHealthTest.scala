@@ -16,6 +16,9 @@
 
 package system.health
 
+import java.time.Clock
+import java.time.Instant
+
 import system.utils.KafkaUtils
 
 import scala.concurrent.duration.DurationInt
@@ -29,6 +32,9 @@ import org.scalatest.junit.JUnitRunner
 
 import common.JsHelpers
 import common.TestHelpers
+import common.TestUtils.DONTCARE_EXIT
+import common.TestUtils.NOT_FOUND
+import common.TestUtils.SUCCESS_EXIT
 import common.Wsk
 import common.WskActorSystem
 import common.WskProps
@@ -67,33 +73,39 @@ class BasicHealthTest
 
     it should "fire a trigger when a message is posted to message hub" in withAssetCleaner(wskprops) {
         val currentTime = s"${System.currentTimeMillis}"
+        val triggerName = "/_/BasicHealthTestTrigger"
 
         (wp, assetHelper) =>
-            val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
-            println(s"Creating trigger ${triggerName}")
+            val result = wsk.trigger.get(triggerName, expectedExitCode = DONTCARE_EXIT)
 
-            val feedCreationResult = assetHelper.withCleaner(wsk.trigger, triggerName) {
-                (trigger, _) =>
-                    trigger.create(triggerName, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = Map(
-                        "user" -> kafkaUtils.getAsJson("user"),
-                        "password" -> kafkaUtils.getAsJson("password"),
-                        "api_key" -> kafkaUtils.getAsJson("api_key"),
-                        "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
-                        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
-                        "topic" -> topic.toJson))
+            if(result.exitCode == NOT_FOUND) {
+                // trigger does not yet exist, create it
+                println(s"Creating trigger ${triggerName}")
+
+                val feedCreationResult = wsk.trigger.create(triggerName, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = Map(
+                    "user" -> kafkaUtils.getAsJson("user"),
+                    "password" -> kafkaUtils.getAsJson("password"),
+                    "api_key" -> kafkaUtils.getAsJson("api_key"),
+                    "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
+                    "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+                    "topic" -> topic.toJson))
+
+                withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
+                    activation =>
+                        // should be successful
+                        activation.response.success shouldBe true
+                }
+
+                // It takes a moment for the consumer to fully initialize.
+                println("Giving the consumer a moment to get ready")
+                Thread.sleep(consumerInitTime)
+            } else {
+                result.exitCode shouldBe(SUCCESS_EXIT)
+                println(s"Trigger already exists, reusing it: $triggerName")
             }
-
-            withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
-                activation =>
-                    // should be successful
-                    activation.response.success shouldBe true
-            }
-
-            // It takes a moment for the consumer to fully initialize.
-            println("Giving the consumer a moment to get ready")
-            Thread.sleep(consumerInitTime)
 
             retry({
+                val start = Instant.now(Clock.systemUTC())
                 // key to use for the produced message
                 val key = "TheKey"
 
@@ -109,7 +121,7 @@ class BasicHealthTest
                     }
 
                 println("Polling for activations")
-                val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = 30)
+                val activations = wsk.activation.pollFor(N = 5, Some(triggerName), since = Some(start), retries = 30)
                 assert(activations.length > 0)
 
                 println("Validating content of activation(s)")
