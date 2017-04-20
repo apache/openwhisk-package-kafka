@@ -14,7 +14,7 @@ RUN apt-get install -y \
     psmisc
 
 # install librdkafka
-RUN git clone --depth 1 --branch v0.9.4 https://github.com/edenhill/librdkafka.git librdkafka \
+RUN git clone --depth 1 --branch v0.9.5 https://github.com/edenhill/librdkafka.git librdkafka \
     && cd librdkafka \
     && ./configure \
     && make \
