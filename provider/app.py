@@ -129,7 +129,13 @@ def deleteTrigger(namespace, trigger):
     consumer = consumers.getConsumerForTrigger(triggerFQN)
     if consumer != None:
         if authorizedForTrigger(auth, consumer):
-            consumer.shutdown()
+            if consumer.desiredState() == Consumer.State.Disabled:
+                # it's already disabled, just delete it
+                database.deleteTrigger(triggerFQN)
+                consumers.removeConsumerForTrigger(triggerFQN)
+            else:
+                consumer.shutdown()
+
             response = jsonify({'success': True})
         else:
             response = jsonify({'error': 'not authorized'})
