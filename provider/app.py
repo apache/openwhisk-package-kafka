@@ -158,19 +158,20 @@ def authorizedForTrigger(auth, consumer):
 
 
 def createAndRunConsumer(triggerFQN, params, record=True):
-    if app.config['TESTING'] == True:
-        logging.debug("Just testing")
-    else:
-        # generate a random uuid for new triggers
-        if not 'uuid' in params:
-            params['uuid'] = str(uuid.uuid4())
+    # generate a random uuid for new triggers
+    if not 'uuid' in params:
+        params['uuid'] = str(uuid.uuid4())
 
+    if 'status' not in params or params['status']['active'] == True:
+        logging.info('{} Trigger was determined to be active, starting...'.format(triggerFQN))
         consumer = Consumer(triggerFQN, params)
         consumer.start()
         consumers.addConsumerForTrigger(triggerFQN, consumer)
+    else:
+        logging.info('{} Trigger was determined to be disabled, ignoring...'.format(triggerFQN))
 
-        if record:
-            database.recordTrigger(triggerFQN, params)
+    if record:
+        database.recordTrigger(triggerFQN, params)
 
 
 def restoreTriggers():

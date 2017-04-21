@@ -14,6 +14,7 @@
 
 import logging
 import os
+import time
 import uuid
 
 from cloudant import Cloudant
@@ -46,6 +47,14 @@ class Database:
                 document = dict(doc)
                 document['_id'] = triggerFQN
 
+                # set the status as active
+                status = {
+                    'active': True,
+                    'dateChanged': time.time()
+                }
+
+                document['status'] = status
+
                 logging.info('Writing trigger {} to DB'.format(triggerFQN))
                 result = self.database.create_document(document)
                 logging.info('Successfully wrote trigger {} to DB'.format(triggerFQN))
@@ -68,6 +77,31 @@ class Database:
                     logging.warn('Attempted to delete non-existent trigger from DB: {}'.format(triggerFQN))
             except Exception as e:
                 logging.error('[{}] Uncaught exception while deleting trigger from database: {}'.format(triggerFQN, e))
+
+    def disableTrigger(self, triggerFQN, status_code):
+        with self.lock:
+            try:
+                document = self.database[triggerFQN]
+
+                if document.exists():
+                    logging.info('Found trigger to disable from DB: {}'.format(triggerFQN))
+
+                    status = {
+                        'active': False,
+                        'dateChanged': time.time(),
+                        'reason': {
+                            'kind': 'AUTO',
+                            'statusCode': status_code,
+                            'message': 'Automatically disabled after receiving a {} status code when firing the trigger.'.format(status_code)
+                        }
+                    }
+
+                    document['status'] = status
+                    document.save()
+
+                    logging.info('{} Successfully recorded trigger as disabled.'.format(triggerFQN))
+            except Exception as e:
+                logging.error('[{}] Uncaught exception while disabling trigger: {}'.format(triggerFQN, e))
 
 
     def triggers(self):
