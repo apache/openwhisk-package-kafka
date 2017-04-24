@@ -47,13 +47,14 @@ class Database:
                 document = dict(doc)
                 document['_id'] = triggerFQN
 
-                # set the status as active
-                status = {
-                    'active': True,
-                    'dateChanged': time.time()
-                }
+                if 'status' not in document:
+                    # set the status as active
+                    status = {
+                        'active': True,
+                        'dateChanged': time.time()
+                    }
 
-                document['status'] = status
+                    document['status'] = status
 
                 logging.info('Writing trigger {} to DB'.format(triggerFQN))
                 result = self.database.create_document(document)
