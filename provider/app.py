@@ -129,7 +129,13 @@ def deleteTrigger(namespace, trigger):
     consumer = consumers.getConsumerForTrigger(triggerFQN)
     if consumer != None:
         if authorizedForTrigger(auth, consumer):
-            consumer.shutdown()
+            if consumer.desiredState() == Consumer.State.Disabled:
+                # it's already disabled, just delete it
+                database.deleteTrigger(triggerFQN)
+                consumers.removeConsumerForTrigger(triggerFQN)
+            else:
+                consumer.shutdown()
+
             response = jsonify({'success': True})
         else:
             response = jsonify({'error': 'not authorized'})
@@ -158,19 +164,24 @@ def authorizedForTrigger(auth, consumer):
 
 
 def createAndRunConsumer(triggerFQN, params, record=True):
-    if app.config['TESTING'] == True:
-        logging.debug("Just testing")
-    else:
-        # generate a random uuid for new triggers
-        if not 'uuid' in params:
-            params['uuid'] = str(uuid.uuid4())
+    # generate a random uuid for new triggers
+    if not 'uuid' in params:
+        params['uuid'] = str(uuid.uuid4())
 
-        consumer = Consumer(triggerFQN, params)
+    # Create a representation for this trigger, even if it is disabled
+    # This allows it to appear in /health as well as allow it to be deleted
+    # Creating this object is lightweight and does not initialize any connections
+    consumer = Consumer(triggerFQN, params)
+    consumers.addConsumerForTrigger(triggerFQN, consumer)
+
+    if 'status' not in params or params['status']['active'] == True:
+        logging.info('{} Trigger was determined to be active, starting...'.format(triggerFQN))
         consumer.start()
-        consumers.addConsumerForTrigger(triggerFQN, consumer)
+    else:
+        logging.info('{} Trigger was determined to be disabled, not starting...'.format(triggerFQN))
 
-        if record:
-            database.recordTrigger(triggerFQN, params)
+    if record:
+        database.recordTrigger(triggerFQN, params)
 
 
 def restoreTriggers():
