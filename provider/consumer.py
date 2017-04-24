@@ -110,8 +110,12 @@ class ConsumerThread (Thread):
 
         # the following params may be set/read from other threads
         # only access through helper methods which handle thread safety!
-        self.__currentState = Consumer.State.Initializing
-        self.__desiredState = Consumer.State.Running
+        if 'status' in params and params['status']['active'] == False:
+            self.__currentState = Consumer.State.Disabled
+            self.__desiredState = Consumer.State.Disabled
+        else:
+            self.__currentState = Consumer.State.Initializing
+            self.__desiredState = Consumer.State.Running
         self.__lastPoll = datetime.max
 
         self.daemon = True
@@ -400,4 +404,3 @@ class ConsumerThread (Thread):
 
         logging.debug('[{}] Returning un-encoded message'.format(self.trigger))
         return key
-

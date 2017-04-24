@@ -168,13 +168,17 @@ def createAndRunConsumer(triggerFQN, params, record=True):
     if not 'uuid' in params:
         params['uuid'] = str(uuid.uuid4())
 
+    # Create a representation for this trigger, even if it is disabled
+    # This allows it to appear in /health as well as allow it to be deleted
+    # Creating this object is lightweight and does not initialize any connections
+    consumer = Consumer(triggerFQN, params)
+    consumers.addConsumerForTrigger(triggerFQN, consumer)
+
     if 'status' not in params or params['status']['active'] == True:
         logging.info('{} Trigger was determined to be active, starting...'.format(triggerFQN))
-        consumer = Consumer(triggerFQN, params)
         consumer.start()
-        consumers.addConsumerForTrigger(triggerFQN, consumer)
     else:
-        logging.info('{} Trigger was determined to be disabled, ignoring...'.format(triggerFQN))
+        logging.info('{} Trigger was determined to be disabled, not starting...'.format(triggerFQN))
 
     if record:
         database.recordTrigger(triggerFQN, params)
