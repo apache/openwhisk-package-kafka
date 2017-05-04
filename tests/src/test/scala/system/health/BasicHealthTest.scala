@@ -73,7 +73,13 @@ class BasicHealthTest
 
     it should "fire a trigger when a message is posted to message hub" in withAssetCleaner(wskprops) {
         val currentTime = s"${System.currentTimeMillis}"
-        val triggerName = "/_/BasicHealthTestTrigger"
+
+        val baseTriggerName = "/_/BasicHealthTestTrigger"
+
+        val triggerName = System.getProperty("trigger.suffix") match {
+            case suffix if suffix != "" => s"${baseTriggerName}-${suffix}"
+            case _ => baseTriggerName
+        }
 
         (wp, assetHelper) =>
             val result = wsk.trigger.get(triggerName, expectedExitCode = DONTCARE_EXIT)
