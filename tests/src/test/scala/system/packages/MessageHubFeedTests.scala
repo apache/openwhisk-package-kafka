@@ -67,61 +67,48 @@ class MessageHubFeedTests
 
   implicit val wskprops = WskProps()
   val wsk = new Wsk()
-  val actionName = "messageHubFeedAction"
-  val actionFile = "../action/messageHubFeed.js"
+  val actionName = s"${messagingPackage}/${messageHubFeed}"
 
   behavior of "Message Hub feed action"
 
-  override def beforeAll() {
-    wsk.action.create(actionName, Some(actionFile))
-    super.beforeAll()
-  }
-
-  override def afterAll() {
-    wsk.action.delete(actionName)
-    super.afterAll()
-  }
-
   it should "reject invocation when topic argument is missing" in {
     val expectedOutput = JsObject(
-      "error" -> JsString("You must supply a \"topic\" parameter."))
+      "error" -> JsString("You must supply a 'topic' parameter.")
+    )
 
     runActionWithExpectedResult(actionName, "dat/missingTopic.json", expectedOutput, false)
   }
 
   it should "reject invocation when kafka_brokers_sasl argument is missing" in {
     val expectedOutput = JsObject(
-      "error" -> JsString("You must supply a \"kafka_brokers_sasl\" parameter as an array of Message Hub brokers."))
+      "error" -> JsString("You must supply a 'kafka_brokers_sasl' parameter.")
+    )
 
     runActionWithExpectedResult(actionName, "dat/missingBrokers.json", expectedOutput, false)
   }
 
   it should "reject invocation when kafka_admin_url argument is missing" in {
     val expectedOutput = JsObject("error" -> JsString(
-      "You must supply a \"kafka_admin_url\" parameter."))
+      "You must supply a 'kafka_admin_url' parameter.")
+    )
 
     runActionWithExpectedResult(actionName, "dat/missingAdminURL.json", expectedOutput, false)
   }
 
   it should "reject invocation when user argument is missing" in {
     val expectedOutput = JsObject(
-      "error" -> JsString("You must supply a \"user\" parameter to authenticate with Message Hub."))
+      "error" -> JsString("You must supply a 'user' parameter to authenticate with Message Hub.")
+    )
 
     runActionWithExpectedResult(actionName, "dat/missingUser.json", expectedOutput, false)
   }
 
   it should "reject invocation when password argument is missing" in {
     val expectedOutput = JsObject(
-      "error" -> JsString("You must supply a \"password\" parameter to authenticate with Message Hub."))
+      "error" -> JsString("You must supply a 'password' parameter to authenticate with Message Hub.")
+    )
 
     runActionWithExpectedResult(actionName, "dat/missingPassword.json", expectedOutput, false)
-  }
-
-  it should "reject invocation when package_endpoint argument is missing" in {
-    val expectedOutput = JsObject(
-      "error" -> JsString("Could not find the package_endpoint parameter."))
-
-    runActionWithExpectedResult(actionName, "dat/missingPackageEndpoint.json", expectedOutput, false)
   }
 
   it should "reject invocation when isJSONData and isBinaryValue are both enable" in {

@@ -2,6 +2,9 @@
   "kafka_brokers_sasl": [
     "someBroker"
   ],
+  "brokers": [
+    "someBroker"
+  ],
   "topic": "someTopic",
   "user": "someUser",
   "password": "somePassword",
