@@ -20,12 +20,13 @@ import time
 
 # HEADS UP! I'm importing confluent_kafka.Consumer as KafkaConsumer to avoid a
 # naming conflict with my own Consumer class
-from confluent_kafka import Consumer as KafkaConsumer, KafkaError
+from confluent_kafka import Consumer as KafkaConsumer, KafkaError, TopicPartition
 from database import Database
 from datetime import datetime
 from threading import Thread, Lock
 
 local_dev = os.getenv('LOCAL_DEV', 'False')
+payload_limit = int(os.getenv('PAYLOAD_LIMIT', 900000))
 check_ssl = (local_dev == 'False')
 
 class Consumer:
@@ -150,6 +151,9 @@ class ConsumerThread (Thread):
         # before the KafkaConsumer is fully initialized/assigned
         self.consumer = None
 
+        # potentially squirrel away the message that would overflow the payload
+        self.queuedMessage = None
+
     # this only records the current state, and does not affect a state transition
     def __recordState(self, newState):
         with self.lock:
@@ -264,12 +268,17 @@ class ConsumerThread (Thread):
 
     def __pollForMessages(self):
         messages = []
-        messageSize = 0
+        totalPayloadSize = 0
         batchMessages = True
 
         if self.__shouldRun():
             while batchMessages and (self.secondsSinceLastPoll() < 2):
-                message = self.consumer.poll(1.0)
+                if self.queuedMessage != None:
+                    logging.debug('[{}] Handling message left over from last batch.'.format(self.trigger))
+                    message = self.queuedMessage
+                    self.queuedMessage = None
+                else:
+                    message = self.consumer.poll(1.0)
 
                 if self.secondsSinceLastPoll() < 0:
                     logging.info('[{}] Completed first poll'.format(self.trigger))
@@ -278,8 +287,20 @@ class ConsumerThread (Thread):
                 if (message is not None):
                     if not message.error():
                         logging.debug("Consumed message: {}".format(str(message)))
-                        messageSize += len(message.value())
-                        messages.append(message)
+                        messageSize = self.__sizeMessage(message)
+                        if totalPayloadSize + messageSize > payload_limit:
+                            if len(messages) == 0:
+                                logging.error('[{}] Single message at offset {} exceeds payload size limit. Skipping this message!'.format(self.trigger, message.offset()))
+                                self.consumer.commit(message=message, async=False)
+                            else:
+                                logging.debug('[{}] Message at offset {} would cause payload to exceed the size limit. Queueing up for the next round...'.format(self.trigger, message.offset()))
+                                self.queuedMessage = message
+
+                            # in any case, we need to stop batching now
+                            batchMessages = False
+                        else:
+                            totalPayloadSize += messageSize
+                            messages.append(message)
                     elif message.error().code() != KafkaError._PARTITION_EOF:
                         logging.error('[{}] Error polling: {}'.format(self.trigger, message.error()))
                         batchMessages = False
@@ -293,7 +314,7 @@ class ConsumerThread (Thread):
         logging.debug('[{}] Completed poll'.format(self.trigger))
 
         if len(messages) > 0:
-            logging.info("[{}] Found {} messages with a total size of {} bytes".format(self.trigger, len(messages), messageSize))
+            logging.info("[{}] Found {} messages with a total size of {} bytes".format(self.trigger, len(messages), totalPayloadSize))
 
         self.updateLastPoll()
         return messages
@@ -311,21 +332,14 @@ class ConsumerThread (Thread):
             # I'm sure there is a much more clever way to do this ;)
             mappedMessages = []
             for message in messages:
-                fieldsToSend = {
-                    'value': self.__encodeMessageIfNeeded(message.value()),
-                    'topic': message.topic(),
-                    'partition': message.partition(),
-                    'offset': message.offset(),
-                    'key': self.__encodeKeyIfNeeded(message.key())
-                }
-                mappedMessages.append(fieldsToSend)
+                mappedMessages.append(self.__getMessagePayload(message))
 
             payload = {}
             payload['messages'] = mappedMessages
             retry = True
             retry_count = 0
 
-            logging.info("[{}] Firing trigger with {} messages".format(self.trigger,len(messages)))
+            logging.info("[{}] Firing trigger with {} messages".format(self.trigger,len(mappedMessages)))
 
             while retry:
                 try:
@@ -337,7 +351,9 @@ class ConsumerThread (Thread):
                     # for a select set of status codes
                     if status_code == 200:
                         logging.info("[{}] Fired trigger with activation {}".format(self.trigger, response.json()['activationId']))
-                        self.consumer.commit()
+                        # the consumer may have consumed messages that did not make it into the messages array.
+                        # be sure to only commit to the messages that were actually fired.
+                        self.consumer.commit(offsets=self.__getOffsetList(messages), async=False)
                         retry = False
                     elif self.__shouldDisable(status_code):
                         logging.error('[{}] Error talking to OpenWhisk, status code {}'.format(self.trigger, status_code))
@@ -359,8 +375,33 @@ class ConsumerThread (Thread):
                         time.sleep(self.retry_timeout)
                     else:
                         logging.warn("[{}] Skipping {} messages to offset {} of partition {}".format(self.trigger, len(messages), lastMessage.offset(), lastMessage.partition()))
-                        self.consumer.commit()
+                        self.consumer.commit(offsets=self.__getOffsetList(messages), async=False)
                         retry = False
+
+    # return the dict that will be sent as the trigger payload
+    def __getMessagePayload(self, message):
+        return {
+            'value': self.__encodeMessageIfNeeded(message.value()),
+            'topic': message.topic(),
+            'partition': message.partition(),
+            'offset': message.offset(),
+            'key': self.__encodeKeyIfNeeded(message.key())
+        }
+
+    # return the size in bytes of the trigger payload for this message
+    def __sizeMessage(self, message):
+        messagePayload = self.__getMessagePayload(message)
+        return len(json.dumps(messagePayload).encode('utf-8'))
+
+    # return list of TopicPartition which represent the _next_ offset to consume
+    def __getOffsetList(self, messages):
+        offsets = []
+        for message in messages:
+            # Add one to the offset, otherwise we'll consume this message again.
+            # That's just how Kafka works, you place the bookmark at the *next* message.
+            offsets.append(TopicPartition(message.topic(), message.partition(), message.offset() + 1))
+
+        return offsets
 
     def shutdown(self):
         if self.currentState() != Consumer.State.Stopping and self.currentState() != Consumer.State.Dead:

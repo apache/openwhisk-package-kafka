@@ -192,7 +192,9 @@ If the same message is posted without `isBinaryData` set to `true`, the trigger 
 ### Messages are batched
 You will notice that the trigger payload contains an array of messages. This means that if you are producing messages to your messaging system very quickly, the feed will attempt to batch up the posted messages into a single firing of your trigger. This allows the messages to be posted to your trigger more rapidly and efficiently.
 
-Please keep in mind when coding actions that are fired by your trigger, that the number of messages in the payload is technically unbounded, but will always be greater than 0. Here is an example of a batched message (please note the change in the *offset* value):
+Please keep in mind when coding actions that are fired by your trigger, the number of messages in the payload will always be greater than 0. While there is technically no upper limit on the number of messages fired, limits are in place to ensure that each trigger payload is below the payload size limit defined by your OpenWhisk deployment.
+
+Here is an example of a batched trigger payload (please note the change in the *offset* value):
 
  ```json
  {
