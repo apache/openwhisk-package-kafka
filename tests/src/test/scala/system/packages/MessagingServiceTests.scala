@@ -21,8 +21,6 @@ import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import org.scalatest.junit.JUnitRunner
 import com.jayway.restassured.RestAssured
-import common.WhiskProperties
-import spray.json._
 
 @RunWith(classOf[JUnitRunner])
 class MessagingServiceTests
@@ -30,24 +28,12 @@ class MessagingServiceTests
     with BeforeAndAfter
     with Matchers {
 
-  val healthEndpoint = s"/health"
+  val healthEndpoint = "/health"
 
   val getMessagingAddress =
     if (System.getProperty("host") != "" && System.getProperty("port") != "") {
       "http://" + System.getProperty("host") + ":" + System.getProperty("port")
     }
-
-  def makePutCallWithExpectedResult(url: String, params: JsObject, expectedResult: JsObject, expectedCode: Int) = {
-    val response = RestAssured.given().body(params.toString()).put(url)
-    assert(response.statusCode() == expectedCode)
-    response.body.asString.parseJson.asJsObject shouldBe expectedResult
-  }
-
-  def makeDeleteCallWithExpectedResult(url: String, expectedResult: JsObject, expectedCode: Int) = {
-    val response = RestAssured.given().delete(url)
-    assert(response.statusCode() == expectedCode)
-    response.body.asString.parseJson.asJsObject shouldBe expectedResult
-  }
 
   behavior of "Messaging feed provider endpoint"
 
@@ -55,197 +41,5 @@ class MessagingServiceTests
     val response = RestAssured.given().get(getMessagingAddress + healthEndpoint)
 
     assert(response.statusCode() == 200 && response.asString().contains("consumers"))
-  }
-
-  it should "reject post of a trigger when missing all arguments" in {
-    val expectedJSON = JsObject(
-      "error" -> JsString("missing fields: brokers, topic, triggerURL, isMessageHub"),
-      "success" -> JsBoolean(false)
-    )
-
-    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", JsObject(), expectedJSON, 400)
-  }
-
-  it should "reject post of a trigger due to missing brokers argument" in {
-    val params = JsObject(
-      "topic" -> JsString("someTopic"),
-      "triggerURL" -> JsString("someURL"),
-      "isMessageHub" -> JsBoolean(false)
-    )
-    val expectedJSON = JsObject(
-      "error" -> JsString("missing fields: brokers"),
-      "success" -> JsBoolean(false)
-    )
-
-    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 400)
-  }
-
-  it should "reject post of a trigger due to missing topic argument" in {
-    val params = JsObject(
-      "brokers" -> JsArray(JsString("someBroker")),
-      "triggerURL" -> JsString("someURL"),
-      "isMessageHub" -> JsBoolean(false)
-    )
-    val expectedJSON = JsObject(
-      "error" -> JsString("missing fields: topic"),
-      "success" -> JsBoolean(false)
-    )
-
-    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 400)
-  }
-
-  it should "reject post of a trigger due to missing triggerURL argument" in {
-    val params = JsObject(
-      "brokers" -> JsArray(JsString("someBroker")),
-      "topic" -> JsString("someTopic"),
-      "isMessageHub" -> JsBoolean(false)
-    )
-    val expectedJSON = JsObject(
-      "error" -> JsString("missing fields: triggerURL"),
-      "success" -> JsBoolean(false)
-    )
-
-    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 400)
-  }
-
-  it should "reject post of a trigger due to missing isMessageHub argument" in {
-    val params = JsObject(
-      "brokers" -> JsArray(JsString("someBroker")),
-      "triggerURL" -> JsString("someURL"),
-      "topic" -> JsString("someTopic")
-    )
-    val expectedJSON = JsObject(
-      "error" -> JsString("missing fields: isMessageHub"),
-      "success" -> JsBoolean(false)
-    )
-
-    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 400)
-  }
-
-  it should "reject post of a trigger due to missing username argument" in {
-    val params = JsObject(
-      "brokers" -> JsArray(JsString("someBroker")),
-      "password" -> JsString("somePassword"),
-      "topic" -> JsString("someTopic"),
-      "triggerURL" -> JsString("someURL"),
-      "isMessageHub" -> JsBoolean(true)
-    )
-    val expectedJSON = JsObject(
-      "error" -> JsString("missing fields: username"),
-      "success" -> JsBoolean(false)
-    )
-
-    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 400)
-  }
-
-  it should "reject post of a trigger due to missing password argument" in {
-    val params = JsObject(
-      "brokers" -> JsArray(JsString("someBroker")),
-      "username" -> JsString("someUsername"),
-      "topic" -> JsString("someTopic"),
-      "triggerURL" -> JsString("someURL"),
-      "isMessageHub" -> JsBoolean(true)
-    )
-    val expectedJSON = JsObject(
-      "error" -> JsString("missing fields: password"),
-      "success" -> JsBoolean(false)
-    )
-
-    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 400)
-  }
-
-  it should "reject post of a trigger due to mismatch between triggerURL and trigger name" in {
-    val params = JsObject(
-      "brokers" -> JsArray(JsString("someBroker")),
-      "username" -> JsString("someUsername"),
-      "password" -> JsString("somePassword"),
-      "topic" -> JsString("someTopic"),
-      "triggerURL" -> JsString(s"https://someKey@${WhiskProperties.getEdgeHost}/api/v1/namespaces/invalidNamespace/triggers/someTrigger"),
-      "isMessageHub" -> JsBoolean(true)
-    )
-    val expectedJSON = JsObject(
-      "error" -> JsString("trigger and namespace from route must correspond to triggerURL"),
-      "success" -> JsBoolean(false)
-    )
-
-    makePutCallWithExpectedResult(getMessagingAddress +  "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 409)
-  }
-
-  it should "reject post of a trigger due to mismatch between triggerURL and namespace" in {
-    val params = JsObject(
-      "brokers" -> JsArray(JsString("someBroker")),
-      "username" -> JsString("someUsername"),
-      "password" -> JsString("somePassword"),
-      "topic" -> JsString("someTopic"),
-      "triggerURL" -> JsString(s"https://someKey@${WhiskProperties.getEdgeHost}/api/v1/namespaces/someNamespace/triggers/invalidTrigger"),
-      "isMessageHub" -> JsBoolean(true)
-    )
-    val expectedJSON = JsObject(
-      "error" -> JsString("trigger and namespace from route must correspond to triggerURL"),
-      "success" -> JsBoolean(false)
-    )
-
-    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 409)
-  }
-
-  it should "reject post of a trigger when authentication fails" in {
-    val params = JsObject(
-      "brokers" -> JsArray(JsString("someBroker")),
-      "username" -> JsString("someUsername"),
-      "password" -> JsString("somePassword"),
-      "topic" -> JsString("someTopic"),
-      "triggerURL" -> JsString(s"https://someKey@${WhiskProperties.getEdgeHost}/api/v1/namespaces/invalidNamespace/triggers/invalidTrigger"),
-      "isMessageHub" -> JsBoolean(true)
-    )
-    val expectedJSON = JsObject(
-      "error" -> JsString("not authorized"),
-      "success" -> JsBoolean(false)
-    )
-
-    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 401)
-  }
-
-  it should "reject delete of a trigger that does not exist" in {
-    val expectedJSON = JsObject(
-      "error" -> JsString("not found")
-    )
-
-    makeDeleteCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", expectedJSON, 404)
-  }
-
-  it should "reject post of a trigger when OpenWhisk host and port fails" in {
-    val address = "0.0.0.0.0.0:9999"
-    val params = JsObject(
-      "brokers" -> JsArray(JsString("someBroker")),
-      "username" -> JsString("someUsername"),
-      "password" -> JsString("somePassword"),
-      "topic" -> JsString("someTopic"),
-      "triggerURL" -> JsString(s"https://someKey@$address/api/v1/namespaces/invalidNamespace/triggers/invalidTrigger"),
-      "isMessageHub" -> JsBoolean(true)
-    )
-    val expectedJSON = JsObject(
-      "error" -> JsString(s"failed to communicate with OpenWhisk server ($address) for authentication."),
-      "success" -> JsBoolean(false)
-    )
-
-    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 500)
-  }
-
-  it should "reject post of a trigger when OpenWhisk host fails" in {
-    val address = "0.0.0.0.0.0"
-    val params = JsObject(
-      "brokers" -> JsArray(JsString("someBroker")),
-      "username" -> JsString("someUsername"),
-      "password" -> JsString("somePassword"),
-      "topic" -> JsString("someTopic"),
-      "triggerURL" -> JsString(s"https://someKey@$address/api/v1/namespaces/invalidNamespace/triggers/invalidTrigger"),
-      "isMessageHub" -> JsBoolean(true)
-    )
-    val expectedJSON = JsObject(
-      "error" -> JsString(s"failed to communicate with OpenWhisk server ($address) for authentication."),
-      "success" -> JsBoolean(false)
-    )
-
-    makePutCallWithExpectedResult(getMessagingAddress + "/triggers/invalidNamespace/invalidTrigger", params, expectedJSON, 500)
   }
 }

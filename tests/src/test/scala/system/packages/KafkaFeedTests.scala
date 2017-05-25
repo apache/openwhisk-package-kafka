@@ -42,24 +42,16 @@ class KafkaFeedTests
 
   implicit val wskprops = WskProps()
   val wsk = new Wsk()
-  val actionName = "kafkaFeedAction"
-  val actionFile = "../action/kafkaFeed.js"
+
+  val messagingPackage = "/whisk.system/messaging"
+  val kafkaFeed = "kafkaFeed"
+  val actionName = s"${messagingPackage}/${kafkaFeed}"
 
   behavior of "Kafka feed action"
 
-  override def beforeAll() {
-    wsk.action.create(actionName, Some(actionFile))
-    super.beforeAll()
-  }
-
-  override def afterAll()  {
-    wsk.action.delete(actionName)
-    super.afterAll()
-  }
-
   it should "reject invocation when topic argument is missing" in {
     val expectedOutput = JsObject(
-      "error" -> JsString("You must supply a \"topic\" parameter.")
+      "error" -> JsString("You must supply a 'topic' parameter.")
     )
 
     runActionWithExpectedResult(actionName, "dat/missingTopic.json", expectedOutput, false)
@@ -67,18 +59,10 @@ class KafkaFeedTests
 
   it should "reject invocation when brokers argument is missing" in  {
     val expectedOutput = JsObject(
-      "error" -> JsString("You must supply a \"brokers\" parameter as an array of Kafka brokers.")
+      "error" -> JsString("You must supply a 'brokers' parameter.")
     )
 
     runActionWithExpectedResult(actionName, "dat/missingBrokers.json", expectedOutput, false)
-  }
-
-  it should "reject invocation when package_endpoint argument is missing" in {
-    val expectedOutput = JsObject(
-      "error" -> JsString("Could not find the package_endpoint parameter.")
-    )
-
-    runActionWithExpectedResult(actionName, "dat/missingPackageEndpoint.json", expectedOutput, false)
   }
 
   it should "reject invocation when isJSONData and isBinaryValue are both enable" in {

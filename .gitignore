@@ -1,2 +1,6 @@
+.gradle
 launchConfigurations/
 *.pyc
+action/*.zip
+action/package.json
+tests/build

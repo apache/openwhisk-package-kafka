@@ -4,8 +4,8 @@
 # automatically
 #
 # To run this command
-# ./installCatalog.sh  <AUTH> <EDGEHOST> <KAFKA_TRIGGER_HOST> <KAFKA_TRIGGER_PORT> <APIHOST>
-# AUTH and APIHOST are found in $HOME/.wskprops
+# ./installCatalog.sh <authkey> <edgehost> <dburl> <dbprefix> <apihost>
+# authkey and apihost are found in $HOME/.wskprops
 
 set -e
 set -x
@@ -15,15 +15,14 @@ WSK_CLI="$OPENWHISK_HOME/bin/wsk"
 
 if [ $# -eq 0 ]
 then
-echo "Usage: ./installCatalog.sh <authkey> <apihost> <kafkatriggerhost> <kafkatriggerport>"
+echo "Usage: ./installCatalog.sh <authkey> <edgehost> <dburl> <dbprefix> <apihost>"
 fi
 
 AUTH="$1"
 EDGEHOST="$2"
-KAFKA_TRIGGER_HOST="$3"
-KAFKA_TRIGGER_PORT="$4"
+DB_URL="$3"
+DB_NAME="${4}ow_kafka_triggers"
 APIHOST="$5"
-
 
 # If the auth key file exists, read the key in the file. Otherwise, take the
 # first argument as the key itself.
@@ -34,28 +33,64 @@ fi
 # Make sure that the APIHOST is not empty.
 : ${APIHOST:?"APIHOST must be set and non-empty"}
 
-KAFKA_PROVIDER_ENDPOINT=$KAFKA_TRIGGER_HOST':'$KAFKA_TRIGGER_PORT
-
 PACKAGE_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 export WSK_CONFIG_FILE= # override local property file to avoid namespace clashes
 
-echo Installing the kafka package and feed action.
+echo Installing the Message Hub package and feed action.
 
 $WSK_CLI -i --apihost "$EDGEHOST" package update messaging \
     --auth "$AUTH" \
     --shared yes \
     -a parameters '[ {"name":"kafka_brokers_sasl", "required":true, "description": "Array of Message Hub brokers", "bindTime":true},{"name":"user", "required":true, "description": "Message Hub username", "bindTime":true},{"name":"password", "required":true, "description": "Message Hub password", "bindTime":true, "type":"password"},{"name":"topic", "required":true, "description": "Topic to subscribe to"},{"name":"isJSONData", "required":false, "description": "Attempt to parse message value as JSON"},{"name":"isBinaryKey", "required":false, "description": "Encode key as Base64"},{"name":"isBinaryValue", "required":false, "description": "Encode message value as Base64"},{"name":"endpoint", "required":true, "description": "Hostname and port of OpenWhisk deployment"},{"name":"kafka_admin_url", "required":true, "description": "Your Message Hub admin REST URL", "bindTime":true}]' \
     -p bluemixServiceName 'messagehub' \
-    -p endpoint "$APIHOST" \
-    -p package_endpoint $KAFKA_PROVIDER_ENDPOINT
+    -p endpoint "$APIHOST"
 
-$WSK_CLI -i --apihost "$EDGEHOST" action update messaging/messageHubFeed "$PACKAGE_HOME/action/messageHubFeed.js" \
+# make messageHubFeed.zip
+OLD_PATH=`pwd`
+cd action
+
+if [ -e messageHubFeed.zip ]
+then
+    rm -rf messageHubFeed.zip
+fi
+
+cp -f messageHubFeed_package.json package.json
+zip -r messageHubFeed.zip lib package.json messageHubFeed.js
+
+$WSK_CLI -i --apihost "$EDGEHOST" action update --kind nodejs:6 messaging/messageHubFeed "$PACKAGE_HOME/action/messageHubFeed.zip" \
     --auth "$AUTH" \
     -a feed true \
     -a description 'Feed to list to Message Hub messages' \
     -a parameters '[ {"name":"kafka_brokers_sasl", "required":true, "description": "Array of Message Hub brokers"},{"name":"user", "required":true, "description": "Message Hub username"},{"name":"password", "required":true, "description": "Message Hub password", "type":"password"},{"name":"topic", "required":true, "description": "Topic to subscribe to"},{"name":"isJSONData", "required":false, "description": "Attempt to parse message value as JSON"},{"name":"isBinaryKey", "required":false, "description": "Encode key as Base64"},{"name":"isBinaryValue", "required":false, "description": "Encode message value as Base64"},{"name":"endpoint", "required":true, "description": "Hostname and port of OpenWhisk deployment"},{"name":"kafka_admin_url", "required":true, "description": "Your Message Hub admin REST URL"}]' \
     -a sampleInput '{"kafka_brokers_sasl":"[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\"]", "username":"someUsername", "password":"somePassword", "topic":"mytopic", "isJSONData": "false", "endpoint":"openwhisk.ng.bluemix.net", "kafka_admin_url":"https://kafka-admin-prod01.messagehub.services.us-south.bluemix.net:443"}'
+
+# create messagingWeb package and web version of feed action
+$WSK_CLI -i --apihost "$EDGEHOST" package update messagingWeb \
+    --auth "$AUTH" \
+    --shared no \
+    -p endpoint "$APIHOST" \
+    -p DB_URL "$DB_URL" \
+    -p DB_NAME "$DB_NAME" \
+
+# make messageHubFeedWeb.zip
+
+if [ -e messageHubFeedWeb.zip ]
+then
+    rm -rf messageHubFeedWeb.zip
+fi
+
+cp -f messageHubFeedWeb_package.json package.json
+zip -r messageHubFeedWeb.zip lib package.json messageHubFeedWeb.js
+
+cd $OLD_PATH
+
+
+$WSK_CLI -i --apihost "$EDGEHOST" action update --kind nodejs:6 messagingWeb/messageHubFeedWeb "$PACKAGE_HOME/action/messageHubFeedWeb.zip" \
+    --auth "$AUTH" \
+    --web true \
+    -a description 'Write a new trigger to MH provider DB' \
+    -a parameters '[ {"name":"kafka_brokers_sasl", "required":true, "description": "Array of Message Hub brokers"},{"name":"user", "required":true, "description": "Message Hub username"},{"name":"password", "required":true, "description": "Message Hub password", "type":"password"},{"name":"topic", "required":true, "description": "Topic to subscribe to"},{"name":"isJSONData", "required":false, "description": "Attempt to parse message value as JSON"},{"name":"isBinaryKey", "required":false, "description": "Encode key as Base64"},{"name":"isBinaryValue", "required":false, "description": "Encode message value as Base64"},{"name":"endpoint", "required":true, "description": "Hostname and port of OpenWhisk deployment"},{"name":"kafka_admin_url", "required":true, "description": "Your Message Hub admin REST URL"}]'
 
 $WSK_CLI -i --apihost "$EDGEHOST" action update messaging/messageHubProduce "$PACKAGE_HOME/action/messageHubProduce.py" \
     --auth "$AUTH" \

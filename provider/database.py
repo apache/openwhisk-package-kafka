@@ -17,18 +17,18 @@ import os
 import time
 import uuid
 
-from cloudant import Cloudant
+from cloudant.client import CouchDB
 from cloudant.result import Result
-from threading import Lock
 
 class Database:
     db_prefix = os.getenv('DB_PREFIX', '')
     dbname = db_prefix + 'ow_kafka_triggers'
-    username = os.environ['CLOUDANT_USER']
-    password = os.environ['CLOUDANT_PASS']
 
-    lock = Lock()
-    client = Cloudant(username, password, account=username)
+    username = os.environ['DB_USER']
+    password = os.environ['DB_PASS']
+    url = os.environ['DB_URL']
+
+    client = CouchDB(username, password, url=url)
     client.connect()
 
     filters_design_doc_id = '_design/filters'
@@ -41,79 +41,35 @@ class Database:
         logging.warn('Database does not exist - creating it.')
         database = client.create_database(dbname)
 
-    def recordTrigger(self, triggerFQN, doc):
-        with self.lock:
-            try:
-                document = dict(doc)
-                document['_id'] = triggerFQN
-
-                if 'status' not in document:
-                    # set the status as active
-                    status = {
-                        'active': True,
-                        'dateChanged': time.time()
-                    }
-
-                    document['status'] = status
-
-                logging.info('Writing trigger {} to DB'.format(triggerFQN))
-                result = self.database.create_document(document)
-                logging.info('Successfully wrote trigger {} to DB'.format(triggerFQN))
-
-                return result
-            except Exception as e:
-                logging.error('[{}] Uncaught exception while recording trigger to database: {}'.format(triggerFQN, e))
-
-
-    def deleteTrigger(self, triggerFQN):
-        with self.lock:
-            try:
-                document = self.database[triggerFQN]
-
-                if document.exists():
-                    logging.info('Found trigger to delete from DB: {}'.format(triggerFQN))
-                    document.delete()
-                    logging.info('Successfully deleted trigger from DB: {}'.format(triggerFQN))
-                else:
-                    logging.warn('Attempted to delete non-existent trigger from DB: {}'.format(triggerFQN))
-            except Exception as e:
-                logging.error('[{}] Uncaught exception while deleting trigger from database: {}'.format(triggerFQN, e))
 
     def disableTrigger(self, triggerFQN, status_code):
-        with self.lock:
-            try:
-                document = self.database[triggerFQN]
+        try:
+            document = self.database[triggerFQN]
 
-                if document.exists():
-                    logging.info('Found trigger to disable from DB: {}'.format(triggerFQN))
+            if document.exists():
+                logging.info('Found trigger to disable from DB: {}'.format(triggerFQN))
 
-                    status = {
-                        'active': False,
-                        'dateChanged': time.time(),
-                        'reason': {
-                            'kind': 'AUTO',
-                            'statusCode': status_code,
-                            'message': 'Automatically disabled after receiving a {} status code when firing the trigger.'.format(status_code)
-                        }
+                status = {
+                    'active': False,
+                    'dateChanged': time.time(),
+                    'reason': {
+                        'kind': 'AUTO',
+                        'statusCode': status_code,
+                        'message': 'Automatically disabled after receiving a {} status code when firing the trigger.'.format(status_code)
                     }
+                }
 
-                    document['status'] = status
-                    document.save()
+                document['status'] = status
+                document.save()
 
-                    logging.info('{} Successfully recorded trigger as disabled.'.format(triggerFQN))
-            except Exception as e:
-                logging.error('[{}] Uncaught exception while disabling trigger: {}'.format(triggerFQN, e))
+                logging.info('{} Successfully recorded trigger as disabled.'.format(triggerFQN))
+        except Exception as e:
+            logging.error('[{}] Uncaught exception while disabling trigger: {}'.format(triggerFQN, e))
 
 
-    def triggers(self):
-        allDocs = []
+    def changesFeed(self):
+        return self.database.infinite_changes(include_docs=True)
 
-        logging.info('Fetching all triggers from DB')
-        for document in self.database.get_view_result(self.filters_design_doc_id, self.only_triggers_view_id, include_docs=True):
-            allDocs.append(document['doc'])
-
-        logging.info('Successfully retrieved {} triggers'.format(len(allDocs)))
-        return allDocs
 
     def migrate(self):
         logging.info('Starting DB migration')

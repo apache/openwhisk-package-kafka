@@ -61,6 +61,9 @@ class Consumer:
     def shutdown(self):
         self.thread.shutdown()
 
+    def disable(self):
+        self.thread.setDesiredState(Consumer.State.Disabled)
+
     def start(self):
         self.thread.start()
 
@@ -216,7 +219,6 @@ class ConsumerThread (Thread):
 
         if self.desiredState() == Consumer.State.Dead:
             logging.info('[{}] Permanently killing consumer because desired state is Dead'.format(self.trigger))
-            self.database.deleteTrigger(self.trigger)
         elif self.desiredState() == Consumer.State.Restart:
             logging.info('[{}] Quietly letting the consumer thread stop in order to allow restart.'.format(self.trigger))
             # nothing else to do because this Thread is about to go away

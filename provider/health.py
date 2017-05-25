@@ -14,7 +14,6 @@
 
 import psutil   # https://pythonhosted.org/psutil/
 
-from consumercollection import ConsumerCollection
 from datetime import datetime
 
 MILLISECONDS_IN_SECOND = 1000
@@ -118,7 +117,6 @@ def getUpdateTime():
 
 def getConsumers(consumers):
     consumerReports = []
-    currentTime = datetime.now()
 
     consumerCopyRO = consumers.getCopyForRead()
     for consumerId in consumerCopyRO:

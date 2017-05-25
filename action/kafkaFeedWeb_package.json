@@ -1,0 +1,5 @@
+{
+  "name": "kafkaFeedWeb",
+  "version": "1.0.0",
+  "main": "kafkaFeedWeb.js"
+}

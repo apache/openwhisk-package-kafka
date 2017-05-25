@@ -1,0 +1,5 @@
+{
+  "name": "kafkaFeed",
+  "version": "1.0.0",
+  "main": "kafkaFeed.js"
+}

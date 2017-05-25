@@ -2,7 +2,6 @@ import logging
 import time
 
 from consumer import Consumer
-from consumercollection import ConsumerCollection
 from threading import Thread
 
 class TheDoctor (Thread):
