@@ -213,6 +213,8 @@ class ConsumerThread (Thread):
                 if len(messages) > 0:
                     self.__fireTrigger(messages)
 
+                time.sleep(0.1)
+
             logging.info("[{}] Consumer exiting main loop".format(self.trigger))
         except Exception as e:
             logging.error('[{}] Uncaught exception: {}'.format(self.trigger, e))
