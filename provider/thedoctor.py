@@ -27,15 +27,18 @@ class TheDoctor (Thread):
                 consumer = consumers[consumerId]
                 logging.debug('[Doctor] [{}] Consumer is in state: {}'.format(consumerId, consumer.currentState()))
 
-                if consumer.currentState() is Consumer.State.Dead and consumer.desiredState() is Consumer.State.Running:
+                if consumer.currentState() == Consumer.State.Dead and consumer.desiredState() == Consumer.State.Running:
                     # well this is unexpected...
                     logging.error('[Doctor][{}] Consumer is dead, but should be alive!'.format(consumerId))
                     consumer.restart()
-                elif consumer.currentState() is Consumer.State.Dead and consumer.desiredState() is Consumer.State.Dead:
+                elif consumer.currentState() == Consumer.State.Dead and consumer.desiredState() == Consumer.State.Dead:
                     # Bring out yer dead...
+                    logging.info('[{}] Joining dead process.'.format(consumer.trigger))
+                    # if you don't first join the process, it'll be left hanging around as a "defunct" process
+                    consumer.process.join(1)
                     logging.info('[{}] Removing dead consumer from the collection.'.format(consumer.trigger))
                     self.consumerCollection.removeConsumerForTrigger(consumer.trigger)
-                elif consumer.secondsSinceLastPoll() > self.poll_timeout_seconds and consumer.desiredState() is Consumer.State.Running:
+                elif consumer.secondsSinceLastPoll() > self.poll_timeout_seconds and consumer.desiredState() == Consumer.State.Running:
                     # there seems to be an issue with the kafka-python client where it gets into an
                     # error-handling loop. This causes poll() to never complete, but also does not
                     # throw an exception.
