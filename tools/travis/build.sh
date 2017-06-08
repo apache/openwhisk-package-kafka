@@ -5,9 +5,8 @@ set -e
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/../.."
-WHISKDIR="$ROOTDIR/../openwhisk"
+UTILDIR="$ROOTDIR/../incubator-openwhisk-utilities"
 
-# Scan code
-
-cd $WHISKDIR
-tools/build/scanCode.py $ROOTDIR
+# run scancode
+cd $UTILDIR
+scancode/scanCode.py $ROOTDIR
