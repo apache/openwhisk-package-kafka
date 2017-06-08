@@ -285,3 +285,5 @@ An OpenWhisk deployment is required in order for the automated test suite to be 
 - [OpenWhisk](https://www.ibm.com/cloud-computing/bluemix/openwhisk)
 - [IBM Message Hub](https://developer.ibm.com/messaging/message-hub/)
 - [Apache Kafka](https://kafka.apache.org/)
+
+foo
