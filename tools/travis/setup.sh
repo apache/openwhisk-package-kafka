@@ -22,7 +22,10 @@ pip install --user jsonschema
 # Ansible
 pip install --user ansible==2.1.2.0
 
-# OpenWhisk stuff
+# clone OpenWhisk repo. in order to run scanCode.py
+cd $HOMEDIR
+git clone https://github.com/apache/incubator-openwhisk-utilities.git
 
+# OpenWhisk stuff
 cd $HOMEDIR
 git clone https://github.com/openwhisk/openwhisk.git
