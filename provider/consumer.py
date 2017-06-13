@@ -23,11 +23,20 @@ import time
 from confluent_kafka import Consumer as KafkaConsumer, KafkaError, TopicPartition
 from database import Database
 from datetime import datetime
-from threading import Thread, Lock
+from multiprocessing import Process, Manager
 
 local_dev = os.getenv('LOCAL_DEV', 'False')
 payload_limit = int(os.getenv('PAYLOAD_LIMIT', 900000))
 check_ssl = (local_dev == 'False')
+
+processingManager = Manager()
+
+# Each Consumer instance will have a shared dictionary that will be used to
+# indicate state, and desired state changes between this process, and the ConsumerProcess.
+def newSharedDictionary():
+    sharedDictionary = processingManager.dict()
+    sharedDictionary['lastPoll'] = datetime.max
+    return sharedDictionary
 
 class Consumer:
     class State:
@@ -41,93 +50,88 @@ class Consumer:
     def __init__(self, trigger, params):
         self.trigger = trigger
         self.params = params
-        self.thread = ConsumerThread(trigger, params)
 
-        # the following fields can be accessed from multiple threads
-        # access needs to be protected with this Lock
-        self.__lock = Lock()
+        self.sharedDictionary = newSharedDictionary()
+
+        self.process = ConsumerProcess(trigger, params, self.sharedDictionary)
         self.__restartCount = 0
 
-        # this is weird.
-        # The app needs this tho...
-        self.triggerURL = params["triggerURL"]
-
     def currentState(self):
-        return self.thread.currentState()
+        return self.sharedDictionary['currentState']
 
     def desiredState(self):
-        return self.thread.desiredState()
+        return self.sharedDictionary['desiredState']
+
+    def setDesiredState(self, newState):
+        self.sharedDictionary['desiredState'] = newState
 
     def shutdown(self):
-        self.thread.shutdown()
+        self.sharedDictionary['currentState'] = Consumer.State.Stopping
+        self.setDesiredState(Consumer.State.Dead)
 
     def disable(self):
-        self.thread.setDesiredState(Consumer.State.Disabled)
+        self.setDesiredState(Consumer.State.Disabled)
 
     def start(self):
-        self.thread.start()
+        self.process.start()
 
     # should only be called by the Doctor thread
     def restart(self):
-        if self.thread.desiredState() is Consumer.State.Dead:
+        if self.desiredState() == Consumer.State.Dead:
             logging.info('[{}] Request to restart a consumer that is already slated for deletion.'.format(self.trigger))
             return
 
-        with self.__lock:
-            self.__restartCount += 1
+        self.__restartCount += 1
 
         logging.info('[{}] Quietly shutting down consumer for restart'.format(self.trigger))
-        self.thread.setDesiredState(Consumer.State.Restart)
-        self.thread.join()
+        self.setDesiredState(Consumer.State.Restart)
+        self.process.join()
         logging.info('Consumer has shut down')
 
         # user may have interleaved a request to delete the trigger, check again
-        if self.thread.desiredState() is not Consumer.State.Dead:
+        if self.desiredState() != Consumer.State.Dead:
             logging.info('[{}] Starting new consumer thread'.format(self.trigger))
-            self.thread = ConsumerThread(self.trigger, self.params)
-            self.thread.start()
+            self.sharedDictionary = newSharedDictionary()
+            self.process = ConsumerProcess(self.trigger, self.params, self.sharedDictionary)
+            self.process.start()
 
     def restartCount(self):
-        with self.__lock:
-            restartCount = self.__restartCount
-
-        return restartCount
+        return self.__restartCount
 
     def lastPoll(self):
-        return self.thread.lastPoll()
+        return self.sharedDictionary['lastPoll']
 
     def secondsSinceLastPoll(self):
-        return self.thread.secondsSinceLastPoll()
+        lastPollDelta = datetime.now() - self.lastPoll()
+        return lastPollDelta.total_seconds()
 
 
-class ConsumerThread (Thread):
+class ConsumerProcess (Process):
 
     retry_timeout = 1   # Timeout in seconds
     max_retries = 10    # Maximum number of times to retry firing trigger
 
     database = Database()
 
-    def __init__(self, trigger, params):
-        Thread.__init__(self)
-
-        self.lock = Lock()
-
-        # the following params may be set/read from other threads
-        # only access through helper methods which handle thread safety!
-        if 'status' in params and params['status']['active'] == False:
-            self.__currentState = Consumer.State.Disabled
-            self.__desiredState = Consumer.State.Disabled
-        else:
-            self.__currentState = Consumer.State.Initializing
-            self.__desiredState = Consumer.State.Running
-        self.__lastPoll = datetime.max
+    def __init__(self, trigger, params, sharedDictionary):
+        Process.__init__(self)
 
         self.daemon = True
+
         self.trigger = trigger
         self.isMessageHub = params["isMessageHub"]
         self.triggerURL = params["triggerURL"]
         self.brokers = params["brokers"]
         self.topic = params["topic"]
+
+        self.sharedDictionary = sharedDictionary
+
+        if 'status' in params and params['status']['active'] == False:
+            self.sharedDictionary['currentState'] = Consumer.State.Disabled
+            self.sharedDictionary['desiredState'] = Consumer.State.Disabled
+        else:
+            self.sharedDictionary['currentState'] = Consumer.State.Initializing
+            self.sharedDictionary['desiredState'] = Consumer.State.Running
 
         if self.isMessageHub:
             self.username = params["username"]
@@ -159,45 +163,33 @@ class ConsumerThread (Thread):
 
     # this only records the current state, and does not affect a state transition
     def __recordState(self, newState):
-        with self.lock:
-            self.__currentState = newState
+        self.sharedDictionary['currentState'] = newState
 
     def currentState(self):
-        with self.lock:
-            state = self.__currentState
-
-        return state
+        return self.sharedDictionary['currentState']
 
     def setDesiredState(self, newState):
         logging.info('[{}] Request to set desiredState to {}'.format(self.trigger, newState))
 
-        with self.lock:
-            if self.__desiredState is Consumer.State.Dead and newState is not Consumer.State.Dead:
-                logging.info('[{}] Asking to kill a consumer that is already marked for death. Doing nothing.'.format(self.trigger))
-                return
-            else:
-                logging.info('[{}] Setting desiredState to: {}'.format(self.trigger, newState))
-                self.__desiredState = newState
+        if self.sharedDictionary['desiredState'] == Consumer.State.Dead and newState != Consumer.State.Dead:
+            logging.info('[{}] Asking to kill a consumer that is already marked for death. Doing nothing.'.format(self.trigger))
+            return
+        else:
+            logging.info('[{}] Setting desiredState to: {}'.format(self.trigger, newState))
+            self.sharedDictionary['desiredState'] = newState
 
     def desiredState(self):
-        with self.lock:
-            state = self.__desiredState
-
-        return state
+        return self.sharedDictionary['desiredState']
 
     # convenience method for checking if desiredState is Running
     def __shouldRun(self):
-        return self.desiredState() is Consumer.State.Running
+        return self.desiredState() == Consumer.State.Running
 
     def lastPoll(self):
-        with self.lock:
-            lastPoll = self.__lastPoll
-
-        return lastPoll
+        return self.sharedDictionary['lastPoll']
 
     def updateLastPoll(self):
-        with self.lock:
-            self.__lastPoll = datetime.now()
+        self.sharedDictionary['lastPoll'] = datetime.now()
 
     def secondsSinceLastPoll(self):
         lastPollDelta = datetime.now() - self.lastPoll()
@@ -212,6 +204,8 @@ class ConsumerThread (Thread):
 
                 if len(messages) > 0:
                     self.__fireTrigger(messages)
+
+                time.sleep(0.1)
 
             logging.info("[{}] Consumer exiting main loop".format(self.trigger))
         except Exception as e:
@@ -404,14 +398,6 @@ class ConsumerThread (Thread):
             offsets.append(TopicPartition(message.topic(), message.partition(), message.offset() + 1))
 
         return offsets
-
-    def shutdown(self):
-        if self.currentState() != Consumer.State.Stopping and self.currentState() != Consumer.State.Dead:
-            logging.info("[{}] Shutting down consumer for trigger".format(self.trigger))
-            self.__recordState(Consumer.State.Stopping)
-            self.setDesiredState(Consumer.State.Dead)
-        else:
-            logging.info("[{}] Ignoring request to shutdown consumer for trigger as it is already shutting down".format(self.trigger))
 
     def __encodeMessageIfNeeded(self, value):
         if self.encodeValueAsJSON:
