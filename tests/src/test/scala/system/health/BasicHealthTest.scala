@@ -77,8 +77,8 @@ class BasicHealthTest
         val baseTriggerName = "/_/BasicHealthTestTrigger"
 
         val triggerName = System.getProperty("trigger.suffix") match {
-            case suffix if suffix != "" => s"${baseTriggerName}-${suffix}"
-            case _ => baseTriggerName
+            case suffix if suffix != "" && suffix != null => s"${baseTriggerName}-${suffix}"
+            case _ => s"${baseTriggerName}-${currentTime}"
         }
 
         (wp, assetHelper) =>
