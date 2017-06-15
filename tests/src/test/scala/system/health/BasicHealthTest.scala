@@ -77,8 +77,8 @@ class BasicHealthTest
         val baseTriggerName = "/_/BasicHealthTestTrigger"
 
         val triggerName = System.getProperty("trigger.suffix") match {
-            case suffix if suffix != "" => s"${baseTriggerName}-${suffix}"
-            case _ => baseTriggerName
+            case suffix if suffix != "" && suffix != null => s"${baseTriggerName}-${suffix}"
+            case _ => s"${baseTriggerName}-${currentTime}"
         }
 
         (wp, assetHelper) =>
@@ -127,7 +127,7 @@ class BasicHealthTest
                     }
 
                 println("Polling for activations")
-                val activations = wsk.activation.pollFor(N = 5, Some(triggerName), since = Some(start), retries = 30)
+                val activations = wsk.activation.pollFor(N = 100, Some(triggerName), since = Some(start), retries = 30)
                 assert(activations.length > 0)
 
                 println("Validating content of activation(s)")

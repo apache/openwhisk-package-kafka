@@ -184,7 +184,7 @@ class MessageHubProduceTests
 
             // verify trigger fired
             println("Polling for activations")
-            val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = 60)
+            val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = 60)
             assert(activations.length > 0)
 
             val matchingActivations = for {
@@ -244,7 +244,7 @@ class MessageHubProduceTests
 
             // verify trigger fired
             println("Polling for activations")
-            val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = 60)
+            val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = 60)
             assert(activations.length > 0)
 
             val matchingActivations = for {
