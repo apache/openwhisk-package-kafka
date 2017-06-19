@@ -39,6 +39,11 @@ export WSK_CONFIG_FILE= # override local property file to avoid namespace clashe
 
 echo Installing the Kafka package and feed action.
 
+$WSK_CLI -i --apihost "$EDGEHOST" package update messaging \
+    --auth "$AUTH" \
+    --shared yes \
+    -p endpoint "$APIHOST"
+
 # make kafkaFeed.zip
 OLD_PATH=`pwd`
 cd action
