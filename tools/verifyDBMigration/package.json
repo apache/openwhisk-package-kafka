@@ -1,0 +1,8 @@
+{
+  "name": "verifyDBMigration",
+  "version": "0.0.1",
+  "dependencies": {
+    "cloudant": "^1.7.1",
+    "shelljs": "^0.7.7"
+  }
+}
