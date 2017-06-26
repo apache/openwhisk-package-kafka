@@ -110,6 +110,8 @@ class Service (Thread):
                 if secondsSince(self.lastCanaryTime) > canaryTimeout:
                     logging.warn('[canary] It has been more than {} seconds since the last canary - restarting the DB changes feed'.format(canaryTimeout))
                     self.restartChangesFeed()
+                    # break out of the for loop so that it can be re-established
+                    # with the new changes feed.
                     break
 
             logging.debug("[changes] I made it out of the changes loop!")
