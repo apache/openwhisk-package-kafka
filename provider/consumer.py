@@ -23,6 +23,7 @@ import time
 from confluent_kafka import Consumer as KafkaConsumer, KafkaError, TopicPartition
 from database import Database
 from datetime import datetime
+from datetimeutils import secondsSince
 from multiprocessing import Process, Manager
 
 local_dev = os.getenv('LOCAL_DEV', 'False')
@@ -102,8 +103,7 @@ class Consumer:
         return self.sharedDictionary['lastPoll']
 
     def secondsSinceLastPoll(self):
-        lastPollDelta = datetime.now() - self.lastPoll()
-        return lastPollDelta.total_seconds()
+        return secondsSince(self.lastPoll())
 
 
 class ConsumerProcess (Process):
@@ -192,8 +192,7 @@ class ConsumerProcess (Process):
         self.sharedDictionary['lastPoll'] = datetime.now()
 
     def secondsSinceLastPoll(self):
-        lastPollDelta = datetime.now() - self.lastPoll()
-        return lastPollDelta.total_seconds()
+        return secondsSince(self.lastPoll())
 
     def run(self):
         try:

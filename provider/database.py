@@ -19,6 +19,7 @@ import uuid
 
 from cloudant.client import CouchDB
 from cloudant.result import Result
+from datetime import datetime
 
 class Database:
     db_prefix = os.getenv('DB_PREFIX', '')
@@ -67,9 +68,42 @@ class Database:
             logging.error('[{}] Uncaught exception while disabling trigger: {}'.format(triggerFQN, e))
 
 
-    def changesFeed(self):
-        return self.database.infinite_changes(include_docs=True)
+    def changesFeed(self, timeout, since = None):
+        if since == None:
+            return self.database.infinite_changes(include_docs=True, heartbeat=(timeout*1000))
+        else:
+            return self.database.infinite_changes(include_docs=True, heartbeat=(timeout*1000), since=since)
 
+    def createCanary(self):
+        retryCount = 3
+
+        while retryCount >= 0:
+            if retryCount == 0:
+                logging.error('[canary] Retried and failed {} times to create a canary'.format(retryCount))
+            else:
+                try:
+                    document = dict()
+                    document['canary'] = datetime.now().isoformat()
+
+                    result = self.database.create_document(document)
+                    logging.info('[canary] Successfully wrote canary to DB')
+
+                    return result
+                except Exception as e:
+                    retryCount -= 1
+                    logging.error('[canary] Uncaught exception while recording trigger to database: {}'.format(e))
+
+    def deleteDoc(self, docId):
+        try:
+            document = self.database[docId]
+
+            if document.exists():
+                document.delete()
+                logging.debug('[database] Successfully deleted document from DB: {}'.format(docId))
+            else:
+                logging.warn('[database] Attempted to delete non-existent document from DB: {}'.format(docId))
+        except Exception as e:
+            logging.error('[database] Uncaught exception while deleting document {} from database: {}'.format(docId, e))
 
     def migrate(self):
         logging.info('Starting DB migration')

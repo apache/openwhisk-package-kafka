@@ -95,8 +95,10 @@ function createTrigger(endpoint, params, actionName) {
 
     return request(options)
         .then(response => {
-            // do not pass the response back to the caller, its contents are secret
-            return;
+            console.log(`response ${JSON.stringify(response, null, 2)}`)
+            return {
+                uuid: response
+            };
         })
         .catch(error => {
             console.log(`Error creating trigger: ${JSON.stringify(error, null, 2)}`);

@@ -15,6 +15,7 @@
 import psutil   # https://pythonhosted.org/psutil/
 
 from datetime import datetime
+from datetimeutils import secondsSince
 
 MILLISECONDS_IN_SECOND = 1000
 MEGABYTE = 10 ** 6
@@ -132,8 +133,9 @@ def getConsumers(consumers):
 
     return consumerReports
 
-def generateHealthReport(consumers):
+def generateHealthReport(consumers, lastCanaryTime):
     healthReport = {}
+    healthReport['last_db_canary'] = secondsSince(lastCanaryTime)
     healthReport['uptime'] = getUpdateTime()
     healthReport['cpu_times'] = getCPUTimes()
     healthReport['cpu_percent'] = getCPUPercent()

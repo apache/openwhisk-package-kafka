@@ -20,25 +20,29 @@ function main(params) {
         var db;
 
         if (params.__ow_method === "put") {
+            var validatedParams;
             return validateParameters(params)
-                .then(validatedParams => {
+                .then(cleanParams => {
+                    validatedParams = cleanParams;
+
                     console.log(`VALIDATED: ${JSON.stringify(validatedParams, null, 2)}`);
                     db = new Database(params.DB_URL, params.DB_NAME);
 
-                    var promises = [];
-
                     // do these in parallel!
-                    promises.push(db.ensureTriggerIsUnique(validatedParams.triggerName));
-                    promises.push(common.verifyTriggerAuth(validatedParams.triggerURL));
-                    promises.push(checkMessageHubCredentials(validatedParams));
-
-                    return Promise.all(promises)
-                        .then(result => validatedParams);
+                    return Promise.all([
+                        db.ensureTriggerIsUnique(validatedParams.triggerName),
+                        common.verifyTriggerAuth(validatedParams.triggerURL),
+                        checkMessageHubCredentials(validatedParams)
+                    ]);
                 })
-                .then(validatedParams => db.recordTrigger(validatedParams))
-                .then(result => {
+                .then(() => db.recordTrigger(validatedParams))
+                .then(() => {
                     console.log('successfully wrote the trigger');
-                    resolve();
+                    resolve({
+                        statusCode: 200,
+                        headers: {'Content-Type': 'text/plain'},
+                        body: validatedParams.uuid
+                    });
                 })
                 .catch(error => {
                     console.log(`Failed to write the trigger ${error}`);

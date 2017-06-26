@@ -29,6 +29,7 @@ app.debug = False
 
 database = None
 consumers = ConsumerCollection()
+feedService = None
 
 
 @app.route('/')
@@ -38,7 +39,7 @@ def testRoute():
 #TODO call TheDoctor.isAlive() and report on that
 @app.route('/health')
 def healthRoute():
-    return jsonify(generateHealthReport(consumers))
+    return jsonify(generateHealthReport(consumers, feedService.lastCanaryTime))
 
 
 def main():
@@ -77,7 +78,9 @@ def main():
 
     TheDoctor(consumers).start()
 
-    Service(consumers).start()
+    global feedService
+    feedService = Service(consumers)
+    feedService.start()
 
     port = int(os.getenv('PORT', 5000))
     server = WSGIServer(('', port), app, log=logging.getLogger())

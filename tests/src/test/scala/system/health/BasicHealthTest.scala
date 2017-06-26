@@ -42,6 +42,8 @@ import common.WskTestHelpers
 import spray.json.DefaultJsonProtocol._
 import spray.json.pimpAny
 
+import com.jayway.restassured.RestAssured
+
 import whisk.utils.retry;
 
 
@@ -69,7 +71,42 @@ class BasicHealthTest
 
     val kafkaUtils = new KafkaUtils
 
+    val getMessagingAddress =
+      if (System.getProperty("host") != "" && System.getProperty("port") != "") {
+        "http://" + System.getProperty("host") + ":" + System.getProperty("port")
+      }
+
     behavior of "Message Hub feed"
+
+    it should "create a new trigger" in withAssetCleaner(wskprops) {
+        val triggerName = s"newTrigger-${System.currentTimeMillis}"
+        println(s"Creating trigger ${triggerName}")
+
+        (wp, assetHelper) =>
+            val feedCreationResult = assetHelper.withCleaner(wsk.trigger, triggerName) {
+                (trigger, _) =>
+                    trigger.create(triggerName, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = Map(
+                        "user" -> kafkaUtils.getAsJson("user"),
+                        "password" -> kafkaUtils.getAsJson("password"),
+                        "api_key" -> kafkaUtils.getAsJson("api_key"),
+                        "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
+                        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+                        "topic" -> topic.toJson))
+            }
+
+            withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
+                activation =>
+                    // should be successful
+                    activation.response.success shouldBe true
+                    val uuid = activation.response.result.get.fields.get("uuid").get.toString
+
+                    // get /health endpoint and ensure it contains the new uuid
+                    retry({
+                        val response = RestAssured.given().get(getMessagingAddress + "/health")
+                        assert(response.statusCode() == 200 && response.asString().contains(uuid))
+                    }, N = 3)
+            }
+    }
 
     it should "fire a trigger when a message is posted to message hub" in withAssetCleaner(wskprops) {
         val currentTime = s"${System.currentTimeMillis}"
