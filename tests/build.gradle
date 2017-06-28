@@ -13,6 +13,7 @@ repositories {
 
 def commonConfiguration = {
   systemProperty 'testthreads', System.getProperty('testthreads', '1')
+  systemProperty 'health_url', System.getProperty('health_url', '')
   systemProperty 'host', System.getProperty('host', '')
   systemProperty 'port', System.getProperty('port', '')
   systemProperty 'trigger.suffix', System.getProperty('trigger.suffix', '')
