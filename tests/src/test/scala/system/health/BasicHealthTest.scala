@@ -71,11 +71,6 @@ class BasicHealthTest
 
     val kafkaUtils = new KafkaUtils
 
-    val getMessagingAddress =
-      if (System.getProperty("host") != "" && System.getProperty("port") != "") {
-        "http://" + System.getProperty("host") + ":" + System.getProperty("port")
-      }
-
     behavior of "Message Hub feed"
 
     it should "create a new trigger" in withAssetCleaner(wskprops) {
@@ -102,7 +97,7 @@ class BasicHealthTest
 
                     // get /health endpoint and ensure it contains the new uuid
                     retry({
-                        val response = RestAssured.given().get(getMessagingAddress + "/health")
+                        val response = RestAssured.given().get(System.getProperty("health_url"))
                         assert(response.statusCode() == 200 && response.asString().contains(uuid))
                     }, N = 3)
             }
