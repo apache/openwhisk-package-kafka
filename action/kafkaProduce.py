@@ -1,11 +1,31 @@
-import ssl
+"""Kafka message producer.
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+"""
+
 import base64
 from kafka import KafkaProducer
 from kafka.errors import NoBrokersAvailable
 
+
 def main(params):
     validationResult = validateParams(params)
-    if validationResult[0] != True:
+    if validationResult[0] is not True:
         return {'error': validationResult[1]}
     else:
         validatedParams = validationResult[1]
@@ -37,6 +57,7 @@ def main(params):
 
     return {"success": True}
 
+
 def validateParams(params):
     validatedParams = params.copy()
     requiredParams = ['brokers', 'topic', 'value']
@@ -49,7 +70,7 @@ def validateParams(params):
     if len(missingParams) > 0:
         return (False, "You must supply all of the following parameters: {}".format(', '.join(missingParams)))
 
-    if 'base64DecodeValue' in params and params['base64DecodeValue'] == True:
+    if 'base64DecodeValue' in params and params['base64DecodeValue'] is True:
         try:
             validatedParams['value'] = base64.b64decode(params['value']).decode('utf-8')
         except:
@@ -58,7 +79,7 @@ def validateParams(params):
         if len(validatedParams['value']) == 0:
             return (False, "value parameter is not Base64 encoded")
 
-    if 'base64DecodeKey' in params and params['base64DecodeKey'] == True:
+    if 'base64DecodeKey' in params and params['base64DecodeKey'] is True:
         try:
             validatedParams['key'] = base64.b64decode(params['key']).decode('utf-8')
         except:
