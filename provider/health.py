@@ -1,18 +1,25 @@
-# Copyright 2016 IBM Corp. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+"""Health reporter.
 
-import psutil   # https://pythonhosted.org/psutil/
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+"""
+
+# https://pythonhosted.org/psutil/
+import psutil
 
 from datetime import datetime
 from datetimeutils import secondsSince
@@ -21,6 +28,7 @@ MILLISECONDS_IN_SECOND = 1000
 MEGABYTE = 10 ** 6
 START_TIME = datetime.now()
 CPU_INTERVAL = 0.5
+
 
 def getSwapMemory():
     total, used, free, percent, sin, sout = psutil.swap_memory()
@@ -33,6 +41,7 @@ def getSwapMemory():
     swap_memory['sout'] = '%d MB' % (sout / MEGABYTE)
 
     return swap_memory
+
 
 def getVirtualMemory():
     total, available, percent, used, free, active, inactive, buffers, cached, shared = psutil.virtual_memory()
@@ -50,6 +59,7 @@ def getVirtualMemory():
 
     return virtual_memory
 
+
 def getCPUTimes():
     user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice = psutil.cpu_times()
     cpu_times = {}
@@ -66,8 +76,10 @@ def getCPUTimes():
 
     return cpu_times
 
+
 def getCPUPercent():
     return '%d%%' % psutil.cpu_percent(interval=CPU_INTERVAL)
+
 
 def getDiskUsage():
     total, used, free, percent = psutil.disk_usage('/')
@@ -78,6 +90,7 @@ def getDiskUsage():
     disk_usage['percent'] = '%d MB' % (percent / MEGABYTE)
 
     return disk_usage
+
 
 def getDiskIOCounters():
     read_count, write_count, read_bytes, write_bytes, read_time, write_time, read_merged_count, write_merged_count,\
@@ -109,12 +122,14 @@ def getNetworkIOCounters():
 
     return net_io_counters
 
+
 def getUpdateTime():
     currentTime = datetime.now()
     delta = currentTime - START_TIME
     uptimeSeconds = int(round(delta.total_seconds()))
 
     return '%d seconds' % uptimeSeconds
+
 
 def getConsumers(consumers):
     consumerReports = []
@@ -132,6 +147,7 @@ def getConsumers(consumers):
         consumerReports.append(consumerInfo)
 
     return consumerReports
+
 
 def generateHealthReport(consumers, lastCanaryTime):
     healthReport = {}
