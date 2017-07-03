@@ -11,6 +11,6 @@ include 'tests'
 rootProject.name = 'openwhisk-package-kafka'
 
 gradle.ext.scala = [
-        version: '2.11.8',
-        compileFlags: ['-feature', '-unchecked', '-deprecation', '-Xfatal-warnings', '-Ywarn-unused-import']
+    version: '2.11.8',
+    compileFlags: ['-feature', '-unchecked', '-deprecation', '-Xfatal-warnings', '-Ywarn-unused-import']
 ]
