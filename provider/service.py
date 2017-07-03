@@ -1,16 +1,22 @@
-# Copyright 2016 IBM Corp. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+"""Service class, CanaryDocumentGenerator class.
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+"""
 
 import logging
 import time
@@ -22,16 +28,17 @@ from datetimeutils import secondsSince
 from threading import Thread
 
 # How often to produce canary documents
-canaryInterval = 60 # seconds
+canaryInterval = 60  # seconds
 
 # How long to wait between detecting carnary documents before restarting the
 # DB changes feed. Should be significantly larger than canaryInterval to allow for
 # the roundtrip to DB as well as to let the Service handle other work in the
 # meantime.
-canaryTimeout = 90 # seconds
+canaryTimeout = 90  # seconds
 
 # How long the changes feed should poll before timing out
-changesFeedTimeout = 10 # seconds
+changesFeedTimeout = 10  # seconds
+
 
 class Service (Thread):
     def __init__(self, consumers):
@@ -142,6 +149,7 @@ class Service (Thread):
 
     def __isTriggerDocActive(self, doc):
         return ('status' not in doc or doc['status']['active'] == True)
+
 
 class CanaryDocumentGenerator (Thread):
     def __init__(self):
