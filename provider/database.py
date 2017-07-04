@@ -80,23 +80,23 @@ class Database:
             return self.database.infinite_changes(include_docs=True, heartbeat=(timeout*1000), since=since)
 
     def createCanary(self):
-        retryCount = 3
+        maxRetries = 3
+        retryCount = 0
 
-        while retryCount >= 0:
-            if retryCount == 0:
-                logging.error('[canary] Retried and failed {} times to create a canary'.format(retryCount))
-            else:
-                try:
-                    document = dict()
-                    document['canary'] = datetime.now().isoformat()
+        while retryCount < maxRetries:
+            try:
+                document = dict()
+                document['canary'] = datetime.now().isoformat()
 
-                    result = self.database.create_document(document)
-                    logging.info('[canary] Successfully wrote canary to DB')
+                result = self.database.create_document(document)
+                logging.info('[canary] Successfully wrote canary to DB')
 
-                    return result
-                except Exception as e:
-                    retryCount -= 1
-                    logging.error('[canary] Uncaught exception while recording trigger to database: {}'.format(e))
+                return result
+            except Exception as e:
+                retryCount += 1
+                logging.error('[canary] Uncaught exception while recording trigger to database: {}'.format(e))
+
+        logging.error('[canary] Retried and failed {} times to create a canary'.format(maxRetries))
 
     def deleteDoc(self, docId):
         try:
