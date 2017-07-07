@@ -1,4 +1,6 @@
 # OpenWhisk package for communication with Kafka or IBM Message Hub
+
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 [![Build Status](https://travis-ci.org/apache/incubator-openwhisk-package-kafka.svg?branch=master)](https://travis-ci.org/apache/incubator-openwhisk-package-kafka)
 
 This project is an OpenWhisk package that allows you to communicate with Kafka or IBM Message Hub instances for publishing and consuming messages using native high performance Kafka API.
