@@ -41,6 +41,9 @@ class Database:
     filters_design_doc_id = '_design/filters'
     only_triggers_view_id = 'only-triggers'
 
+    instance = os.getenv('INSTANCE', 'messageHubTrigger-0')
+    canaryId = "canary-{}".format(instance)
+
     if dbname in client.all_dbs():
         logging.info('Database exists - connecting to it.')
         database = client[dbname]
@@ -83,24 +86,23 @@ class Database:
         maxRetries = 3
         retryCount = 0
 
-        instance = os.getenv('INSTANCE', 'messageHubTrigger-0')
-        canaryId = "canary-{}".format(instance)
-
         while retryCount < maxRetries:
             try:
-                if canaryId in self.database.keys(remote=True):
+                if self.canaryId in self.database.keys(remote=True):
                     # update the timestamp to cause a document change
                     logging.debug("[database] Canary doc exists, updating it.")
 
-                    myCanaryDocument = self.database[canaryId]
+                    myCanaryDocument = self.database[self.canaryId]
                     myCanaryDocument["canary-timestamp"] = datetime.now().isoformat()
                     myCanaryDocument.save()
 
                     return
                 else:
+                    # create the canary doc for this instance
                     logging.debug("[database] Canary doc does not exist, creating it.")
+
                     document = dict()
-                    document['_id'] = canaryId
+                    document['_id'] = self.canaryId
                     document['canary-timestamp'] = datetime.now().isoformat()
 
                     result = self.database.create_document(document)
