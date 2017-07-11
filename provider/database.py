@@ -41,6 +41,9 @@ class Database:
     filters_design_doc_id = '_design/filters'
     only_triggers_view_id = 'only-triggers'
 
+    instance = os.getenv('INSTANCE', 'messageHubTrigger-0')
+    canaryId = "canary-{}".format(instance)
+
     if dbname in client.all_dbs():
         logging.info('Database exists - connecting to it.')
         database = client[dbname]
@@ -85,30 +88,33 @@ class Database:
 
         while retryCount < maxRetries:
             try:
-                document = dict()
-                document['canary'] = datetime.now().isoformat()
+                if self.canaryId in self.database.keys(remote=True):
+                    # update the timestamp to cause a document change
+                    logging.debug("[database] Canary doc exists, updating it.")
 
-                result = self.database.create_document(document)
-                logging.info('[canary] Successfully wrote canary to DB')
+                    myCanaryDocument = self.database[self.canaryId]
+                    myCanaryDocument["canary-timestamp"] = datetime.now().isoformat()
+                    myCanaryDocument.save()
 
-                return result
+                    return
+                else:
+                    # create the canary doc for this instance
+                    logging.debug("[database] Canary doc does not exist, creating it.")
+
+                    document = dict()
+                    document['_id'] = self.canaryId
+                    document['canary-timestamp'] = datetime.now().isoformat()
+
+                    result = self.database.create_document(document)
+                    logging.debug('[canary] Successfully wrote canary to DB')
+
+                    return
             except Exception as e:
                 retryCount += 1
-                logging.error('[canary] Uncaught exception while recording trigger to database: {}'.format(e))
+                logging.error(
+                    '[canary] Uncaught exception while writing canary document: {}'.format(e))
 
         logging.error('[canary] Retried and failed {} times to create a canary'.format(maxRetries))
-
-    def deleteDoc(self, docId):
-        try:
-            document = self.database[docId]
-
-            if document.exists():
-                document.delete()
-                logging.debug('[database] Successfully deleted document from DB: {}'.format(docId))
-            else:
-                logging.warn('[database] Attempted to delete non-existent document from DB: {}'.format(docId))
-        except Exception as e:
-            logging.error('[database] Uncaught exception while deleting document {} from database: {}'.format(docId, e))
 
     def migrate(self):
         logging.info('Starting DB migration')

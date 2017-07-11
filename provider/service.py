@@ -104,13 +104,10 @@ class Service (Thread):
                                 existingConsumer.disable()
                             else:
                                 logging.debug('[changes] Found non-interesting trigger change: \n{}\n{}'.format(existingConsumer.desiredState(), document))
-                    elif 'canary' in change['doc']:
+                    elif 'canary-timestamp' in change['doc']:
                         # found a canary - update lastCanaryTime
                         logging.info('[canary] I found a canary. The last one was {} seconds ago.'.format(secondsSince(self.lastCanaryTime)))
                         self.lastCanaryTime = datetime.now()
-
-                        # delete the canary document
-                        self.database.deleteDoc(change['id'])
                     else:
                         logging.debug('[changes] Found a change for a non-trigger document')
 
