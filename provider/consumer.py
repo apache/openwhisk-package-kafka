@@ -118,8 +118,6 @@ class ConsumerProcess (Process):
     retry_timeout = 1   # Timeout in seconds
     max_retries = 10    # Maximum number of times to retry firing trigger
 
-    database = Database()
-
     def __init__(self, trigger, params, sharedDictionary):
         Process.__init__(self)
 
@@ -160,6 +158,8 @@ class ConsumerProcess (Process):
             self.encodeKeyAsBase64 = params["isBinaryKey"]
         else:
             self.encodeKeyAsBase64 = False
+
+        self.database = Database()
 
         # always init consumer to None in case the consumer needs to shut down
         # before the KafkaConsumer is fully initialized/assigned
