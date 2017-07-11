@@ -35,21 +35,22 @@ class Database:
     password = os.environ['DB_PASS']
     url = os.environ['DB_URL']
 
-    client = CouchDB(username, password, url=url)
-    client.connect()
-
     filters_design_doc_id = '_design/filters'
     only_triggers_view_id = 'only-triggers'
 
     instance = os.getenv('INSTANCE', 'messageHubTrigger-0')
     canaryId = "canary-{}".format(instance)
 
-    if dbname in client.all_dbs():
-        logging.info('Database exists - connecting to it.')
-        database = client[dbname]
-    else:
-        logging.warn('Database does not exist - creating it.')
-        database = client.create_database(dbname)
+    def __init__(self):
+        client = CouchDB(self.username, self.password, url=self.url)
+        client.connect()
+
+        if self.dbname in client.all_dbs():
+            logging.info('Database exists - connecting to it.')
+            self.database = client[self.dbname]
+        else:
+            logging.warn('Database does not exist - creating it.')
+            self.database = client.create_database(self.dbname)
 
 
     def disableTrigger(self, triggerFQN, status_code):
