@@ -73,7 +73,14 @@ function main(params) {
                     db = new Database(params.DB_URL, params.DB_NAME);
                     return db.deleteTrigger(params.triggerName);
                 })
-                .then(resolve)
+                .then(() => {
+                    console.log('successfully deleted the trigger');
+                    resolve({
+                        statusCode: 200,
+                        headers: {'Content-Type': 'text/plain'},
+                        body: "deleted trigger"
+                    });
+                })
                 .catch(reject);
         } else {
             resolve({
