@@ -100,7 +100,7 @@ class BasicHealthTest
                     retry({
                         val response = RestAssured.given().get(System.getProperty("health_url"))
                         assert(response.statusCode() == 200 && response.asString().contains(uuid))
-                    }, N = 3)
+                    }, N = 3, waitBeforeRetry = Some(1.second))
             }
     }
 
