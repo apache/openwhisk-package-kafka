@@ -107,7 +107,7 @@ class MessageHubProduceTests
     it should "Reject with bad credentials" in {
         val badAuthParams = validParameters + ("user" -> "ThisWillNeverWork".toJson)
 
-        withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", badAuthParams)) {
+        withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", badAuthParams), totalWait = 60 seconds) {
             activation =>
                 activation.response.success shouldBe false
                 activation.response.result.get.toString should include("Authentication failed")
@@ -117,7 +117,7 @@ class MessageHubProduceTests
     it should "Reject with bad broker list" in {
         val badBrokerParams = validParameters + ("kafka_brokers_sasl" -> List("localhost:0000").toJson)
 
-        withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", badBrokerParams)) {
+        withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", badBrokerParams), totalWait = 60 seconds) {
             activation =>
                 activation.response.success shouldBe false
                 activation.response.result.get.toString should include("Timed out communicating with Message Hub")
