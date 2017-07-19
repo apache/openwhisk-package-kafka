@@ -41,6 +41,7 @@ def main(params):
 
     try:
         producer = KafkaProducer(
+            api_version=(0, 10, 1),
             api_version_auto_timeout_ms=15000,
             bootstrap_servers=validatedParams['kafka_brokers_sasl'],
             sasl_plain_username=validatedParams['user'],
