@@ -21,7 +21,7 @@
 import ssl
 import base64
 from kafka import KafkaProducer
-from kafka.errors import NoBrokersAvailable
+from kafka.errors import NoBrokersAvailable, KafkaTimeoutError
 
 
 def main(params):
@@ -44,6 +44,8 @@ def main(params):
             api_version=(0, 10),
             api_version_auto_timeout_ms=15000,
             bootstrap_servers=validatedParams['kafka_brokers_sasl'],
+            max_block_ms=20000,
+            request_timeout_ms=20000,
             sasl_plain_username=validatedParams['user'],
             sasl_plain_password=validatedParams['password'],
             security_protocol=security_protocol,
@@ -55,13 +57,17 @@ def main(params):
         # only use the key parameter if it is present
         if 'key' in validatedParams:
             messageKey = validatedParams['key']
-            producer.send(validatedParams['topic'], bytes(validatedParams['value'], 'utf-8'), key=bytes(messageKey, 'utf-8'))
+            future = producer.send(validatedParams['topic'], bytes(validatedParams['value'], 'utf-8'), key=bytes(messageKey, 'utf-8'))
         else:
-            producer.send(validatedParams['topic'], bytes(validatedParams['value'], 'utf-8'))
+            future = producer.send(validatedParams['topic'], bytes(validatedParams['value'], 'utf-8'))
 
-        producer.flush()
+        sent = future.get(timeout=30)
+        msg = "Successfully sent message to {}:{} at offset {}".format(
+            sent.topic, sent.partition, sent.offset)
 
-        print("Sent message")
+        print(msg)
+    except KafkaTimeoutError:
+        return {'error': 'Timed out communicating with Message Hub.'}
     except NoBrokersAvailable:
         # this exception's message is a little too generic
         return {'error': 'No brokers available. Check that your supplied brokers are correct and available.'}

@@ -120,7 +120,7 @@ class MessageHubProduceTests
         withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", badBrokerParams)) {
             activation =>
                 activation.response.success shouldBe false
-                activation.response.result.get.toString should include("No brokers available")
+                activation.response.result.get.toString should include("Timed out communicating with Message Hub")
         }
     }
 
