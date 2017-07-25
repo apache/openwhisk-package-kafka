@@ -41,17 +41,20 @@ class Database:
     instance = os.getenv('INSTANCE', 'messageHubTrigger-0')
     canaryId = "canary-{}".format(instance)
 
-    def __init__(self):
-        client = CouchDB(self.username, self.password, url=self.url)
-        client.connect()
+    def __init__(self, timeout=None):
+        self.client = CouchDB(self.username, self.password, url=self.url, timeout=timeout)
+        self.client.connect()
 
-        if self.dbname in client.all_dbs():
+        if self.dbname in self.client.all_dbs():
             logging.info('Database exists - connecting to it.')
-            self.database = client[self.dbname]
+            self.database = self.client[self.dbname]
         else:
             logging.warn('Database does not exist - creating it.')
-            self.database = client.create_database(self.dbname)
+            self.database = self.client.create_database(self.dbname)
 
+    def destroy(self):
+        self.client.disconnect()
+        self.client = None
 
     def disableTrigger(self, triggerFQN, status_code):
         try:
