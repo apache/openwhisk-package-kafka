@@ -27,7 +27,8 @@ from threading import Thread
 
 class TheDoctor (Thread):
     # maximum time to allow a consumer to not successfully poll() before restarting
-    poll_timeout_seconds = 20
+    # this value must be greater than the total amount of time a consumer might retry firing a trigger
+    poll_timeout_seconds = 200
 
     # interval between the Doctor making rounds
     sleepy_time_seconds = 2
