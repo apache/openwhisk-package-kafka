@@ -114,9 +114,7 @@ class Consumer:
 
 
 class ConsumerProcess (Process):
-
-    retry_timeout = 1   # Timeout in seconds
-    max_retries = 10    # Maximum number of times to retry firing trigger
+    max_retries = 6    # Maximum number of times to retry firing trigger
 
     def __init__(self, trigger, params, sharedDictionary):
         Process.__init__(self)
@@ -371,10 +369,10 @@ class ConsumerProcess (Process):
                 if retry:
                     retry_count += 1
 
-                    if retry_count < self.max_retries:
-                        logging.info("[{}] Retrying in {} second(s)".format(
-                            self.trigger, self.retry_timeout))
-                        time.sleep(self.retry_timeout)
+                    if retry_count <= self.max_retries:
+                        sleepyTime = pow(2,retry_count)
+                        logging.info("[{}] Retrying in {} second(s)".format(self.trigger, sleepyTime))
+                        time.sleep(sleepyTime)
                     else:
                         logging.warn("[{}] Skipping {} messages to offset {} of partition {}".format(self.trigger, len(messages), lastMessage.offset(), lastMessage.partition()))
                         self.consumer.commit(offsets=self.__getOffsetList(messages), async=False)
