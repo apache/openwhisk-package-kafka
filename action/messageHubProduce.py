@@ -40,7 +40,7 @@ def main(params):
     producer = None
     logging.info("Using kafka-python %s", str(__version__))
 
-    print("Validating parameters")
+    logging.info("Validating parameters")
     validationResult = validateParams(params)
     if validationResult[0] != True:
         return {'error': validationResult[1]}
@@ -54,29 +54,29 @@ def main(params):
 
     while attempt < max_attempts:
         attempt += 1
-        print("Starting attempt {}".format(attempt))
+        logging.info("Starting attempt {}".format(attempt))
 
         try:
-            print("Getting producer")
+            logging.info("Getting producer")
             producer = getProducer(validatedParams)
 
             topic = validatedParams['topic']
-            print("Finding topic {}".format(topic))
+            logging.info("Finding topic {}".format(topic))
             partition_info = producer.partitions_for(topic)
-            print("Found topic {} with partition(s) {}".format(topic, partition_info))
+            logging.info("Found topic {} with partition(s) {}".format(topic, partition_info))
 
             break
         except Exception as e:
             if attempt == max_attempts:
                 producer = None
                 logging.warning(e)
-                traceback.print_stack(limit=5)
+                traceback.print_exc(limit=5)
                 result = getResultForException(e)
 
     # we successfully connected and found the topic metadata... let's send!
     if producer is not None:
         try:
-            print("Producing message")
+            logging.info("Producing message")
 
             # only use the key parameter if it is present
             value = validatedParams['value']
@@ -90,11 +90,11 @@ def main(params):
             sent = future.get(timeout=20)
             msg = "Successfully sent message to {}:{} at offset {}".format(
                 sent.topic, sent.partition, sent.offset)
-            print(msg)
+            logging.info(msg)
             result = {"success": True, "message": msg}
         except Exception as e:
             logging.warning(e)
-            traceback.print_stack(limit=5)
+            traceback.print_exc(limit=5)
             result = getResultForException(e)
 
     return result
@@ -152,17 +152,17 @@ def getProducer(validatedParams):
     connectionHash = getConnectionHash(validatedParams)
 
     if globals().get("cached_producers") is None:
-        print("dictionary was none")
+        logging.info("dictionary was None")
         globals()["cached_producers"] = dict()
 
     # remove arbitrary connection to make room for new one
     if len(globals()["cached_producers"]) == max_cached_producers:
         poppedProducer = globals()["cached_producers"].popitem()[1]
         poppedProducer.close(timeout=1)
-        print("Removed cached producer")
+        logging.info("Removed cached producer")
 
     if connectionHash not in globals()["cached_producers"]:
-        print("cache miss")
+        logging.info("cache miss")
         # create a new connection
         sasl_mechanism = 'PLAIN'
         security_protocol = 'SASL_SSL'
@@ -176,8 +176,8 @@ def getProducer(validatedParams):
             api_version=(0, 10),
             batch_size=0,
             bootstrap_servers=validatedParams['kafka_brokers_sasl'],
-            max_block_ms=15000,
-            request_timeout_ms=15000,
+            max_block_ms=18000,
+            request_timeout_ms=18000,
             sasl_plain_username=validatedParams['user'],
             sasl_plain_password=validatedParams['password'],
             security_protocol=security_protocol,
@@ -185,7 +185,7 @@ def getProducer(validatedParams):
             sasl_mechanism=sasl_mechanism
         )
 
-        print("Created producer")
+        logging.info("Created producer")
 
         # store the producer globally for subsequent invocations
         globals()["cached_producers"][connectionHash] = producer
@@ -193,18 +193,10 @@ def getProducer(validatedParams):
         # return it
         return producer
     else:
-        print("Reusing existing producer")
+        logging.info("Reusing existing producer")
         return globals()["cached_producers"][connectionHash]
 
 
 def getConnectionHash(params):
-    # always use the sorted brokers to combat the effects of shuffle()
-    brokers = params['kafka_brokers_sasl']
-    brokers.sort()
-    brokersString = ",".join(brokers)
-
     apiKey = "{}:{}".format(params['user'], params['password'])
-
-    connectionHash = brokersString + apiKey
-
-    return connectionHash
+    return apiKey
