@@ -20,7 +20,10 @@
 
 import base64
 import logging
+import math
+import os
 import sys
+import time
 import traceback
 
 from kafka import KafkaProducer
@@ -57,7 +60,11 @@ def main(params):
 
         try:
             logging.info("Getting producer")
-            producer = getProducer(validatedParams)
+
+            # set a client timeout that allows for 3 connection retries while still
+            # reserving 10s for the actual send
+            producer_timeout_ms = math.floor(getRemainingTime(reservedTime=10) / max_attempts * 1000)
+            producer = getProducer(validatedParams, producer_timeout_ms)
 
             topic = validatedParams['topic']
             logging.info("Finding topic {}".format(topic))
@@ -86,7 +93,9 @@ def main(params):
             else:
                 future = producer.send(topic, bytes(value, 'utf-8'))
 
-            sent = future.get(timeout=20)
+            # future should wait all of the remaining time
+            future_time_seconds = math.floor(getRemainingTime())
+            sent = future.get(timeout=future_time_seconds)
             msg = "Successfully sent message to {}:{} at offset {}".format(
                 sent.topic, sent.partition, sent.offset)
             logging.info(msg)
@@ -147,7 +156,7 @@ def validateParams(params):
 
     return (True, validatedParams)
 
-def getProducer(validatedParams):
+def getProducer(validatedParams, timeout_ms):
     connectionHash = getConnectionHash(validatedParams)
 
     if globals().get("cached_producers") is None:
@@ -168,8 +177,8 @@ def getProducer(validatedParams):
             api_version_auto_timeout_ms=15000,
             batch_size=0,
             bootstrap_servers=validatedParams['brokers'],
-            max_block_ms=18000,
-            request_timeout_ms=18000,
+            max_block_ms=timeout_ms,
+            request_timeout_ms=timeout_ms,
         )
 
         logging.info("Created producer")
@@ -191,3 +200,13 @@ def getConnectionHash(params):
     brokersString = ",".join(brokers)
 
     return brokersString
+
+# return the remaining time (in seconds) until the action will expire,
+# optionally reserving some time (also in seconds).
+def getRemainingTime(reservedTime=0):
+    deadlineSeconds = int(os.getenv('__OW_DEADLINE', 60000)) / 1000
+    remaining = deadlineSeconds - time.time() - reservedTime
+
+    # ensure value is at least zero
+    # yes, this is a little paranoid
+    return max(remaining, 0)
