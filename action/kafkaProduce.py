@@ -195,7 +195,7 @@ def getProducer(validatedParams, timeout_ms):
 
 def getConnectionHash(params):
     # always use the sorted brokers to combat the effects of shuffle()
-    brokers = params['kafka_brokers_sasl']
+    brokers = params['brokers']
     brokers.sort()
     brokersString = ",".join(brokers)
 
