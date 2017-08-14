@@ -113,8 +113,9 @@ class Service (Thread):
                             self.lastCanaryTime = datetime.now()
                         else:
                             logging.debug('[changes] Found a change for a non-trigger document')
-            except (ConnectionError, ReadTimeout):
-                logging.error('[canary] DB connection timed out. Restarting changes feed...')
+            except Exception as e:
+                logging.error('[canary] Exception caught from changes feed. Restarting changes feed...')
+                logging.error(e)
                 self.stopChangesFeed()
 
             logging.debug("[changes] I made it out of the changes loop!")
