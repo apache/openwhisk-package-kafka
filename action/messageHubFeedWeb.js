@@ -38,11 +38,7 @@ function main(params) {
                 .then(() => db.recordTrigger(validatedParams))
                 .then(() => {
                     console.log('successfully wrote the trigger');
-                    resolve({
-                        statusCode: 200,
-                        headers: {'Content-Type': 'text/plain'},
-                        body: validatedParams.uuid
-                    });
+                    resolve(common.webResponse(200, validatedParams.uuid));
                 })
                 .catch(error => {
                     console.log(`Failed to write the trigger ${error}`);
@@ -59,11 +55,7 @@ function main(params) {
                         body = error.authError;
                     }
 
-                    resolve({
-                        statusCode: statusCode,
-                        headers: {'Content-Type': 'text/plain'},
-                        body: body
-                    });
+                    resolve(common.webResponse(statusCode, body));
                 });
         } else if (params.__ow_method === "delete") {
             const triggerURL = common.getTriggerURL(params.authKey, params.endpoint, params.triggerName);
@@ -73,14 +65,16 @@ function main(params) {
                     db = new Database(params.DB_URL, params.DB_NAME);
                     return db.deleteTrigger(params.triggerName);
                 })
-                .then(resolve)
-                .catch(reject);
+                .then(() => {
+                    console.log('successfully deleted the trigger');
+                    resolve(common.webResponse(200, 'deleted trigger'));
+                })
+                .catch(error => {
+                    console.log(`Failed to remove trigger ${error}`);
+                    resolve(common.webResponse(500, error.toString()));
+                });
         } else {
-            resolve({
-                statusCode: 400,
-                headers: {'Content-Type': 'text/plain'},
-                body: 'unsupported lifecycleEvent'
-            });
+            resolve(common.webResponse(400, 'unsupported lifecycleEvent'));
         }
     });
 

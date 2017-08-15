@@ -166,6 +166,16 @@ function performCommonParameterValidation(rawParams) {
     return { validatedParams: validatedParams };
 }
 
+function webResponse(code, body) {
+    return {
+        statusCode: code,
+        headers: {
+            'Content-Type': 'text/plain'
+        },
+        body: body
+    };
+}
+
 module.exports = {
     'createTrigger': createTrigger,
     'deleteTrigger': deleteTrigger,
@@ -176,4 +186,5 @@ module.exports = {
     'performCommonParameterValidation': performCommonParameterValidation,
     'validateBrokerParam': validateBrokerParam,
     'verifyTriggerAuth': verifyTriggerAuth,
+    'webResponse': webResponse
 };
