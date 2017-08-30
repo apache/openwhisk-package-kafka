@@ -1,7 +1,11 @@
 // constructor for DB object - a thin, promise-loving wrapper around nano
 module.exports = function(dbURL, dbName) {
+    var _ = require('lodash');
     var nano = require('nano')(dbURL);
     this.db = nano.db.use(dbName);
+
+    var DDOC_ID = "workers";
+    var VIEW_ID = "triggers_by_workers";
 
     this.getTrigger = function(triggerFQN) {
         return new Promise((resolve, reject) => {
@@ -43,7 +47,7 @@ module.exports = function(dbURL, dbName) {
                     resolve(result);
                 }
             });
-        });
+        }); 
     };
 
     this.deleteTrigger = function(triggerFQN) {
@@ -59,5 +63,24 @@ module.exports = function(dbURL, dbName) {
                     });
                 });
             })
+    };
+
+    this.getWorkerAssignment = function(workers) {
+        return new Promise((resolve, reject) => {
+            this.db.view(DDOC_ID, VIEW_ID, {group: true}, (err, result) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    var rows = result.rows;
+                    var difference = _.difference(workers, rows.map(a => a.key));
+                    if (difference.length) {
+                        resolve(difference.shift());
+                    } else {
+                        var sorted = rows.sort((a, b) => a.value - b.value).map(a => a.key);
+                        resolve(sorted.shift() || 'worker0');
+                    }
+                }
+            });
+        });
     };
 };

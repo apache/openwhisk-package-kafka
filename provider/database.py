@@ -38,8 +38,12 @@ class Database:
     filters_design_doc_id = '_design/filters'
     only_triggers_view_id = 'only-triggers'
 
+    workers_design_doc_id = '_design/workers'
+    triggers_by_workers_view_id = 'triggers_by_workers'
+
     instance = os.getenv('INSTANCE', 'messageHubTrigger-0')
-    canaryId = "canary-{}".format(instance)
+    workerId = os.getenv('WORKER_ID', 'worker0')
+    canaryId = "canary-{}-{}".format(instance, workerId)
 
     def __init__(self, timeout=None):
         self.client = CouchDB(self.username, self.password, url=self.url, timeout=timeout)
@@ -127,7 +131,7 @@ class Database:
         filtersDesignDoc = self.database.get_design_document(self.filters_design_doc_id)
 
         if not filtersDesignDoc.exists():
-            logging.info('Creating the design doc')
+            logging.info('Creating the filters design doc')
 
             # create only-triggers view
             self.database.create_document({
@@ -143,6 +147,28 @@ class Database:
                 }
             })
         else:
-            logging.info("design doc already exists")
+            logging.info("filters design doc already exists")
+
+        workersDesignDoc = self.database.get_design_document(self.workers_design_doc_id)
+
+        if not workersDesignDoc.exists():
+            logging.info('Creating the workers design doc')
+
+            # create triggers_by_worker view
+            self.database.create_document({
+                '_id': self.workers_design_doc_id,
+                'views': {
+                    self.triggers_by_workers_view_id: {
+                        'map': """function(doc) {
+                                    if (doc.triggerURL && doc.status.active) {
+                                        emit(doc.worker || 'worker0');
+                                    }
+                                }""",
+                        'reduce': '_count'
+                    }
+                }
+            })
+        else:
+            logging.info('workers design doc already exists')
 
         logging.info('Database migration complete')

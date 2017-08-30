@@ -54,6 +54,7 @@ def main():
     logger.setLevel(logging.INFO)
 
     component = os.getenv('INSTANCE', 'messageHubTrigger-0')
+    workerId = os.getenv('WORKER_ID', 'worker0')
 
     # Make sure we log to the console
     streamHandler = logging.StreamHandler()
@@ -63,7 +64,7 @@ def main():
 
     # also log to file if /logs is present
     if os.path.isdir('/logs'):
-        fh = logging.FileHandler('/logs/{}_logs.log'.format(component))
+        fh = logging.FileHandler('/logs/{}-{}_logs.log'.format(component, workerId))
         fh.setFormatter(formatter)
         logger.addHandler(fh)
 
@@ -86,7 +87,8 @@ def main():
     TheDoctor(consumers).start()
 
     global feedService
-    feedService = Service(consumers)
+    feedService = Service(consumers, workerId)
+    logging.info('Starting service for component {} on {}'.format(component, workerId))
     feedService.start()
 
     port = int(os.getenv('PORT', 5000))

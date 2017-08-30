@@ -36,7 +36,7 @@ changesFeedTimeout = 30  # seconds
 
 
 class Service (Thread):
-    def __init__(self, consumers):
+    def __init__(self, consumers, workerId):
         Thread.__init__(self)
         self.daemon = True
 
@@ -45,6 +45,7 @@ class Service (Thread):
         self.canaryGenerator = CanaryDocumentGenerator()
 
         self.consumers = consumers
+        self.workerId = workerId
 
     def run(self):
         self.canaryGenerator.start()
@@ -91,22 +92,28 @@ class Service (Thread):
                             document = change['doc']
 
                             if not self.consumers.hasConsumerForTrigger(change["id"]):
-                                logging.info('[{}] Found a new trigger to create'.format(change["id"]))
-                                self.createAndRunConsumer(document)
+                                if document['worker'] == self.workerId:
+                                    logging.info('[{}] Found a new trigger to create'.format(change["id"]))
+                                    self.createAndRunConsumer(document)
                             else:
                                 logging.info('[{}] Found a change to an existing trigger'.format(change["id"]))
                                 existingConsumer = self.consumers.getConsumerForTrigger(change["id"])
-
-                                if existingConsumer.desiredState() == Consumer.State.Disabled and self.__isTriggerDocActive(document):
-                                    # disabled trigger has become active
-                                    logging.info('[{}] Existing disabled trigger should become active'.format(change["id"]))
-                                    self.createAndRunConsumer(document)
-                                elif existingConsumer.desiredState() == Consumer.State.Running and not self.__isTriggerDocActive(document):
-                                    # running trigger should become disabled
-                                    logging.info('[{}] Existing running trigger should become disabled'.format(change["id"]))
-                                    existingConsumer.disable()
+                                
+                                if document['worker'] == self.workerId:
+                                    if existingConsumer.desiredState() == Consumer.State.Disabled and self.__isTriggerDocActive(document):
+                                        # disabled trigger has become active
+                                        logging.info('[{}] Existing disabled trigger should become active'.format(change["id"]))
+                                        self.createAndRunConsumer(document)
+                                    elif existingConsumer.desiredState() == Consumer.State.Running and not self.__isTriggerDocActive(document):
+                                        # running trigger should become disabled
+                                        logging.info('[{}] Existing running trigger should become disabled'.format(change["id"]))
+                                        existingConsumer.disable()
+                                    else:
+                                        logging.debug('[changes] Found non-interesting trigger change: \n{}\n{}'.format(existingConsumer.desiredState(), document))
                                 else:
-                                    logging.debug('[changes] Found non-interesting trigger change: \n{}\n{}'.format(existingConsumer.desiredState(), document))
+                                    # trigger has become reassigned to a different worker
+                                    logging.info('[{}] Existing running trigger has been reassigned to another worker and should become disabled on this worker'.format(change["id"]))
+                                    existingConsumer.disable()
                         elif 'canary-timestamp' in change['doc']:
                             # found a canary - update lastCanaryTime
                             logging.info('[canary] I found a canary. The last one was {} seconds ago.'.format(secondsSince(self.lastCanaryTime)))

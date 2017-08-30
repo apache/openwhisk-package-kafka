@@ -23,6 +23,7 @@ EDGEHOST="$2"
 DB_URL="$3"
 DB_NAME="${4}ow_kafka_triggers"
 APIHOST="$5"
+WORKERS="$6"
 
 # If the auth key file exists, read the key in the file. Otherwise, take the
 # first argument as the key itself.
@@ -72,6 +73,7 @@ $WSK_CLI -i --apihost "$EDGEHOST" package update messagingWeb \
     -p endpoint "$APIHOST" \
     -p DB_URL "$DB_URL" \
     -p DB_NAME "$DB_NAME" \
+    -p workers "$WORKERS" \
 
 # make messageHubFeedWeb.zip
 
