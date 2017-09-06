@@ -55,9 +55,13 @@ class TheDoctor (Thread):
                     consumer.restart()
                 elif consumer.currentState() == Consumer.State.Dead and consumer.desiredState() == Consumer.State.Dead:
                     # Bring out yer dead...
-                    logging.info('[{}] Joining dead process.'.format(consumer.trigger))
-                    # if you don't first join the process, it'll be left hanging around as a "defunct" process
-                    consumer.process.join(1)
+                    if consumer.process.is_alive():
+                        logging.info('[{}] Joining dead process.'.format(consumer.trigger))
+                        # if you don't first join the process, it'll be left hanging around as a "defunct" process
+                        consumer.process.join(1)
+                    else:
+                        logging.info('[{}] Process is already dead.'.format(consumer.trigger))
+
                     logging.info('[{}] Removing dead consumer from the collection.'.format(consumer.trigger))
                     self.consumerCollection.removeConsumerForTrigger(consumer.trigger)
                 elif consumer.secondsSinceLastPoll() > self.poll_timeout_seconds and consumer.desiredState() == Consumer.State.Running:

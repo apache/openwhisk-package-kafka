@@ -35,7 +35,10 @@ function main(params) {
                         checkMessageHubCredentials(validatedParams)
                     ]);
                 })
-                .then(() => db.getWorkerAssignment((params.workers || '').split(',').filter(a => a.match('worker'))))
+                .then(() => {
+                    var workers = (params.workers || '').split(',').filter(a => a.match('worker'));
+                    return db.getTriggerAssignment(workers)
+                })
                 .then((worker) => {
                     validatedParams['worker'] = worker;
                     return db.recordTrigger(validatedParams);

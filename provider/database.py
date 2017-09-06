@@ -37,12 +37,10 @@ class Database:
 
     filters_design_doc_id = '_design/filters'
     only_triggers_view_id = 'only-triggers'
-
-    workers_design_doc_id = '_design/workers'
-    triggers_by_workers_view_id = 'triggers_by_workers'
+    by_worker_view_id = 'by-worker'
 
     instance = os.getenv('INSTANCE', 'messageHubTrigger-0')
-    workerId = os.getenv('WORKER_ID', 'worker0')
+    workerId = os.getenv('WORKER', 'worker0')
     canaryId = "canary-{}-{}".format(instance, workerId)
 
     def __init__(self, timeout=None):
@@ -128,12 +126,25 @@ class Database:
     def migrate(self):
         logging.info('Starting DB migration')
 
+        by_worker_view = {
+            'map': """function(doc) {
+                        if(doc.triggerURL && (!doc.status || doc.status.active)) {
+                            emit(doc.worker || 'worker0', 1);
+                        }
+                    }""",
+            'reduce': '_count'
+        }
+
         filtersDesignDoc = self.database.get_design_document(self.filters_design_doc_id)
 
-        if not filtersDesignDoc.exists():
-            logging.info('Creating the filters design doc')
+        if filtersDesignDoc.exists():
+            if self.by_worker_view_id not in filtersDesignDoc["views"]:
+                filtersDesignDoc["views"][self.by_worker_view_id] = by_worker_view
+                logging.info('Updating the design doc')
+                filtersDesignDoc.save()
+        else:
+            logging.info('Creating the design doc')
 
-            # create only-triggers view
             self.database.create_document({
                 '_id': self.filters_design_doc_id,
                 'views': {
@@ -143,32 +154,9 @@ class Database:
                                         emit(doc._id, 1);
                                     }
                                 }"""
-                    }
+                    },
+                    self.by_worker_view_id: by_worker_view
                 }
             })
-        else:
-            logging.info("filters design doc already exists")
-
-        workersDesignDoc = self.database.get_design_document(self.workers_design_doc_id)
-
-        if not workersDesignDoc.exists():
-            logging.info('Creating the workers design doc')
-
-            # create triggers_by_worker view
-            self.database.create_document({
-                '_id': self.workers_design_doc_id,
-                'views': {
-                    self.triggers_by_workers_view_id: {
-                        'map': """function(doc) {
-                                    if (doc.triggerURL && doc.status.active) {
-                                        emit(doc.worker || 'worker0');
-                                    }
-                                }""",
-                        'reduce': '_count'
-                    }
-                }
-            })
-        else:
-            logging.info('workers design doc already exists')
 
         logging.info('Database migration complete')

@@ -19,6 +19,7 @@
 """
 
 import logging
+import os
 import time
 
 from consumer import Consumer
@@ -36,7 +37,7 @@ changesFeedTimeout = 30  # seconds
 
 
 class Service (Thread):
-    def __init__(self, consumers, workerId):
+    def __init__(self, consumers):
         Thread.__init__(self)
         self.daemon = True
 
@@ -45,7 +46,7 @@ class Service (Thread):
         self.canaryGenerator = CanaryDocumentGenerator()
 
         self.consumers = consumers
-        self.workerId = workerId
+        self.workerId = os.getenv("WORKER", "worker0")
 
     def run(self):
         self.canaryGenerator.start()
@@ -90,30 +91,33 @@ class Service (Thread):
                         elif 'triggerURL' in change['doc']:
                             logging.info('[changes] Found a change in a trigger document')
                             document = change['doc']
+                            triggerIsAssignedToMe = self.__isTriggerDocAssignedToMe(document)
 
                             if not self.consumers.hasConsumerForTrigger(change["id"]):
-                                if document['worker'] == self.workerId:
+                                if triggerIsAssignedToMe:
                                     logging.info('[{}] Found a new trigger to create'.format(change["id"]))
                                     self.createAndRunConsumer(document)
+                                else:
+                                    logging.info("[{}] Found a new trigger, but is assigned to another worker: {}".format(change["id"], document["worker"]))
                             else:
-                                logging.info('[{}] Found a change to an existing trigger'.format(change["id"]))
                                 existingConsumer = self.consumers.getConsumerForTrigger(change["id"])
-                                
-                                if document['worker'] == self.workerId:
+
+                                if existingConsumer.desiredState() == Consumer.State.Running and not self.__isTriggerDocActive(document):
+                                    # running trigger should become disabled
+                                    # this should be done regardless of which worker the document claims to be assigned to
+                                    logging.info('[{}] Existing running trigger should become disabled'.format(change["id"]))
+                                    existingConsumer.disable()
+                                elif triggerIsAssignedToMe:
+                                    logging.info('[{}] Found a change to an existing trigger'.format(change["id"]))
+
                                     if existingConsumer.desiredState() == Consumer.State.Disabled and self.__isTriggerDocActive(document):
                                         # disabled trigger has become active
                                         logging.info('[{}] Existing disabled trigger should become active'.format(change["id"]))
                                         self.createAndRunConsumer(document)
-                                    elif existingConsumer.desiredState() == Consumer.State.Running and not self.__isTriggerDocActive(document):
-                                        # running trigger should become disabled
-                                        logging.info('[{}] Existing running trigger should become disabled'.format(change["id"]))
-                                        existingConsumer.disable()
-                                    else:
-                                        logging.debug('[changes] Found non-interesting trigger change: \n{}\n{}'.format(existingConsumer.desiredState(), document))
                                 else:
                                     # trigger has become reassigned to a different worker
-                                    logging.info('[{}] Existing running trigger has been reassigned to another worker and should become disabled on this worker'.format(change["id"]))
-                                    existingConsumer.disable()
+                                    logging.info("[{}] Shutting down trigger as it has been re-assigned to {}".format(change["id"], document["worker"]))
+                                    existingConsumer.shutdown()
                         elif 'canary-timestamp' in change['doc']:
                             # found a canary - update lastCanaryTime
                             logging.info('[canary] I found a canary. The last one was {} seconds ago.'.format(secondsSince(self.lastCanaryTime)))
@@ -126,6 +130,14 @@ class Service (Thread):
                 self.stopChangesFeed()
 
             logging.debug("[changes] I made it out of the changes loop!")
+
+    def __isTriggerDocAssignedToMe(self, doc):
+        if "worker" in doc:
+            return doc["worker"] == self.workerId
+        else:
+            # TODO I'm uncomfortable with the assumption that "worker0" is the default worker
+            # perhaps this would be better to consult the available workers in the DB...
+            return self.workerId == "worker0"
 
     def stopChangesFeed(self):
         if self.changes != None:
