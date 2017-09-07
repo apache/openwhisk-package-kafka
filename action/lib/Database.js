@@ -46,7 +46,7 @@ module.exports = function(dbURL, dbName) {
                     resolve(result);
                 }
             });
-        }); 
+        });
     };
 
     this.deleteTrigger = function(triggerFQN) {
