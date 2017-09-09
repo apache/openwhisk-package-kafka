@@ -53,8 +53,9 @@ class Database:
             self.database = self.client.create_database(self.dbname)
 
     def destroy(self):
-        self.client.disconnect()
-        self.client = None
+        if self.client is not None:
+            self.client.disconnect()
+            self.client = None
 
     def disableTrigger(self, triggerFQN, status_code):
         try:
