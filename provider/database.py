@@ -40,8 +40,7 @@ class Database:
     by_worker_view_id = 'by-worker'
 
     instance = os.getenv('INSTANCE', 'messageHubTrigger-0')
-    workerId = os.getenv('WORKER', 'worker0')
-    canaryId = "canary-{}-{}".format(instance, workerId)
+    canaryId = "canary-{}".format(instance)
 
     def __init__(self, timeout=None):
         self.client = CouchDB(self.username, self.password, url=self.url, timeout=timeout)

@@ -135,8 +135,6 @@ class Service (Thread):
         if "worker" in doc:
             return doc["worker"] == self.workerId
         else:
-            # TODO I'm uncomfortable with the assumption that "worker0" is the default worker
-            # perhaps this would be better to consult the available workers in the DB...
             return self.workerId == "worker0"
 
     def stopChangesFeed(self):
