@@ -22,6 +22,7 @@ Now we need to start the provider service. This is also a simple matter of runni
 |INSTANCE|String|A unique identifier for this service. This is useful to differentiate log messages if you run multiple instances of the service|
 |LOCAL_DEV|Boolean|If you are using a locally-deployed OpenWhisk core system, it likely has a self-signed certificate. Set `LOCAL_DEV` to `true` to allow firing triggers without checking the certificate validity. *Do not use this for production systems!*|
 |PAYLOAD_LIMIT|Integer (default=900000)|The maxmimum payload size, in bytes, allowed during message batching. This value should be less than your OpenWhisk deployment's payload limit.|
+|WORKER|String|The ID of this running instances. Useful when running multiple instances. This should be of the form `workerX`. e.g. `worker0`.
 
 With that in mind, starting the feed service might look something like:
 
@@ -45,6 +46,7 @@ Each script requires a number of arguments which are outlined below:
 |dburl|The full URL (including credentials) of the CouchDB or Cloudant account used by the feed service.|
 |dbprefix|A prefix to be prepended to the default DB name (ow_kafka_triggers) that will be created by the provider service.|
 |apihost|The hostname or IP address of the core OpenWhisk system that will be used as the hostname for all trigger URLs. In most cases, this will be the same as `edgehost`.|
+|workers|A comma separated list of the IDs of the running instances with each ID of the form `workerX`. e.g. `worker0,worker1`|
 
 An example run might look something like:
 

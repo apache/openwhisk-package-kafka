@@ -67,7 +67,6 @@ module.exports = function(dbURL, dbName) {
     this.getTriggerAssignment = function(workers) {
         // a map between available workers and their number of assigned triggers
         // values will be populated with the results of the assignment view
-        console.log(`Available workers: ${JSON.stringify(workers, null, 2)}`);
         var counter = {};
         workers.forEach(worker => {
             counter[worker] = 0;
