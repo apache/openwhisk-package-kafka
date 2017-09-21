@@ -33,7 +33,7 @@ function main(params) {
                     ]);
                 })
                 .then(() => {
-                    var workers = (params.workers || '').split(',').filter(a => a.match('worker'));
+                    var workers = (params.workers || []);
                     return db.getTriggerAssignment(workers)
                 })
                 .then((worker) => {

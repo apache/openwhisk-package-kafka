@@ -66,13 +66,23 @@ $WSK_CLI -i --apihost "$EDGEHOST" action update --kind nodejs:6 messaging/kafkaF
     -a sampleInput '{"brokers":"[\"127.0.0.1:9093\"]", "topic":"mytopic", "isJSONData":"false", "endpoint": "openwhisk.ng.bluemix.net"}'
 
 # create messagingWeb package and web version of feed action
-$WSK_CLI -i --apihost "$EDGEHOST" package update messagingWeb \
-    --auth "$AUTH" \
-    --shared no \
-    -p endpoint "$APIHOST" \
-    -p DB_URL "$DB_URL" \
-    -p DB_NAME "$DB_NAME" \
-    -p workers "$WORKERS" \
+if [ -n "$WORKERS" ];
+then
+    $WSK_CLI -i --apihost "$EDGEHOST" package update messagingWeb \
+        --auth "$AUTH" \
+        --shared no \
+        -p endpoint "$APIHOST" \
+        -p DB_URL "$DB_URL" \
+        -p DB_NAME "$DB_NAME"  \
+        -p workers "$WORKERS"
+else
+    $WSK_CLI -i --apihost "$EDGEHOST" package update messagingWeb \
+        --auth "$AUTH" \
+        --shared no \
+        -p endpoint "$APIHOST" \
+        -p DB_URL "$DB_URL" \
+        -p DB_NAME "$DB_NAME"
+fi
 
 # make kafkaFeedWeb.zip
 OLD_PATH=`pwd`

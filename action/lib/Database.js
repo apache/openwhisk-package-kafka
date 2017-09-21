@@ -82,7 +82,9 @@ module.exports = function(dbURL, dbName) {
                     // update counter values with the number of assigned triggers
                     // for each worker
                     result.rows.forEach(row => {
-                        counter[row.key] = row.value;
+                        if (row.key in counter) {
+                            counter[row.key] = row.value;
+                        }
                     });
 
                     // find which of the available workers has the least number of

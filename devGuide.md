@@ -46,12 +46,22 @@ Each script requires a number of arguments which are outlined below:
 |dburl|The full URL (including credentials) of the CouchDB or Cloudant account used by the feed service.|
 |dbprefix|A prefix to be prepended to the default DB name (ow_kafka_triggers) that will be created by the provider service.|
 |apihost|The hostname or IP address of the core OpenWhisk system that will be used as the hostname for all trigger URLs. In most cases, this will be the same as `edgehost`.|
-|workers|A comma separated list of the IDs of the running instances with each ID of the form `workerX`. e.g. `worker0,worker1`|
 
 An example run might look something like:
 
 ```sh
 ./installKafka.sh MyOpenWhiskAuthKey 10.0.1.5 https://cloudant_user:cloudant_pw@cloudant.com staging_db_prefix 10.0.1.5
+```
+
+In addition, when running multiple instances, the following argument is required
+|Name|Description|
+|---|---|
+|workers|An array of the IDs of the running instances with each ID of the form `workerX`. e.g. `["worker0", "worker1"]`|
+
+When running multiple instances, an example run might look something like:
+
+```sh
+./installKafka.sh MyOpenWhiskAuthKey 10.0.1.5 https://cloudant_user:cloudant_pw@cloudant.com staging_db_prefix 10.0.1.5 "[\"worker0\", \"worker1\"]"
 ```
 
 # Testing
