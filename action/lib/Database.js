@@ -3,6 +3,9 @@ module.exports = function(dbURL, dbName) {
     var nano = require('nano')(dbURL);
     this.db = nano.db.use(dbName);
 
+    const designDoc = "filters";
+    const assignmentView = "by-worker";
+
     this.getTrigger = function(triggerFQN) {
         return new Promise((resolve, reject) => {
             this.db.get(triggerFQN, (err, result) => {
@@ -59,5 +62,46 @@ module.exports = function(dbURL, dbName) {
                     });
                 });
             })
+    };
+
+    this.getTriggerAssignment = function(workers) {
+
+        return new Promise((resolve, reject) => {
+            var assignment = workers[0] || 'worker0';
+
+            if (workers.length > 1) {
+                this.db.view(designDoc, assignmentView, {group: true}, (err, result) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        // a map between available workers and their number of assigned triggers
+                        // values will be populated with the results of the assignment view
+                        var counter = {};
+                        workers.forEach(worker => {
+                            counter[worker] = 0;
+                        });
+
+                        // update counter values with the number of assigned triggers
+                        // for each worker
+                        result.rows.forEach(row => {
+                            if (row.key in counter) {
+                                counter[row.key] = row.value;
+                            }
+                        });
+
+                        // find which of the available workers has the least number of
+                        // assigned triggers
+                        for (availableWorker in counter) {
+                            if (counter[availableWorker] < counter[assignment]) {
+                                assignment = availableWorker;
+                            }
+                        }
+                        resolve(assignment);
+                    }
+                });
+            } else {
+                resolve(assignment);
+            }
+        });
     };
 };

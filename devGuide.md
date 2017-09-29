@@ -22,6 +22,7 @@ Now we need to start the provider service. This is also a simple matter of runni
 |INSTANCE|String|A unique identifier for this service. This is useful to differentiate log messages if you run multiple instances of the service|
 |LOCAL_DEV|Boolean|If you are using a locally-deployed OpenWhisk core system, it likely has a self-signed certificate. Set `LOCAL_DEV` to `true` to allow firing triggers without checking the certificate validity. *Do not use this for production systems!*|
 |PAYLOAD_LIMIT|Integer (default=900000)|The maxmimum payload size, in bytes, allowed during message batching. This value should be less than your OpenWhisk deployment's payload limit.|
+|WORKER|String|The ID of this running instances. Useful when running multiple instances. This should be of the form `workerX`. e.g. `worker0`.
 
 With that in mind, starting the feed service might look something like:
 
@@ -50,6 +51,17 @@ An example run might look something like:
 
 ```sh
 ./installKafka.sh MyOpenWhiskAuthKey 10.0.1.5 https://cloudant_user:cloudant_pw@cloudant.com staging_db_prefix 10.0.1.5
+```
+
+In addition, when running multiple instances, the following argument is required
+|Name|Description|
+|---|---|
+|workers|An array of the IDs of the running instances with each ID of the form `workerX`. e.g. `["worker0", "worker1"]`|
+
+When running multiple instances, an example run might look something like:
+
+```sh
+./installKafka.sh MyOpenWhiskAuthKey 10.0.1.5 https://cloudant_user:cloudant_pw@cloudant.com staging_db_prefix 10.0.1.5 "[\"worker0\", \"worker1\"]"
 ```
 
 # Testing

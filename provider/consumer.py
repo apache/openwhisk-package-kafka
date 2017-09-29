@@ -74,8 +74,12 @@ class Consumer:
         self.sharedDictionary['desiredState'] = newState
 
     def shutdown(self):
-        self.sharedDictionary['currentState'] = Consumer.State.Stopping
-        self.setDesiredState(Consumer.State.Dead)
+        if self.currentState() == Consumer.State.Disabled:
+            self.sharedDictionary['currentState'] = Consumer.State.Dead
+            self.setDesiredState(Consumer.State.Dead)
+        else:
+            self.sharedDictionary['currentState'] = Consumer.State.Stopping
+            self.setDesiredState(Consumer.State.Dead)
 
     def disable(self):
         self.setDesiredState(Consumer.State.Disabled)

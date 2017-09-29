@@ -32,7 +32,14 @@ function main(params) {
                         common.verifyTriggerAuth(validatedParams.triggerURL)
                     ]);
                 })
-                .then(() => db.recordTrigger(validatedParams))
+                .then(() => {
+                    var workers = (params.workers || []);
+                    return db.getTriggerAssignment(workers)
+                })
+                .then((worker) => {
+                    validatedParams['worker'] = worker;
+                    return db.recordTrigger(validatedParams);
+                })
                 .then(() => {
                     console.log('successfully wrote the trigger');
                     resolve(common.webResponse(200, validatedParams.uuid));

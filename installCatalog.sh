@@ -23,6 +23,7 @@ EDGEHOST="$2"
 DB_URL="$3"
 DB_NAME="${4}ow_kafka_triggers"
 APIHOST="$5"
+WORKERS="$6"
 
 # If the auth key file exists, read the key in the file. Otherwise, take the
 # first argument as the key itself.
@@ -66,12 +67,23 @@ $WSK_CLI -i --apihost "$EDGEHOST" action update --kind nodejs:6 messaging/messag
     -a sampleInput '{"kafka_brokers_sasl":"[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\"]", "username":"someUsername", "password":"somePassword", "topic":"mytopic", "isJSONData": "false", "endpoint":"openwhisk.ng.bluemix.net", "kafka_admin_url":"https://kafka-admin-prod01.messagehub.services.us-south.bluemix.net:443"}'
 
 # create messagingWeb package and web version of feed action
-$WSK_CLI -i --apihost "$EDGEHOST" package update messagingWeb \
-    --auth "$AUTH" \
-    --shared no \
-    -p endpoint "$APIHOST" \
-    -p DB_URL "$DB_URL" \
-    -p DB_NAME "$DB_NAME" \
+if [ -n "$WORKERS" ];
+then
+    $WSK_CLI -i --apihost "$EDGEHOST" package update messagingWeb \
+        --auth "$AUTH" \
+        --shared no \
+        -p endpoint "$APIHOST" \
+        -p DB_URL "$DB_URL" \
+        -p DB_NAME "$DB_NAME"  \
+        -p workers "$WORKERS"
+else
+    $WSK_CLI -i --apihost "$EDGEHOST" package update messagingWeb \
+        --auth "$AUTH" \
+        --shared no \
+        -p endpoint "$APIHOST" \
+        -p DB_URL "$DB_URL" \
+        -p DB_NAME "$DB_NAME"
+fi
 
 # make messageHubFeedWeb.zip
 
