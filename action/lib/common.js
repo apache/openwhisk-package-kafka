@@ -130,6 +130,30 @@ function deleteTrigger(endpoint, params, actionName) {
         });
 }
 
+function getTrigger(endpoint, params, actionName) {
+    var options = {
+        method: 'GET',
+        url: getWebActionURL(endpoint, actionName),
+        rejectUnauthorized: false,
+        json: true,
+        body: params,
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/plain',
+            'User-Agent': 'whisk'
+        }
+    };
+
+    return request(options)
+        .then(response => {
+            return response;
+        })
+        .catch(error => {
+            console.log(`Error fetching trigger: ${JSON.stringify(error, null, 2)}`);
+            return Promise.reject(error.response.body);
+        });
+}
+
 // perform parameter validation that is common to both feed actions
 function performCommonParameterValidation(rawParams) {
     var validatedParams = {};
@@ -179,6 +203,7 @@ function webResponse(code, body) {
 module.exports = {
     'createTrigger': createTrigger,
     'deleteTrigger': deleteTrigger,
+    'getTrigger': getTrigger,
     'getBooleanFromArgs': getBooleanFromArgs,
     'getTriggerFQN': getTriggerFQN,
     'getTriggerURL': getTriggerURL,

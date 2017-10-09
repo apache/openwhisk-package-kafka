@@ -64,6 +64,35 @@ function main(params) {
 
                     resolve(common.webResponse(statusCode, body));
                 });
+        } else if (params.__ow_method === "get") {
+            const triggerURL = common.getTriggerURL(params.authKey, params.endpoint, params.triggerName);
+
+            return common.verifyTriggerAuth(triggerURL)
+                .then(() => {
+                    db = new Database(params.DB_URL, params.DB_NAME);
+                    return db.getTrigger(params.triggerName);
+                })
+                .then((triggerDoc) => {
+                    var body = {
+                        config: {
+                            triggerName: triggerDoc.triggerName,
+                            topic: triggerDoc.topic,
+                            isJSONData: triggerDoc.isJSONData,
+                            isBinaryValue: triggerDoc.isBinaryValue,
+                            isBinaryKey: triggerDoc.isBinaryKey,
+                            isMessageHub: triggerDoc.isMessageHub,
+                            brokers: triggerDoc.brokers,
+                            kafka_admin_url: triggerDoc.kafka_admin_url,
+                            username: triggerDoc.username,
+                            password: triggerDoc.password
+                        },
+                        status: triggerDoc.status
+                    }
+                    resolve(common.webResponse(200, JSON.stringify(body, null, 2)));
+                })
+                .catch(error => {
+                    resolve(common.webResponse(500, error.toString()));
+                });
         } else if (params.__ow_method === "delete") {
             const triggerURL = common.getTriggerURL(params.authKey, params.endpoint, params.triggerName);
 
