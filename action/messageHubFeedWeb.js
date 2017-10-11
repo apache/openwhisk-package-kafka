@@ -88,7 +88,7 @@ function main(params) {
                         },
                         status: triggerDoc.status
                     }
-                    resolve(common.webResponse(200, JSON.stringify(body, null, 2)));
+                    resolve(common.webResponse(200, body, 'application/json'));
                 })
                 .catch(error => {
                     resolve(common.webResponse(500, error.toString()));

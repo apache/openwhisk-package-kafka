@@ -139,7 +139,7 @@ function getTrigger(endpoint, params, actionName) {
         body: params,
         headers: {
             'Content-Type': 'application/json',
-            'Accept': 'text/plain',
+            'Accept': 'application/json',
             'User-Agent': 'whisk'
         }
     };
@@ -190,11 +190,11 @@ function performCommonParameterValidation(rawParams) {
     return { validatedParams: validatedParams };
 }
 
-function webResponse(code, body) {
+function webResponse(code, body, contentType = 'text/plain') {
     return {
         statusCode: code,
         headers: {
-            'Content-Type': 'text/plain'
+            'Content-Type': contentType
         },
         body: body
     };
