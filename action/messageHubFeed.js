@@ -20,6 +20,8 @@ function main(params) {
 
     if (params.lifecycleEvent === 'CREATE') {
         return common.createTrigger(endpoint, massagedParams, webActionName);
+    } else if (params.lifecycleEvent === 'READ') {
+        return common.getTrigger(endpoint, massagedParams, webActionName);
     } else if (params.lifecycleEvent === 'DELETE') {
         return common.deleteTrigger(endpoint, massagedParams, webActionName);
     }
