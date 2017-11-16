@@ -77,11 +77,7 @@ function main(params) {
                             isJSONData: triggerDoc.isJSONData,
                             isBinaryValue: triggerDoc.isBinaryValue,
                             isBinaryKey: triggerDoc.isBinaryKey,
-                            isMessageHub: triggerDoc.isMessageHub,
-                            brokers: triggerDoc.brokers,
-                            kafka_admin_url: triggerDoc.kafka_admin_url,
-                            username: triggerDoc.username,
-                            password: triggerDoc.password
+                            brokers: triggerDoc.brokers
                         },
                         status: triggerDoc.status
                     }
