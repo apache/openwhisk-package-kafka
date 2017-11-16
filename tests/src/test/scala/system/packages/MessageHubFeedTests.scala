@@ -274,67 +274,6 @@ class MessageHubFeedTests
       assert(matchingActivations.length == 0)
   }
 
-  it should "return correct status and configuration" in withAssetCleaner(wskprops) {
-    val currentTime = s"${System.currentTimeMillis}"
-
-    (wp, assetHelper) =>
-      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
-      println(s"Creating trigger ${triggerName}")
-
-      val username = kafkaUtils.getAsJson("user")
-      val password = kafkaUtils.getAsJson("password")
-      val admin_url = kafkaUtils.getAsJson("kafka_admin_url")
-      val brokers = kafkaUtils.getAsJson("brokers")
-
-      createTrigger(assetHelper, triggerName, parameters = Map(
-        "user" -> username,
-        "password" -> password,
-        "api_key" -> kafkaUtils.getAsJson("api_key"),
-        "kafka_admin_url" -> admin_url,
-        "kafka_brokers_sasl" -> brokers,
-        "topic" -> topic.toJson,
-        "isBinaryKey" -> false.toJson,
-        "isBinaryValue" -> false.toJson
-      ))
-
-      val run = wsk.action.invoke(actionName, parameters = Map(
-        "triggerName" -> triggerName.toJson,
-        "lifecycleEvent" -> "READ".toJson,
-        "authKey" -> wp.authKey.toJson
-      ))
-
-      withActivation(wsk.activation, run) {
-        activation =>
-          activation.response.success shouldBe true
-
-          inside (activation.response.result) {
-            case Some(result) =>
-              val config = result.getFields("config").head.asInstanceOf[JsObject].fields
-              val status = result.getFields("status").head.asInstanceOf[JsObject].fields
-
-              config should contain("brokers" -> brokers)
-              config should contain("isBinaryKey" -> false.toJson)
-              config should contain("isBinaryValue" -> false.toJson)
-              config should contain("isJSONData" -> false.toJson)
-              config should contain("isMessageHub" -> true.toJson)
-              config should contain("kafka_admin_url" -> admin_url)
-              config should contain("password" -> password)
-              config should contain("topic" -> topic.toJson)
-              config should contain("username" -> username)
-              config("triggerName").convertTo[String].split("/").last should equal (triggerName.split("/").last)
-              config should not {
-                contain key "authKey"
-                contain key "triggerURL"
-                contain key "uuid"
-                contain key "worker"
-              }
-              status should contain("active" -> true.toJson)
-              status should contain key "dateChanged"
-              status should not(contain key "reason")
-          }
-      }
-  }
-
   def createTrigger(assetHelper: AssetCleaner, name: String, parameters: Map[String, spray.json.JsValue]) = {
     val feedCreationResult = assetHelper.withCleaner(wsk.trigger, name) {
       (trigger, _) =>
