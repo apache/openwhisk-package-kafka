@@ -274,6 +274,144 @@ class MessageHubFeedTests
       assert(matchingActivations.length == 0)
   }
 
+  it should "reject trigger update without passing in any updatable parameters" in withAssetCleaner(wskprops) {
+    val currentTime = s"${System.currentTimeMillis}"
+
+    (wp, assetHelper) =>
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
+      println(s"Creating trigger ${triggerName}")
+
+      val username = kafkaUtils.getAsJson("user")
+      val password = kafkaUtils.getAsJson("password")
+      val admin_url = kafkaUtils.getAsJson("kafka_admin_url")
+      val brokers = kafkaUtils.getAsJson("brokers")
+
+      createTrigger(assetHelper, triggerName, parameters = Map(
+        "user" -> username,
+        "password" -> password,
+        "api_key" -> kafkaUtils.getAsJson("api_key"),
+        "kafka_admin_url" -> admin_url,
+        "kafka_brokers_sasl" -> brokers,
+        "topic" -> topic.toJson,
+        "isBinaryKey" -> false.toJson,
+        "isBinaryValue" -> false.toJson
+      ))
+  }
+
+  it should "reject trigger update when both isJSONData and isBinaryValue are enabled" in withAssetCleaner(wskprops) {
+    val currentTime = s"${System.currentTimeMillis}"
+
+    (wp, assetHelper) =>
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
+      println(s"Creating trigger $triggerName")
+
+      val username = kafkaUtils.getAsJson("user")
+      val password = kafkaUtils.getAsJson("password")
+      val admin_url = kafkaUtils.getAsJson("kafka_admin_url")
+      val brokers = kafkaUtils.getAsJson("brokers")
+
+      createTrigger(assetHelper, triggerName, parameters = Map(
+        "user" -> username,
+        "password" -> password,
+        "api_key" -> kafkaUtils.getAsJson("api_key"),
+        "kafka_admin_url" -> admin_url,
+        "kafka_brokers_sasl" -> brokers,
+        "topic" -> topic.toJson,
+        "isJSONData" -> true.toJson,
+        "isBinaryKey" -> false.toJson,
+        "isBinaryValue" -> false.toJson
+      ))
+
+      val run = wsk.action.invoke(actionName, parameters = Map(
+        "triggerName" -> triggerName.toJson,
+        "lifecycleEvent" -> "UPDATE".toJson,
+        "authKey" -> wp.authKey.toJson,
+        "isBinaryValue" -> true.toJson
+      ))
+
+      withActivation(wsk.activation, run) {
+        activation =>
+          activation.response.success shouldBe false
+      }
+  }
+
+  it should "correctly update isJSONData, isBinaryValue, and isBinaryKey" in withAssetCleaner(wskprops) {
+    val currentTime = s"${System.currentTimeMillis}"
+
+    (wp, assetHelper) =>
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
+      println(s"Creating trigger $triggerName")
+
+      val username = kafkaUtils.getAsJson("user")
+      val password = kafkaUtils.getAsJson("password")
+      val admin_url = kafkaUtils.getAsJson("kafka_admin_url")
+      val brokers = kafkaUtils.getAsJson("brokers")
+
+      createTrigger(assetHelper, triggerName, parameters = Map(
+        "user" -> username,
+        "password" -> password,
+        "api_key" -> kafkaUtils.getAsJson("api_key"),
+        "kafka_admin_url" -> admin_url,
+        "kafka_brokers_sasl" -> brokers,
+        "topic" -> topic.toJson,
+        "isJSONData" -> true.toJson,
+        "isBinaryKey" -> false.toJson,
+        "isBinaryValue" -> false.toJson
+      ))
+
+      val readRunResult = wsk.action.invoke(actionName, parameters = Map(
+        "triggerName" -> triggerName.toJson,
+        "lifecycleEvent" -> "READ".toJson,
+        "authKey" -> wp.authKey.toJson
+      ))
+
+      withActivation(wsk.activation, readRunResult) {
+        activation =>
+          activation.response.success shouldBe true
+
+          inside (activation.response.result) {
+            case Some(result) =>
+              val config = result.getFields("config").head.asInstanceOf[JsObject].fields
+              config should contain("isBinaryKey" -> false.toJson)
+              config should contain("isBinaryValue" -> false.toJson)
+              config should contain("isJSONData" -> true.toJson)
+          }
+      }
+
+      val updateRunResult = wsk.action.invoke(actionName, parameters = Map(
+        "triggerName" -> triggerName.toJson,
+        "lifecycleEvent" -> "UPDATE".toJson,
+        "authKey" -> wp.authKey.toJson,
+        "isBinaryValue" -> true.toJson,
+        "isBinaryKey" -> true.toJson,
+        "isJSONData" -> false.toJson
+      ))
+
+      withActivation(wsk.activation, updateRunResult) {
+        activation =>
+          activation.response.success shouldBe true
+      }
+
+      val run = wsk.action.invoke(actionName, parameters = Map(
+        "triggerName" -> triggerName.toJson,
+        "lifecycleEvent" -> "READ".toJson,
+        "authKey" -> wp.authKey.toJson
+      ))
+
+      withActivation(wsk.activation, run) {
+        activation =>
+          activation.response.success shouldBe true
+
+          inside (activation.response.result) {
+            case Some(result) =>
+              val config = result.getFields("config").head.asInstanceOf[JsObject].fields
+              config should contain("isBinaryKey" -> true.toJson)
+              config should contain("isBinaryValue" -> true.toJson)
+              config should contain("isJSONData" -> false.toJson)
+          }
+      }
+  }
+  
   def createTrigger(assetHelper: AssetCleaner, name: String, parameters: Map[String, spray.json.JsValue]) = {
     val feedCreationResult = assetHelper.withCleaner(wsk.trigger, name) {
       (trigger, _) =>
