@@ -24,13 +24,9 @@ import system.utils.KafkaUtils
 
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
-
 import org.junit.runner.RunWith
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Inside, Matchers}
 import org.scalatest.junit.JUnitRunner
-
 import common.JsHelpers
 import common.TestHelpers
 import common.TestUtils.DONTCARE_EXIT
@@ -41,10 +37,8 @@ import common.WskActorSystem
 import common.WskProps
 import common.WskTestHelpers
 import spray.json.DefaultJsonProtocol._
-import spray.json.pimpAny
-
+import spray.json.{JsObject, pimpAny}
 import com.jayway.restassured.RestAssured
-
 import whisk.utils.retry;
 
 @RunWith(classOf[JUnitRunner])
@@ -55,6 +49,7 @@ class BasicHealthTest
   with BeforeAndAfterAll
   with TestHelpers
   with WskTestHelpers
+  with Inside
   with JsHelpers {
 
   val topic = "test"
@@ -188,5 +183,77 @@ class BasicHealthTest
         message.getFieldPath("topic") shouldBe Some(topic.toJson)
         message.getFieldPath("key") shouldBe Some(key.toJson)
       }, N = 3)
+  }
+
+  it should "return correct status and configuration" in withAssetCleaner(wskprops) {
+    val currentTime = s"${System.currentTimeMillis}"
+
+    (wp, assetHelper) =>
+      val messagingPackage = "/whisk.system/messaging"
+      val messageHubFeed = "messageHubFeed"
+      val actionName = s"${messagingPackage}/${messageHubFeed}"
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
+      println(s"Creating trigger ${triggerName}")
+
+      val username = kafkaUtils.getAsJson("user")
+      val password = kafkaUtils.getAsJson("password")
+      val admin_url = kafkaUtils.getAsJson("kafka_admin_url")
+      val brokers = kafkaUtils.getAsJson("brokers")
+
+      val feedCreationResult = assetHelper.withCleaner(wsk.trigger, triggerName) {
+        (trigger, _) =>
+          trigger.create(triggerName, feed = Some(actionName), parameters = Map(
+            "user" -> username,
+            "password" -> password,
+            "api_key" -> kafkaUtils.getAsJson("api_key"),
+            "kafka_admin_url" -> admin_url,
+            "kafka_brokers_sasl" -> brokers,
+            "topic" -> topic.toJson,
+            "isBinaryKey" -> false.toJson,
+            "isBinaryValue" -> false.toJson
+          ))
+      }
+
+      withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
+        activation =>
+          // should be successful
+          activation.response.success shouldBe true
+      }
+
+      val run = wsk.action.invoke(actionName, parameters = Map(
+        "triggerName" -> triggerName.toJson,
+        "lifecycleEvent" -> "READ".toJson,
+        "authKey" -> wp.authKey.toJson
+      ))
+
+      withActivation(wsk.activation, run) {
+        activation =>
+          activation.response.success shouldBe true
+
+          inside (activation.response.result) {
+            case Some(result) =>
+              val config = result.getFields("config").head.asInstanceOf[JsObject].fields
+              val status = result.getFields("status").head.asInstanceOf[JsObject].fields
+
+              config should contain("kafka_brokers_sasl" -> brokers)
+              config should contain("isBinaryKey" -> false.toJson)
+              config should contain("isBinaryValue" -> false.toJson)
+              config should contain("isJSONData" -> false.toJson)
+              config should contain("kafka_admin_url" -> admin_url)
+              config should contain("password" -> password)
+              config should contain("topic" -> topic.toJson)
+              config should contain("user" -> username)
+              config("triggerName").convertTo[String].split("/").last should equal (triggerName.split("/").last)
+              config should not {
+                contain key "authKey"
+                contain key "triggerURL"
+                contain key "uuid"
+                contain key "worker"
+              }
+              status should contain("active" -> true.toJson)
+              status should contain key "dateChanged"
+              status should not(contain key "reason")
+          }
+      }
   }
 }
