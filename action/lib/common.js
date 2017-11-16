@@ -136,9 +136,8 @@ function getTrigger(endpoint, params, actionName) {
         url: getWebActionURL(endpoint, actionName),
         rejectUnauthorized: false,
         json: true,
-        body: params,
+        qs: params,
         headers: {
-            'Content-Type': 'application/json',
             'Accept': 'application/json',
             'User-Agent': 'whisk'
         }
