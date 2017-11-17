@@ -1,5 +1,6 @@
 const common = require('./lib/common');
 const Database = require('./lib/Database');
+var moment = require('moment');
 
 /**
  *   Feed to listen to MessageHub messages
@@ -19,7 +20,7 @@ function main(params) {
         // hold off initializing this until definitely needed
         var db;
 
-        if (params.__ow_method === "put") {
+        if (params.__ow_method === "post") {
             var validatedParams;
             return validateParameters(params)
                 .then(cleanParams => {
@@ -85,12 +86,47 @@ function main(params) {
                             user: triggerDoc.username,
                             password: triggerDoc.password
                         },
-                        status: triggerDoc.status
+                        status: {
+                            active: triggerDoc.status.active,
+                            dateChanged: moment(triggerDoc.status.dateChanged).utc().valueOf(),
+                            dateChangedISO: moment(triggerDoc.status.dateChanged).utc().format(),
+                            reason: triggerDoc.status.reason
+                        }
                     }
                     resolve(common.webResponse(200, body, 'application/json'));
                 })
                 .catch(error => {
                     resolve(common.webResponse(500, error.toString()));
+                });
+        } else if (params.__ow_method === "put") {
+            const triggerURL = common.getTriggerURL(params.authKey, params.endpoint, params.triggerName);
+
+            return common.verifyTriggerAuth(triggerURL)
+                .then(() => {
+                    db = new Database(params.DB_URL, params.DB_NAME);
+                    return db.getTrigger(params.triggerName);
+                })
+                .then(triggerDoc => {
+                    if (!triggerDoc.status.active) {
+                        resolve(common.webResponse(400, `${params.triggerName} cannot be updated because it is disabled`));
+                    }
+                    return common.performUpdateParameterValidation(params, triggerDoc)
+                    .then(updatedParams => db.updateTrigger(triggerDoc, updatedParams))
+                })
+                .then(() => {
+                    console.log('successfully updated the trigger');
+                    resolve(common.webResponse(200, 'updated trigger'));
+                })
+                .catch(error => {
+                    console.log(`Failed to update trigger: ${error}`);
+                    var statusCode = 500;
+                    var body = error.toString();
+
+                    if (error.validationError) {
+                        statusCode = 400;
+                        body = error.validationError;
+                    }
+                    resolve(common.webResponse(statusCode, body));
                 });
         } else if (params.__ow_method === "delete") {
             const triggerURL = common.getTriggerURL(params.authKey, params.endpoint, params.triggerName);

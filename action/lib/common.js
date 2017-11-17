@@ -81,7 +81,7 @@ function getWebActionURL(endpoint, actionName) {
 
 function createTrigger(endpoint, params, actionName) {
     var options = {
-        method: 'PUT',
+        method: 'POST',
         url: getWebActionURL(endpoint, actionName),
         rejectUnauthorized: false,
         json: true,
@@ -153,6 +153,30 @@ function getTrigger(endpoint, params, actionName) {
         });
 }
 
+function updateTrigger(endpoint, params, actionName) {
+    var options = {
+        method: 'PUT',
+        url: getWebActionURL(endpoint, actionName),
+        rejectUnauthorized: false,
+        json: true,
+        body: params,
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/plain',
+            'User-Agent': 'whisk'
+        }
+    };
+
+    return request(options)
+        .then(response => {
+            return;
+        })
+        .catch(error => {
+            console.log(`Error updating trigger: ${JSON.stringify(error, null, 2)}`);
+            return Promise.reject(error.response.body);
+        });
+}
+
 // perform parameter validation that is common to both feed actions
 function performCommonParameterValidation(rawParams) {
     var validatedParams = {};
@@ -189,6 +213,39 @@ function performCommonParameterValidation(rawParams) {
     return { validatedParams: validatedParams };
 }
 
+function performUpdateParameterValidation(params, doc) {
+    return new Promise((resolve, reject) => {
+
+        if (params.isBinaryKey !== undefined || params.isBinaryValue !== undefined || params.isJSONData !== undefined) {
+            var updatedParams = {
+                isJSONData: doc.isJSONData,
+                isBinaryKey: doc.isBinaryKey,
+                isBinaryValue: doc.isBinaryValue
+            };
+
+            if (params.isJSONData !== undefined) {
+                updatedParams.isJSONData = getBooleanFromArgs(params, 'isJSONData');
+            }
+
+            if (params.isBinaryValue !== undefined) {
+                updatedParams.isBinaryValue = getBooleanFromArgs(params, 'isBinaryValue');
+            }
+
+            if (updatedParams.isJSONData && updatedParams.isBinaryValue) {
+                reject({ validationError: 'isJSONData and isBinaryValue cannot both be enabled.' });
+            }
+
+            if (params.isBinaryKey !== undefined) {
+                updatedParams.isBinaryKey = getBooleanFromArgs(params, 'isBinaryKey');
+            }
+            resolve(updatedParams);
+        } else {
+            // cannot update any other parameters
+            reject({ validationError: 'At least one of isJsonData, isBinaryKey, or isBinaryValue must be supplied.' });
+        }
+    });
+}
+
 function webResponse(code, body, contentType = 'text/plain') {
     return {
         statusCode: code,
@@ -203,11 +260,13 @@ module.exports = {
     'createTrigger': createTrigger,
     'deleteTrigger': deleteTrigger,
     'getTrigger': getTrigger,
+    'updateTrigger': updateTrigger,
     'getBooleanFromArgs': getBooleanFromArgs,
     'getTriggerFQN': getTriggerFQN,
     'getTriggerURL': getTriggerURL,
     'massageParamsForWeb': massageParamsForWeb,
     'performCommonParameterValidation': performCommonParameterValidation,
+    'performUpdateParameterValidation': performUpdateParameterValidation,
     'validateBrokerParam': validateBrokerParam,
     'verifyTriggerAuth': verifyTriggerAuth,
     'webResponse': webResponse

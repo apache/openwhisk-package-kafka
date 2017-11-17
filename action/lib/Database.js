@@ -35,7 +35,7 @@ module.exports = function(dbURL, dbName) {
         params['_id'] = params.triggerName;
         params['status'] = {
             'active': true,
-            'dateChanged': Math.round(new Date().getTime() / 1000)
+            'dateChanged': Date.now()
         };
 
         return new Promise((resolve, reject) => {
@@ -102,6 +102,48 @@ module.exports = function(dbURL, dbName) {
             } else {
                 resolve(assignment);
             }
+        });
+    };
+
+    this.updateTrigger = function(existing, params) {
+        return new Promise((resolve, reject) => {
+            var message = 'Automatically disabled trigger while updating';
+            var status = {
+                'active': false,
+                'dateChanged': Date.now(),
+                'reason': {'kind': 'AUTO', 'statusCode': undefined, 'message': message}
+            };
+            existing.status = status;
+            this.db.insert(existing, (err, result) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
+            });
+        })
+        .then(() => this.getTrigger(existing.triggerName))
+        .then(doc => {
+            for (var key in params) {
+                if (params[key] !== undefined) {
+                    doc[key] = params[key];
+                }
+            }
+            var status = {
+                'active': true,
+                'dateChanged': Date.now()
+            };
+            doc.status = status;
+
+            return new Promise((resolve, reject) => {
+                this.db.insert(doc, (err, result) => {
+                    if(err) {
+                        reject(err);
+                    } else {
+                        resolve(result);
+                    }
+                });
+            });
         });
     };
 };
