@@ -106,14 +106,19 @@ function main(params) {
                     db = new Database(params.DB_URL, params.DB_NAME);
                     return db.getTrigger(params.triggerName);
                 })
-                .then(triggerDoc => common.performUpdateParameterValidation(params, triggerDoc))
-                .then(updatedDoc => db.updateTrigger(updatedDoc))
+                .then(triggerDoc => {
+                    if (!triggerDoc.status.active) {
+                        resolve(common.webResponse(400, `${params.triggerName} cannot be updated because it is disabled`));
+                    }
+                    return common.performUpdateParameterValidation(params, triggerDoc)
+                    .then(updatedParams => db.updateTrigger(triggerDoc, updatedParams))
+                })
                 .then(() => {
                     console.log('successfully updated the trigger');
                     resolve(common.webResponse(200, 'updated trigger'));
                 })
                 .catch(error => {
-                    console.log(`Failed to update trigger ${error}`);
+                    console.log(`Failed to update trigger: ${error}`);
                     var statusCode = 500;
                     var body = error.toString();
 

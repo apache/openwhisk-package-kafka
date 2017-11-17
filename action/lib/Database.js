@@ -105,7 +105,7 @@ module.exports = function(dbURL, dbName) {
         });
     };
 
-    this.updateTrigger = function(updatedDoc) {
+    this.updateTrigger = function(existing, params) {
         return new Promise((resolve, reject) => {
             var message = 'Automatically disabled trigger while updating';
             var status = {
@@ -113,8 +113,8 @@ module.exports = function(dbURL, dbName) {
                 'dateChanged': Date.now(),
                 'reason': {'kind': 'AUTO', 'statusCode': undefined, 'message': message}
             };
-            updatedDoc.status = status;
-            this.db.insert(updatedDoc, (err, result) => {
+            existing.status = status;
+            this.db.insert(existing, (err, result) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -122,8 +122,13 @@ module.exports = function(dbURL, dbName) {
                 }
             });
         })
-        .then(() => this.getTrigger(updatedDoc.triggerName))
+        .then(() => this.getTrigger(existing.triggerName))
         .then(doc => {
+            for (var key in params) {
+                if (params[key] !== undefined) {
+                    doc[key] = params[key];
+                }
+            }
             var status = {
                 'active': true,
                 'dateChanged': Date.now()

@@ -62,7 +62,7 @@ $WSK_CLI -i --apihost "$EDGEHOST" action update --kind nodejs:6 messaging/kafkaF
     --auth "$AUTH" \
     -a feed true \
     -a description 'Feed to listen to Kafka messages' \
-    -a parameters '[ {"name":"brokers", "required":true, "description": "Array of Kafka brokers"}, {"name":"topic", "required":true, "description": "Topic to subscribe to"}, {"name":"isJSONData", "required":false, "description": "Attempt to parse message value as JSON"}, {"name":"isBinaryKey", "required":false, "description": "Encode key as Base64"}, {"name":"isBinaryValue", "required":false, "description": "Encode message value as Base64"}, {"name":"endpoint", "required":true, "description": "Hostname and port of OpenWhisk deployment"}]' \
+    -a parameters '[ {"name":"brokers", "required":true, "updatable":false, "description": "Array of Kafka brokers"}, {"name":"topic", "required":true, "updatable":false, "description": "Topic to subscribe to"}, {"name":"isJSONData", "required":false, "updatable":true, "description": "Attempt to parse message value as JSON"}, {"name":"isBinaryKey", "required":false, "updatable":true, "description": "Encode key as Base64"}, {"name":"isBinaryValue", "required":false, "updatable":true, "description": "Encode message value as Base64"}, {"name":"endpoint", "required":true, "updatable":false, "description": "Hostname and port of OpenWhisk deployment"}]' \
     -a sampleInput '{"brokers":"[\"127.0.0.1:9093\"]", "topic":"mytopic", "isJSONData":"false", "endpoint": "openwhisk.ng.bluemix.net"}'
 
 # create messagingWeb package and web version of feed action

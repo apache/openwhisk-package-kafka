@@ -215,24 +215,30 @@ function performCommonParameterValidation(rawParams) {
 
 function performUpdateParameterValidation(params, doc) {
     return new Promise((resolve, reject) => {
-        
+
         if (params.isBinaryKey !== undefined || params.isBinaryValue !== undefined || params.isJSONData !== undefined) {
+            var updatedParams = {
+                isJSONData: doc.isJSONData,
+                isBinaryKey: doc.isBinaryKey,
+                isBinaryValue: doc.isBinaryValue
+            };
+            
             if (params.isJSONData !== undefined) {
-                doc.isJSONData = getBooleanFromArgs(params, 'isJSONData');
+                updatedParams.isJSONData = getBooleanFromArgs(params, 'isJSONData');
             }
     
             if (params.isBinaryValue !== undefined) {
-                doc.isBinaryValue = getBooleanFromArgs(params, 'isBinaryValue');
+                updatedParams.isBinaryValue = getBooleanFromArgs(params, 'isBinaryValue');
             }
         
-            if (doc.isJSONData && doc.isBinaryValue) {
+            if (updatedParams.isJSONData && updatedParams.isBinaryValue) {
                 reject({ validationError: 'isJSONData and isBinaryValue cannot both be enabled.' });
             }
             
             if (params.isBinaryKey !== undefined) {
-                doc.isBinaryKey = getBooleanFromArgs(params, 'isBinaryKey');
+                updatedParams.isBinaryKey = getBooleanFromArgs(params, 'isBinaryKey');
             }
-            resolve(doc);
+            resolve(updatedParams);
         } else {
             // cannot update any other parameters
             reject({ validationError: 'At least one of isJsonData, isBinaryKey, or isBinaryValue must be supplied.' });
