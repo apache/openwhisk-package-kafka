@@ -94,7 +94,7 @@ function main(params) {
                 });
         } else if (params.__ow_method === "put") {
             const triggerURL = common.getTriggerURL(params.authKey, params.endpoint, params.triggerName);
-            
+
             return common.verifyTriggerAuth(triggerURL)
                 .then(() => {
                     db = new Database(params.DB_URL, params.DB_NAME);

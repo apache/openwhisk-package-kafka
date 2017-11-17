@@ -222,19 +222,19 @@ function performUpdateParameterValidation(params, doc) {
                 isBinaryKey: doc.isBinaryKey,
                 isBinaryValue: doc.isBinaryValue
             };
-            
+
             if (params.isJSONData !== undefined) {
                 updatedParams.isJSONData = getBooleanFromArgs(params, 'isJSONData');
             }
-    
+
             if (params.isBinaryValue !== undefined) {
                 updatedParams.isBinaryValue = getBooleanFromArgs(params, 'isBinaryValue');
             }
-        
+
             if (updatedParams.isJSONData && updatedParams.isBinaryValue) {
                 reject({ validationError: 'isJSONData and isBinaryValue cannot both be enabled.' });
             }
-            
+
             if (params.isBinaryKey !== undefined) {
                 updatedParams.isBinaryKey = getBooleanFromArgs(params, 'isBinaryKey');
             }
