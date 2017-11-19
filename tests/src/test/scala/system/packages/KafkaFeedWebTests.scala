@@ -59,6 +59,7 @@ class KafkaFeedWebTests
         .config(RestAssured.config().sslConfig(new SSLConfig().relaxedHTTPSValidation()))
         .body(params.toString())
         .post(webActionURL)
+    println()
     assert(response.statusCode() == expectedCode)
     response.body.asString shouldBe expectedResult
   }
@@ -96,7 +97,7 @@ class KafkaFeedWebTests
     makePostCallWithExpectedResult(params, "You must supply a 'triggerName' parameter.", 400)
   }
 
-  it should "reject put of a trigger when authentication fails" in {
+  it should "reject post of a trigger when authentication fails" in {
     makePostCallWithExpectedResult(completeParams, "You are not authorized for this trigger.", 401)
   }
 

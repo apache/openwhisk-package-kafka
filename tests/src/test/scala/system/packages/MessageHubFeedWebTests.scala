@@ -108,7 +108,7 @@ class MessageHubFeedWebTests
     makePostCallWithExpectedResult(params, "You must supply a 'password' parameter to authenticate with Message Hub.", 400)
   }
 
-  it should "reject put of a trigger when authentication fails" in {
+  it should "reject post of a trigger when authentication fails" in {
     makePostCallWithExpectedResult(completeParams, "You are not authorized for this trigger.", 401)
   }
 
