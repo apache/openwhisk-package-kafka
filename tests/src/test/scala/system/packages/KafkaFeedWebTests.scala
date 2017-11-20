@@ -53,12 +53,12 @@ class KafkaFeedWebTests
     "authKey" -> JsString("DoesNotWork")
   )
 
-  def makePutCallWithExpectedResult(params: JsObject, expectedResult: String, expectedCode: Int) = {
+  def makePostCallWithExpectedResult(params: JsObject, expectedResult: String, expectedCode: Int) = {
     val response = RestAssured.given()
         .contentType("application/json\r\n")
         .config(RestAssured.config().sslConfig(new SSLConfig().relaxedHTTPSValidation()))
         .body(params.toString())
-        .put(webActionURL)
+        .post(webActionURL)
     assert(response.statusCode() == expectedCode)
     response.body.asString shouldBe expectedResult
   }
@@ -81,23 +81,23 @@ class KafkaFeedWebTests
   it should "reject post of a trigger due to missing brokers argument" in {
     val params = JsObject(completeParams.fields - "brokers")
 
-    makePutCallWithExpectedResult(params, "You must supply a 'brokers' parameter.", 400)
+    makePostCallWithExpectedResult(params, "You must supply a 'brokers' parameter.", 400)
   }
 
   it should "reject post of a trigger due to missing topic argument" in {
     val params = JsObject(completeParams.fields - "topic")
 
-    makePutCallWithExpectedResult(params, "You must supply a 'topic' parameter.", 400)
+    makePostCallWithExpectedResult(params, "You must supply a 'topic' parameter.", 400)
   }
 
   it should "reject post of a trigger due to missing triggerName argument" in {
     val params = JsObject(completeParams.fields - "triggerName")
 
-    makePutCallWithExpectedResult(params, "You must supply a 'triggerName' parameter.", 400)
+    makePostCallWithExpectedResult(params, "You must supply a 'triggerName' parameter.", 400)
   }
 
-  it should "reject put of a trigger when authentication fails" in {
-    makePutCallWithExpectedResult(completeParams, "You are not authorized for this trigger.", 401)
+  it should "reject post of a trigger when authentication fails" in {
+    makePostCallWithExpectedResult(completeParams, "You are not authorized for this trigger.", 401)
   }
 
   // it should "reject delete of a trigger that does not exist" in {
