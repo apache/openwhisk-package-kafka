@@ -59,7 +59,6 @@ class KafkaFeedWebTests
         .config(RestAssured.config().sslConfig(new SSLConfig().relaxedHTTPSValidation()))
         .body(params.toString())
         .post(webActionURL)
-    println()
     assert(response.statusCode() == expectedCode)
     response.body.asString shouldBe expectedResult
   }
