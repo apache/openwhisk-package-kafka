@@ -353,7 +353,7 @@ class ConsumerProcess (Process):
 
                     # Manually commit offset if the trigger was fired successfully. Retry firing the trigger
                     # for a select set of status codes
-                    if status_code == 200:
+                    if status_code in range(200, 300):
                         logging.info("[{}] Fired trigger with activation {}".format(self.trigger, response.json()['activationId']))
                         # the consumer may have consumed messages that did not make it into the messages array.
                         # be sure to only commit to the messages that were actually fired.
