@@ -357,6 +357,8 @@ class ConsumerProcess (Process):
                         response_json = response.json()
                         if 'activationId' in response_json and response_json['activationId'] is not None:
                             logging.info("[{}] Fired trigger with activation {}".format(self.trigger, response_json['activationId']))
+                        else:
+                            logging.info("[{}] Successfully fired trigger".format(self.trigger))
                         # the consumer may have consumed messages that did not make it into the messages array.
                         # be sure to only commit to the messages that were actually fired.
                         self.consumer.commit(offsets=self.__getOffsetList(messages), async=False)
