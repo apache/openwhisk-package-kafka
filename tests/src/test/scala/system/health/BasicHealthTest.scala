@@ -29,14 +29,14 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Inside, Matchers}
 import org.scalatest.junit.JUnitRunner
 import common.JsHelpers
 import common.TestHelpers
-import common.Wsk
-import common.WskActorSystem
-import common.WskProps
-import common.WskTestHelpers
 import common.TestUtils
 import common.TestUtils.DONTCARE_EXIT
 import common.TestUtils.NOT_FOUND
 import common.TestUtils.SUCCESS_EXIT
+import common.Wsk
+import common.WskActorSystem
+import common.WskProps
+import common.WskTestHelpers
 import spray.json.DefaultJsonProtocol._
 import spray.json.{JsObject, pimpAny}
 import com.jayway.restassured.RestAssured
