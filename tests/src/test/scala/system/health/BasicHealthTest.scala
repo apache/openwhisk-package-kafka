@@ -147,7 +147,7 @@ class BasicHealthTest
       val defaultAction = Some(TestUtils.getTestActionFilename("hello.js"))
       val defaultActionName = "hello"
 
-      assetHelper.withCleaner(wsk.action, "hello") { (action, name) =>
+      assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
         action.create(name, defaultAction)
       }
       assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>

@@ -137,7 +137,7 @@ class MessageHubFeedTests
         "isBinaryKey" -> true.toJson,
         "isBinaryValue" -> true.toJson))
 
-      assetHelper.withCleaner(wsk.action, "hello") { (action, name) =>
+      assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
         action.create(name, defaultAction)
       }
       assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
@@ -208,7 +208,7 @@ class MessageHubFeedTests
         "isBinaryKey" -> false.toJson,
         "isBinaryValue" -> false.toJson))
 
-      assetHelper.withCleaner(wsk.action, "hello") { (action, name) =>
+      assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
         action.create(name, defaultAction)
       }
       assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
@@ -265,7 +265,7 @@ class MessageHubFeedTests
         "isBinaryKey" -> false.toJson,
         "isBinaryValue" -> false.toJson))
 
-      assetHelper.withCleaner(wsk.action, "hello") { (action, name) =>
+      assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
         action.create(name, defaultAction)
       }
       assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
@@ -385,7 +385,7 @@ class MessageHubFeedTests
         "topic" -> topic.toJson
       ))
 
-      assetHelper.withCleaner(wsk.action, "hello") { (action, name) =>
+      assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
         action.create(name, defaultAction)
       }
       assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
