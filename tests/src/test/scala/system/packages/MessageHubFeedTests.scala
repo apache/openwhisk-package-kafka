@@ -29,7 +29,13 @@ import org.scalatest.Inside
 import org.scalatest.junit.JUnitRunner
 import spray.json.DefaultJsonProtocol._
 import spray.json._
-import common._
+import common.JsHelpers
+import common.TestUtils
+import common.TestHelpers
+import common.Wsk
+import common.WskActorSystem
+import common.WskProps
+import common.WskTestHelpers
 import ActionHelper._
 import java.util.Base64
 import java.nio.charset.StandardCharsets
