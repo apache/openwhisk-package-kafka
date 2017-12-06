@@ -29,12 +29,7 @@ import org.scalatest.Inside
 import org.scalatest.junit.JUnitRunner
 import spray.json.DefaultJsonProtocol._
 import spray.json._
-import common.JsHelpers
-import common.TestHelpers
-import common.Wsk
-import common.WskActorSystem
-import common.WskProps
-import common.WskTestHelpers
+import common._
 import ActionHelper._
 import java.util.Base64
 import java.nio.charset.StandardCharsets
@@ -66,6 +61,9 @@ class MessageHubFeedTests
   implicit val wskprops = WskProps()
   val wsk = new Wsk()
   val actionName = s"${messagingPackage}/${messageHubFeed}"
+
+  val defaultAction = Some(TestUtils.getTestActionFilename("hello.js"))
+  val defaultActionName = "hello"
 
   behavior of "Message Hub feed action"
 
@@ -133,6 +131,13 @@ class MessageHubFeedTests
         "isBinaryKey" -> true.toJson,
         "isBinaryValue" -> true.toJson))
 
+      assetHelper.withCleaner(wsk.action, "hello") { (action, name) =>
+        action.create(name, defaultAction)
+      }
+      assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
+        rule.create(name, trigger = triggerName, action = defaultActionName)
+      }
+
       // It takes a moment for the consumer to fully initialize.
       println("Giving the consumer a moment to get ready")
       Thread.sleep(consumerInitTime)
@@ -197,6 +202,13 @@ class MessageHubFeedTests
         "isBinaryKey" -> false.toJson,
         "isBinaryValue" -> false.toJson))
 
+      assetHelper.withCleaner(wsk.action, "hello") { (action, name) =>
+        action.create(name, defaultAction)
+      }
+      assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
+        rule.create(name, trigger = triggerName, action = defaultActionName)
+      }
+
       // It takes a moment for the consumer to fully initialize.
       println("Giving the consumer a moment to get ready")
       Thread.sleep(consumerInitTime)
@@ -247,6 +259,13 @@ class MessageHubFeedTests
         "isBinaryKey" -> false.toJson,
         "isBinaryValue" -> false.toJson))
 
+      assetHelper.withCleaner(wsk.action, "hello") { (action, name) =>
+        action.create(name, defaultAction)
+      }
+      assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
+        rule.create(name, trigger = triggerName, action = defaultActionName)
+      }
+
       // It takes a moment for the consumer to fully initialize.
       println("Giving the consumer a moment to get ready")
       Thread.sleep(consumerInitTime)
@@ -293,6 +312,17 @@ class MessageHubFeedTests
         "isBinaryKey" -> false.toJson,
         "isBinaryValue" -> false.toJson
       ))
+
+      val run = wsk.action.invoke(actionName, parameters = Map(
+        "triggerName" -> triggerName.toJson,
+        "lifecycleEvent" -> "UPDATE".toJson,
+        "authKey" -> wp.authKey.toJson
+      ))
+
+      withActivation(wsk.activation, run) {
+        activation =>
+          activation.response.success shouldBe false
+      }
   }
 
   it should "reject trigger update when both isJSONData and isBinaryValue are enabled" in withAssetCleaner(wskprops) {
@@ -348,6 +378,13 @@ class MessageHubFeedTests
         "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
         "topic" -> topic.toJson
       ))
+
+      assetHelper.withCleaner(wsk.action, "hello") { (action, name) =>
+        action.create(name, defaultAction)
+      }
+      assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
+        rule.create(name, trigger = triggerName, action = defaultActionName)
+      }
 
       println("Giving the consumer a moment to get ready")
       Thread.sleep(consumerInitTime)

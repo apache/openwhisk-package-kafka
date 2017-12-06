@@ -27,15 +27,10 @@ import scala.language.postfixOps
 import org.junit.runner.RunWith
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Inside, Matchers}
 import org.scalatest.junit.JUnitRunner
-import common.JsHelpers
-import common.TestHelpers
+import common._
 import common.TestUtils.DONTCARE_EXIT
 import common.TestUtils.NOT_FOUND
 import common.TestUtils.SUCCESS_EXIT
-import common.Wsk
-import common.WskActorSystem
-import common.WskProps
-import common.WskTestHelpers
 import spray.json.DefaultJsonProtocol._
 import spray.json.{JsObject, pimpAny}
 import com.jayway.restassured.RestAssured
@@ -141,6 +136,16 @@ class BasicHealthTest
       } else {
         result.exitCode shouldBe (SUCCESS_EXIT)
         println(s"Trigger already exists, reusing it: $triggerName")
+      }
+
+      val defaultAction = Some(TestUtils.getTestActionFilename("hello.js"))
+      val defaultActionName = "hello"
+
+      assetHelper.withCleaner(wsk.action, "hello") { (action, name) =>
+        action.create(name, defaultAction)
+      }
+      assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
+        rule.create(name, trigger = triggerName, action = defaultActionName)
       }
 
       retry({
