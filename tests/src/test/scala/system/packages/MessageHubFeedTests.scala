@@ -64,6 +64,8 @@ class MessageHubFeedTests
 
   val kafkaUtils = new KafkaUtils
 
+  val maxRetries = System.getProperty("maxRetries", "30").toInt
+
   implicit val wskprops = WskProps()
   val wsk = new Wsk()
   val actionName = s"${messagingPackage}/${messageHubFeed}"
@@ -164,7 +166,7 @@ class MessageHubFeedTests
       }
 
       println("Polling for activations")
-      val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = 60)
+      val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = maxRetries)
       assert(activations.length > 0)
 
       val matchingActivations = for {
@@ -231,7 +233,7 @@ class MessageHubFeedTests
 
       // verify there are two trigger activations required to handle these messages
       println("Polling for activations")
-      val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = 60)
+      val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = maxRetries)
 
       println("Verifying activation content")
       val matchingActivations = for {
@@ -284,7 +286,7 @@ class MessageHubFeedTests
 
       // verify there are no activations that match
       println("Polling for activations")
-      val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = 60)
+      val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = maxRetries)
 
       println("Verifying activation content")
       val matchingActivations = for {
@@ -461,7 +463,7 @@ class MessageHubFeedTests
 
   def checkForActivations(triggerName: String, since: Instant, topic: String, key: String, value: String) = {
     println("Polling for activations")
-    val activations = wsk.activation.pollFor(N = 100, Some(triggerName), since = Some(since), retries = 30)
+    val activations = wsk.activation.pollFor(N = 100, Some(triggerName), since = Some(since), retries = maxRetries)
     assert(activations.length > 0)
 
     println("Validating content of activation(s)")
