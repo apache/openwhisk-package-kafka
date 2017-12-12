@@ -30,6 +30,7 @@ import org.scalatest.junit.JUnitRunner
 
 import common.JsHelpers
 import common.TestHelpers
+import common.TestUtils
 import common.Wsk
 import common.WskActorSystem
 import common.WskProps
@@ -63,6 +64,9 @@ class MessageHubProduceTests
     val consumerInitTime = 10000 // ms
 
     val kafkaUtils = new KafkaUtils
+
+    val defaultAction = Some(TestUtils.getTestActionFilename("hello.js"))
+    val defaultActionName = "hello"
 
     // these parameter values are 100% valid and should work as-is
     val validParameters = Map(
@@ -169,6 +173,13 @@ class MessageHubProduceTests
                     activation.response.success shouldBe true
             }
 
+            assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
+                action.create(name, defaultAction)
+            }
+            assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
+                rule.create(name, trigger = triggerName, action = defaultActionName)
+            }
+
             // It takes a moment for the consumer to fully initialize.
             println("Giving the consumer a moment to get ready")
             Thread.sleep(consumerInitTime)
@@ -227,6 +238,13 @@ class MessageHubProduceTests
                 activation =>
                     // should be successful
                     activation.response.success shouldBe true
+            }
+
+            assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
+                action.create(name, defaultAction)
+            }
+            assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
+                rule.create(name, trigger = triggerName, action = defaultActionName)
             }
 
             // It takes a moment for the consumer to fully initialize.
