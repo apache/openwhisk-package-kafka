@@ -68,6 +68,8 @@ class BasicHealthTest
 
   val kafkaUtils = new KafkaUtils
 
+  val maxRetries = System.getProperty("max.retries").toInt
+
   behavior of "Message Hub feed"
 
   it should "create a new trigger" in withAssetCleaner(wskprops) {
@@ -172,7 +174,7 @@ class BasicHealthTest
         }
 
         println("Polling for activations")
-        val activations = wsk.activation.pollFor(N = 100, Some(triggerName), since = Some(start), retries = 30)
+        val activations = wsk.activation.pollFor(N = 100, Some(triggerName), since = Some(start), retries = maxRetries)
         assert(activations.length > 0)
 
         println("Validating content of activation(s)")

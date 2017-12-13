@@ -65,6 +65,8 @@ class MessageHubProduceTests
 
     val kafkaUtils = new KafkaUtils
 
+  val maxRetries = System.getProperty("max.retries").toInt
+
     val defaultAction = Some(TestUtils.getTestActionFilename("hello.js"))
     val defaultActionName = "hello"
 
@@ -196,7 +198,7 @@ class MessageHubProduceTests
 
             // verify trigger fired
             println("Polling for activations")
-            val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = 60)
+            val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = maxRetries)
             assert(activations.length > 0)
 
             val matchingActivations = for {
@@ -263,7 +265,7 @@ class MessageHubProduceTests
 
             // verify trigger fired
             println("Polling for activations")
-            val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = 60)
+            val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = maxRetries)
             assert(activations.length > 0)
 
             val matchingActivations = for {

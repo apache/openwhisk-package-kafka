@@ -17,6 +17,7 @@ def commonConfiguration = {
   systemProperty 'host', System.getProperty('host', '')
   systemProperty 'port', System.getProperty('port', '')
   systemProperty 'trigger.suffix', System.getProperty('trigger.suffix', '')
+  systemProperty 'max.retries', System.getProperty('max.retries', '60')
   testLogging {
     events "passed", "skipped", "failed"
     showStandardStreams = true
