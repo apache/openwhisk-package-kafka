@@ -65,7 +65,7 @@ class MessageHubProduceTests
 
     val kafkaUtils = new KafkaUtils
 
-  val maxRetries = System.getProperty("max.retries", "60").toInt
+    val maxRetries = System.getProperty("max.retries", "60").toInt
 
     val defaultAction = Some(TestUtils.getTestActionFilename("hello.js"))
     val defaultActionName = "hello"
