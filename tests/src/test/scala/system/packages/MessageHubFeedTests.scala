@@ -64,7 +64,7 @@ class MessageHubFeedTests
 
   val kafkaUtils = new KafkaUtils
 
-  val maxRetries = System.getProperty("max.retries").toInt
+  val maxRetries = System.getProperty("max.retries", "60").toInt
 
   implicit val wskprops = WskProps()
   val wsk = new Wsk()

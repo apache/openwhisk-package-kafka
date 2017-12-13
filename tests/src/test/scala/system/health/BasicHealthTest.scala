@@ -68,7 +68,7 @@ class BasicHealthTest
 
   val kafkaUtils = new KafkaUtils
 
-  val maxRetries = System.getProperty("max.retries").toInt
+  val maxRetries = System.getProperty("max.retries", "60").toInt
 
   behavior of "Message Hub feed"
 
