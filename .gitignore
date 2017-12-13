@@ -4,3 +4,6 @@ launchConfigurations/
 action/*.zip
 action/package.json
 tests/build
+
+.idea/
+out/
