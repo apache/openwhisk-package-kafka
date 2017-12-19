@@ -68,7 +68,6 @@ class MessageHubProduceTests
     val maxRetries = System.getProperty("max.retries", "60").toInt
 
     val defaultAction = Some(TestUtils.getTestActionFilename("hello.js"))
-    val defaultActionName = "hello"
 
     // these parameter values are 100% valid and should work as-is
     val validParameters = Map(
@@ -175,6 +174,8 @@ class MessageHubProduceTests
                     activation.response.success shouldBe true
             }
 
+            val defaultActionName = s"helloKafka-${currentTime}"
+
             assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
                 action.create(name, defaultAction)
             }
@@ -241,6 +242,8 @@ class MessageHubProduceTests
                     // should be successful
                     activation.response.success shouldBe true
             }
+
+            val defaultActionName = s"helloKafka-${currentTime}"
 
             assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
                 action.create(name, defaultAction)

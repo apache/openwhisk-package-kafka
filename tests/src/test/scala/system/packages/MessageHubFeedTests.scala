@@ -71,7 +71,6 @@ class MessageHubFeedTests
   val actionName = s"${messagingPackage}/${messageHubFeed}"
 
   val defaultAction = Some(TestUtils.getTestActionFilename("hello.js"))
-  val defaultActionName = "hello"
 
   behavior of "Message Hub feed action"
 
@@ -138,6 +137,8 @@ class MessageHubFeedTests
         "topic" -> topic.toJson,
         "isBinaryKey" -> true.toJson,
         "isBinaryValue" -> true.toJson))
+
+      val defaultActionName = s"helloKafka-${currentTime}"
 
       assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
         action.create(name, defaultAction)
@@ -210,6 +211,8 @@ class MessageHubFeedTests
         "isBinaryKey" -> false.toJson,
         "isBinaryValue" -> false.toJson))
 
+      val defaultActionName = s"helloKafka-${currentTime}"
+
       assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
         action.create(name, defaultAction)
       }
@@ -266,6 +269,8 @@ class MessageHubFeedTests
         "topic" -> topic.toJson,
         "isBinaryKey" -> false.toJson,
         "isBinaryValue" -> false.toJson))
+
+      val defaultActionName = s"helloKafka-${currentTime}"
 
       assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
         action.create(name, defaultAction)
@@ -386,6 +391,8 @@ class MessageHubFeedTests
         "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
         "topic" -> topic.toJson
       ))
+
+      val defaultActionName = s"helloKafka-${currentTime}"
 
       assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
         action.create(name, defaultAction)

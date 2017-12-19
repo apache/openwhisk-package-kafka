@@ -147,7 +147,7 @@ class BasicHealthTest
       }
 
       val defaultAction = Some(TestUtils.getTestActionFilename("hello.js"))
-      val defaultActionName = "hello"
+      val defaultActionName = s"helloKafka-${currentTime}"
 
       assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
         action.create(name, defaultAction)
