@@ -131,6 +131,8 @@ class ConsumerProcess (Process):
         self.brokers = params["brokers"]
         self.topic = params["topic"]
 
+        self.authErrors = 0
+
         self.sharedDictionary = sharedDictionary
 
         if 'status' in params and params['status']['active'] == False:
@@ -253,7 +255,8 @@ class ConsumerProcess (Process):
                         'group.id': self.trigger,
                         'default.topic.config': {'auto.offset.reset': 'latest'},
                         'enable.auto.commit': False,
-                        'api.version.request': True
+                        'api.version.request': True,
+                        'error_cb': self.__error_callback
                     }
 
             if self.isMessageHub:
@@ -445,3 +448,12 @@ class ConsumerProcess (Process):
 
         logging.debug('[{}] Returning un-encoded message'.format(self.trigger))
         return key
+
+    def __error_callback(self, error):
+        logging.warning(error)
+        if error.code() == KafkaError._AUTHENTICATION:
+            self.authErrors = self.authErrors + 1
+            if self.authErrors > 5:
+                self.setDesiredState(Consumer.State.Disabled)
+                message = 'Automatically disabled trigger. Consumer failed to authentication with broker(s) more than 5 times with apikey {}:{}'.format(self.username, self.password)
+                self.database.disableTrigger(self.trigger, 403, message)
