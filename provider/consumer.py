@@ -141,7 +141,7 @@ class ConsumerProcess (Process):
         # still maintaining a connection to one or more others. We'll use this flag to
         # signal when we have been disconnected from all brokers. Value will be set to
         # 'True' when we have received a partition assignment and 'False' when our
-        # partition assignment has been revoked. When disconnected we will begin to 
+        # partition assignment has been revoked. When disconnected we will begin to
         # increment the 'authErrors' counter.
         self.connected = False
 
