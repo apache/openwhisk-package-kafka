@@ -485,7 +485,7 @@ class ConsumerProcess (Process):
             self.authErrors = self.authErrors + 1
             if self.authErrors > self.maxAuthErrors:
                 self.setDesiredState(Consumer.State.Disabled)
-                message = 'Automatically disabled trigger. Consumer failed to authentication with broker(s) more than 30 attempts with apikey {}:{}'.format(self.username, self.password)
+                message = 'Automatically disabled trigger. Consumer failed to authenticate with broker(s) after more than 30 attempts with apikey {}:{}'.format(self.username, self.password)
                 self.database.disableTrigger(self.trigger, 403, message)
 
     def __on_assign(self, consumer, partitions):
