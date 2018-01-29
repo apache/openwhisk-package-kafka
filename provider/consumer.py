@@ -481,6 +481,7 @@ class ConsumerProcess (Process):
         return key
 
     def __error_callback(self, error):
+        logging.warning(error)
         if not self.connected and error.code() == KafkaError._AUTHENTICATION:
             self.authErrors = self.authErrors + 1
             if self.authErrors > self.maxAuthErrors:
