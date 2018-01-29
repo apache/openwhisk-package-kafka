@@ -133,6 +133,18 @@ class ConsumerProcess (Process):
 
         self.authErrors = 0
 
+        # We want to account for the number of brokers when deciding the maximum number
+        # number of auth errors to allow
+        self.maxAuthErrors = len(self.brokers) * 30
+
+        # There is the possibility of being disconnected from one or more brokers while
+        # still maintaining a connection to one or more others. We'll use this flag to
+        # signal when we have been disconnected from all brokers. Value will be set to
+        # 'True' when we have received a partition assignment and 'False' when our
+        # partition assignment has been revoked. When disconnected we will begin to 
+        # increment the 'authErrors' counter.
+        self.connected = False
+
         self.sharedDictionary = sharedDictionary
 
         if 'status' in params and params['status']['active'] == False:
@@ -269,7 +281,7 @@ class ConsumerProcess (Process):
                              })
 
             consumer = KafkaConsumer(config)
-            consumer.subscribe([self.topic])
+            consumer.subscribe([self.topic], self.__on_assign, self.__on_revoke)
             logging.info("[{}] Now listening in order to fire trigger".format(self.trigger))
             return consumer
 
@@ -368,6 +380,25 @@ class ConsumerProcess (Process):
                         retry = False
                     elif self.__shouldDisable(status_code):
                         logging.error('[{}] Error talking to OpenWhisk, status code {}'.format(self.trigger, status_code))
+                        response_dump = {
+                            'request': {
+                                'method': response.request.method,
+                                'url': response.request.url,
+                                'path_url': response.request.path_url,
+                                'headers': response.request.headers,
+                                'body': response.request.body
+                            },
+                            'response': {
+                                'status_code': response.status_code,
+                                'ok': response.ok,
+                                'reason': response.reason,
+                                'url': response.url,
+                                'headers': response.headers,
+                                'content': response.content
+                            }
+                        }
+
+                        logging.error('[{}] Dumping the content of the request and response:\n{}'.format(self.trigger, response_dump))
 
                         # abandon all hope?
                         self.setDesiredState(Consumer.State.Disabled)
@@ -451,9 +482,20 @@ class ConsumerProcess (Process):
 
     def __error_callback(self, error):
         logging.warning(error)
-        if error.code() == KafkaError._AUTHENTICATION:
+        if not self.connected and error.code() == KafkaError._AUTHENTICATION:
             self.authErrors = self.authErrors + 1
-            if self.authErrors > 5:
+            if self.authErrors > self.maxAuthErrors:
                 self.setDesiredState(Consumer.State.Disabled)
-                message = 'Automatically disabled trigger. Consumer failed to authentication with broker(s) more than 5 times with apikey {}:{}'.format(self.username, self.password)
+                message = 'Automatically disabled trigger. Consumer failed to authentication with broker(s) more than 30 attempts with apikey {}:{}'.format(self.username, self.password)
                 self.database.disableTrigger(self.trigger, 403, message)
+
+    def __on_assign(self, consumer, partitions):
+        topicPartition = partitions[0]
+        logging.info('[{}] Completed partition assignment. topic: {}, partition: {}, offset: {}'.format(self.trigger, topicPartition.topic, topicPartition.partition, topicPartition.offset))
+        self.authErrors = 0
+        self.connected = True
+
+    def __on_revoke(self, consumer, partitions):
+        topicPartition = partitions[0]
+        logging.info('[{}] Partition assignment has been revoked. topic: {}, partition: {}, offset: {}'.format(self.trigger, topicPartition.topic, topicPartition.partition, topicPartition.offset))
+        self.connected = False
