@@ -17,6 +17,9 @@
 
 package system.packages
 
+import java.time.Clock
+import java.time.Instant
+
 import system.utils.KafkaUtils
 
 import scala.concurrent.duration.DurationInt
@@ -40,6 +43,7 @@ import spray.json.pimpAny
 
 import java.util.Base64
 import java.nio.charset.StandardCharsets
+import java.time.temporal.ChronoUnit
 
 @RunWith(classOf[JUnitRunner])
 class MessageHubProduceTests
@@ -183,9 +187,12 @@ class MessageHubProduceTests
                 rule.create(name, trigger = triggerName, action = defaultActionName)
             }
 
-            // It takes a moment for the consumer to fully initialize.
-            println("Giving the consumer a moment to get ready")
-            Thread.sleep(consumerInitTime)
+            val sleepTime = maxRetries * 1000
+            val start = Instant.now(Clock.systemUTC()).minus(5, ChronoUnit.MINUTES) // Allow for 5 minutes of clock skew
+
+            // Sleep for sleepTime ms to simulate pollFor(), but with no requests
+            println(s"Giving the consumer $sleepTime ms to consume the message")
+            Thread.sleep(sleepTime)
 
             // produce message
             val decodedMessage = "This will be base64 encoded"
@@ -197,18 +204,26 @@ class MessageHubProduceTests
                     activation.response.success shouldBe true
             }
 
-            // verify trigger fired
-            println("Polling for activations")
-            val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = maxRetries)
+            println("Giving the consumer a moment to consume the message")
+            Thread.sleep(consumerInitTime)
+
+            // Make sure we don't get a stale activations view
+            wsk.activation.list(Some(triggerName), limit = Some(10))
+
+            println(s"Getting last 10 activations for $triggerName since $start")
+            val activations = wsk.activation.ids(wsk.activation.list(Some(triggerName), limit = Some(10), since = Some(start)))
             assert(activations.length > 0)
 
+            println("Validating content of activation(s)")
             val matchingActivations = for {
                 id <- activations
                 activation = wsk.activation.waitForActivation(id)
                 if (activation.isRight && activation.right.get.fields.get("response").toString.contains(decodedMessage))
             } yield activation.right.get
 
-            assert(matchingActivations.length == 1)
+            // We may have gone through the retry loop already, so we can have more than one matching activation
+            assert(matchingActivations.length >= 1, "Consumer trigger was not fired, or activation got lost")
+            println(s"Found ${matchingActivations.length} triggers fired with expected message")
 
             val activation = matchingActivations.head
             activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
@@ -216,6 +231,7 @@ class MessageHubProduceTests
             // assert that there exists a message in the activation which has the expected keys and values
             val messages = KafkaUtils.messagesInActivation(activation, field = "value", value = decodedMessage)
             assert(messages.length == 1)
+
     }
 
     it should "Post a message with a binary key" in withAssetCleaner(wskprops) {
@@ -252,6 +268,9 @@ class MessageHubProduceTests
                 rule.create(name, trigger = triggerName, action = defaultActionName)
             }
 
+            val sleepTime = maxRetries * 1000
+            val start = Instant.now(Clock.systemUTC()).minus(5, ChronoUnit.MINUTES) // Allow for 5 minutes of clock skew
+
             // It takes a moment for the consumer to fully initialize.
             println("Giving the consumer a moment to get ready")
             Thread.sleep(consumerInitTime)
@@ -266,18 +285,27 @@ class MessageHubProduceTests
                     activation.response.success shouldBe true
             }
 
-            // verify trigger fired
-            println("Polling for activations")
-            val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = maxRetries)
+            // Sleep for sleepTime ms to simulate pollFor(), but with no requests
+            println(s"Giving the consumer $sleepTime ms to consume the message")
+            Thread.sleep(sleepTime)
+
+            // Make sure we don't get a stale activations view
+            wsk.activation.list(Some(triggerName), limit = Some(10))
+
+            println(s"Getting last 10 activations for $triggerName since $start")
+            val activations = wsk.activation.ids(wsk.activation.list(Some(triggerName), limit = Some(10), since = Some(start)))
             assert(activations.length > 0)
 
+            println("Validating content of activation(s)")
             val matchingActivations = for {
                 id <- activations
                 activation = wsk.activation.waitForActivation(id)
                 if (activation.isRight && activation.right.get.fields.get("response").toString.contains(decodedKey))
             } yield activation.right.get
 
-            assert(matchingActivations.length == 1)
+            // We may have gone through the retry loop already, so we can have more than one matching activation
+            assert(matchingActivations.length >= 1, "Consumer trigger was not fired, or activation got lost")
+            println(s"Found ${matchingActivations.length} triggers fired with expected message")
 
             val activation = matchingActivations.head
             activation.getFieldPath("response", "success") shouldBe Some(true.toJson)

@@ -19,14 +19,17 @@ package system.health
 
 import java.time.Clock
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 import system.utils.KafkaUtils
 
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
+
 import org.junit.runner.RunWith
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Inside, Matchers}
 import org.scalatest.junit.JUnitRunner
+
 import common.JsHelpers
 import common.TestHelpers
 import common.TestUtils
@@ -37,21 +40,24 @@ import common.Wsk
 import common.WskActorSystem
 import common.WskProps
 import common.WskTestHelpers
+
 import spray.json.DefaultJsonProtocol._
 import spray.json.{JsObject, pimpAny}
+
 import com.jayway.restassured.RestAssured
-import whisk.utils.retry;
+
+import whisk.utils.retry
 
 @RunWith(classOf[JUnitRunner])
 class BasicHealthTest
-  extends FlatSpec
-  with Matchers
-  with WskActorSystem
-  with BeforeAndAfterAll
-  with TestHelpers
-  with WskTestHelpers
-  with Inside
-  with JsHelpers {
+    extends FlatSpec
+        with Matchers
+        with WskActorSystem
+        with BeforeAndAfterAll
+        with TestHelpers
+        with WskTestHelpers
+        with Inside
+        with JsHelpers {
 
   val topic = "test"
   val sessionTimeout = 10 seconds
@@ -156,11 +162,11 @@ class BasicHealthTest
         rule.create(name, trigger = triggerName, action = defaultActionName)
       }
 
-      retry({
-        val start = Instant.now(Clock.systemUTC())
-        // key to use for the produced message
-        val key = "TheKey"
+      val key = "TheKey"
+      val sleepTime = maxRetries * 1000
+      val start = Instant.now(Clock.systemUTC()).minus(5, ChronoUnit.MINUTES) // Allow for 5 minutes of clock skew
 
+      retry({
         println("Producing a message")
         withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
           "user" -> kafkaUtils.getAsJson("user"),
@@ -173,8 +179,15 @@ class BasicHealthTest
           _.response.success shouldBe true
         }
 
-        println("Polling for activations")
-        val activations = wsk.activation.pollFor(N = 100, Some(triggerName), since = Some(start), retries = maxRetries)
+        // Sleep for sleepTime ms to simulate pollFor(), but with no requests
+        println(s"Giving the consumer $sleepTime ms to consume the message")
+        Thread.sleep(sleepTime)
+
+        // Make sure we don't get a stale activations view
+        wsk.activation.list(Some(triggerName), limit = Some(10))
+
+        println(s"Getting last 10 activations for $triggerName since $start")
+        val activations = wsk.activation.ids(wsk.activation.list(Some(triggerName), limit = Some(10), since = Some(start)))
         assert(activations.length > 0)
 
         println("Validating content of activation(s)")
@@ -184,7 +197,9 @@ class BasicHealthTest
           if (activation.isRight && activation.right.get.fields.get("response").toString.contains(currentTime))
         } yield activation.right.get
 
-        assert(matchingActivations.length == 1)
+        // We may have gone through the retry loop already, so we can have more than one matching activation
+        assert(matchingActivations.length >= 1, "Consumer trigger was not fired, or activation got lost")
+        println(s"Found ${matchingActivations.length} triggers fired with expected message")
 
         val activation = matchingActivations.head
         activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
