@@ -481,21 +481,20 @@ class ConsumerProcess (Process):
         return key
 
     def __error_callback(self, error):
-        logging.warning(error)
+        logging.warning('[{}] {}'.format(self.trigger, error))
         if not self.connected and error.code() == KafkaError._AUTHENTICATION:
             self.authErrors = self.authErrors + 1
             if self.authErrors > self.maxAuthErrors:
+                logging.warning('[{}] Shutting down consumer and disabling trigger. Exceeded the allowable number of _AUTHENTICATION errors'.format(self.trigger))
                 self.setDesiredState(Consumer.State.Disabled)
                 message = 'Automatically disabled trigger. Consumer failed to authenticate with broker(s) after more than 30 attempts with apikey {}:{}'.format(self.username, self.password)
                 self.database.disableTrigger(self.trigger, 403, message)
 
     def __on_assign(self, consumer, partitions):
-        topicPartition = partitions[0]
-        logging.info('[{}] Completed partition assignment. topic: {}, partition: {}, offset: {}'.format(self.trigger, topicPartition.topic, topicPartition.partition, topicPartition.offset))
+        logging.info('[{}] Completed partition assignment. Connected to broker(s)'.format(self.trigger))
         self.authErrors = 0
         self.connected = True
 
     def __on_revoke(self, consumer, partitions):
-        topicPartition = partitions[0]
-        logging.info('[{}] Partition assignment has been revoked. topic: {}, partition: {}, offset: {}'.format(self.trigger, topicPartition.topic, topicPartition.partition, topicPartition.offset))
+        logging.info('[{}] Partition assignment has been revoked. Disconnected from broker(s)'.format(self.trigger))
         self.connected = False
