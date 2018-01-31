@@ -83,23 +83,20 @@ def main(params):
     # we successfully connected and found the topic metadata... let's send!
     if producer is not None:
         try:
-            logging.info("Producing message")
+            value = validatedParams['value']
+            batch = isinstance(value, list)
 
             # only use the key parameter if it is present
-            value = validatedParams['value']
             if 'key' in validatedParams:
                 messageKey = validatedParams['key']
-                future = producer.send(
-                    topic, bytes(value, 'utf-8'), key=bytes(messageKey, 'utf-8'))
             else:
-                future = producer.send(topic, bytes(value, 'utf-8'))
+                messageKey = None
 
-            # future should wait all of the remaining time
-            future_time_seconds = math.floor(getRemainingTime())
-            sent = future.get(timeout=future_time_seconds)
-            msg = "Successfully sent message to {}:{} at offset {}".format(
-                sent.topic, sent.partition, sent.offset)
-            logging.info(msg)
+            if batch == True:
+                msg = produceBatchedMessages(producer, topic, messageKey, value)
+            else:
+                msg = produceMessage(producer, topic, messageKey, value)
+
             result = {"success": True, "message": msg}
         except Exception as e:
             logging.warning(e)
@@ -107,6 +104,42 @@ def main(params):
             result = getResultForException(e)
 
     return result
+
+def produceBatchedMessages(producer, topic, messageKey, values):
+    logging.info("Producing batched messages")
+
+    if messageKey is not None:
+        for val in values:
+            producer.send(topic, bytes(val, 'utf-8'), key=bytes(messageKey, 'utf-8'))
+    else:
+        for val in values:
+            producer.send(topic, bytes(val, 'utf-8'))
+
+    producer.flush()
+
+    msg = "Successfully sent batched messages"
+    logging.info(msg)
+
+    return msg
+
+def produceMessage(producer, topic, messageKey, value):
+    logging.info("Producing message")
+
+    if messageKey is not None:
+        future = producer.send(
+            topic, bytes(value, 'utf-8'), key=bytes(messageKey, 'utf-8'))
+    else:
+        future = producer.send(topic, bytes(value, 'utf-8'))
+
+    # future should wait all of the remaining time
+    future_time_seconds = math.floor(getRemainingTime())
+    sent = future.get(timeout=future_time_seconds)
+
+    msg = "Successfully sent message to {}:{} at offset {}".format(
+        sent.topic, sent.partition, sent.offset)
+    logging.info(msg)
+
+    return msg
 
 def getResultForException(e):
     if isinstance(e, KafkaTimeoutError):
@@ -139,7 +172,13 @@ def validateParams(params):
 
     if 'base64DecodeValue' in params and params['base64DecodeValue'] == True:
         try:
-            validatedParams['value'] = base64.b64decode(params['value']).decode('utf-8')
+            if isinstance(validatedParams['value'], list):
+                validatedParams['value'] = []
+
+                for val in params['value']:
+                    validatedParams['value'].append(base64.b64decode(val).decode('utf-8'))
+            else:
+                validatedParams['value'] = base64.b64decode(params['value']).decode('utf-8')
         except:
             return (False, "value parameter is not Base64 encoded")
 
