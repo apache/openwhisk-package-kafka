@@ -43,7 +43,7 @@ class Database:
     canaryId = "canary-{}".format(instance)
 
     def __init__(self, timeout=None):
-        self.client = CouchDB(self.username, self.password, url=self.url, timeout=timeout)
+        self.client = CouchDB(self.username, self.password, url=self.url, timeout=timeout, auto_renew=True)
         self.client.connect()
 
         if self.dbname in self.client.all_dbs():
