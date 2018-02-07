@@ -16,8 +16,6 @@
  */
 package system.packages
 
-import java.io.File
-
 import system.utils.KafkaUtils
 import org.apache.kafka.clients.producer.ProducerRecord
 
@@ -456,7 +454,7 @@ class MessageHubFeedTests
 
       checkForActivations(triggerName, second, topic, key, encodedCurrentTime)
   }
-  
+
   def createTrigger(assetHelper: AssetCleaner, name: String, parameters: Map[String, spray.json.JsValue]) = {
     val feedCreationResult = assetHelper.withCleaner(wsk.trigger, name) {
       (trigger, _) =>
