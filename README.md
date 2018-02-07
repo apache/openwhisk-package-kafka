@@ -232,6 +232,80 @@ Here is an example of a batched trigger payload (please note the change in the *
  }
  ```
 
+### Checking the status and configuration of a trigger
+The status and configuration of a feed trigger can be gotten using `wsk trigger get`.
+
+Example:
+```
+$ wsk trigger get myTopicTrigger
+```
+
+This response will contain a `result` object containing the status of the trigger along with configuration information
+
+e.g.
+
+```json
+{
+  "result": {
+      "config": {
+          "isBinaryKey": false,
+          "isBinaryValue": false,
+          "isJSONData": false,
+          "kafka_admin_url": ...,
+          "kafka_brokers_sasl": [
+              ...
+          ],
+          "user": ...,
+          "password": ...,
+          "topic": "myTopic",
+          "triggerName": "/myNamespace/myTopicTrigger"
+      },
+      "status": {
+          "active": true,
+          "dateChanged": 1517245917340,
+          "dateChangedISO": "2018-01-29T17:11:57Z"
+      }
+  }
+}
+```
+
+ Triggers may become inactive when certain exceptional behavior occurs. For example, there was an error firing the trigger or it was not possible to connect to the kafka brokers. When a trigger becomes inactive the status object will contain additional information as to the cause.
+
+ e.g
+
+ ```json
+{
+    "status": {
+        "active": false,
+        "dateChanged": 1517936358359,
+        "dateChangedISO": "2018-02-06T16:59:18Z",
+        "reason": {
+            "kind": "AUTO",
+            "message": "Automatically disabled trigger. Consumer was unable to connect to broker(s) after 30 attempts",
+            "statusCode": 403
+        }
+    }
+}
+```
+
+### Updating the configuration of a trigger
+It is possible to update a limited set of configuration parameters for a trigger. The updatable parameters are:
+- `isBinaryKey`
+- `isBinaryValue`
+- `isJSONData`
+
+These parameters can be updated using `wsk trigger update`
+
+Examples:
+
+```
+$ wsk trigger update myTopicTrigger -p isJSONData true
+```
+
+```
+$ wsk trigger update myTopicTrigger -p isJSONData false -p isBinaryKey true -p isBinaryValue
+```
+
 ### Producing messages to Message Hub
 If you would like to use an OpenWhisk action to conveniently produce a message to Message Hub, you can use the `/messaging/messageHubProduce` action. This action takes the following parameters:
 

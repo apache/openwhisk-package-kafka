@@ -16,6 +16,8 @@
  */
 package system.packages
 
+import java.io.File
+
 import system.utils.KafkaUtils
 import org.apache.kafka.clients.producer.ProducerRecord
 
@@ -167,8 +169,8 @@ class MessageHubFeedTests
       }
 
       println("Polling for activations")
-      val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = maxRetries)
-      assert(activations.length > 0)
+      val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = maxRetries)
+      assert(activations.length == 1)
 
       val matchingActivations = for {
         id <- activations
@@ -236,7 +238,7 @@ class MessageHubFeedTests
 
       // verify there are two trigger activations required to handle these messages
       println("Polling for activations")
-      val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = maxRetries)
+      val activations = wsk.activation.pollFor(N = 2, Some(triggerName), retries = maxRetries)
 
       println("Verifying activation content")
       val matchingActivations = for {
@@ -291,7 +293,7 @@ class MessageHubFeedTests
 
       // verify there are no activations that match
       println("Polling for activations")
-      val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = maxRetries)
+      val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = maxRetries)
 
       println("Verifying activation content")
       val matchingActivations = for {
@@ -455,6 +457,53 @@ class MessageHubFeedTests
       checkForActivations(triggerName, second, topic, key, encodedCurrentTime)
   }
 
+  it should "fire a trigger when message contains non-unicode bytes"  in withAssetCleaner(wskprops) {
+    val currentTime = s"${System.currentTimeMillis}"
+
+    (wp, assetHelper) =>
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
+      println(s"Creating trigger ${triggerName}")
+
+      createTrigger(assetHelper, triggerName, parameters = Map(
+        "user" -> kafkaUtils.getAsJson("user"),
+        "password" -> kafkaUtils.getAsJson("password"),
+        "api_key" -> kafkaUtils.getAsJson("api_key"),
+        "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
+        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+        "topic" -> topic.toJson,
+        "isBinaryKey" -> true.toJson,
+        "isBinaryValue" -> true.toJson))
+
+      val defaultActionName = s"helloKafka-${currentTime}"
+
+      assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
+        action.create(name, defaultAction)
+      }
+      assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
+        rule.create(name, trigger = triggerName, action = defaultActionName)
+      }
+
+      // It takes a moment for the consumer to fully initialize.
+      println("Giving the consumer a moment to get ready")
+      Thread.sleep(consumerInitTime)
+
+      assetHelper.withCleaner(wsk.action, "badbytes") { (action, name) =>
+        action.create(name, Some(new File("dat/", "badbytes.py").toString()), Some("python"))
+      }
+
+      withActivation(wsk.activation, wsk.action.invoke("badbytes", Map(
+        "username" -> kafkaUtils.getAsJson("user"),
+        "password" -> kafkaUtils.getAsJson("password"),
+        "brokers" -> kafkaUtils.getAsJson("brokers"),
+        "topic" -> topic.toJson))) {
+        _.response.success shouldBe true
+      }
+
+      println("Polling for activations")
+      val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = maxRetries)
+      assert(activations.length == 1)
+  }
+
   def createTrigger(assetHelper: AssetCleaner, name: String, parameters: Map[String, spray.json.JsValue]) = {
     val feedCreationResult = assetHelper.withCleaner(wsk.trigger, name) {
       (trigger, _) =>
@@ -470,8 +519,8 @@ class MessageHubFeedTests
 
   def checkForActivations(triggerName: String, since: Instant, topic: String, key: String, value: String) = {
     println("Polling for activations")
-    val activations = wsk.activation.pollFor(N = 100, Some(triggerName), since = Some(since), retries = maxRetries)
-    assert(activations.length > 0)
+    val activations = wsk.activation.pollFor(N = 1, Some(triggerName), since = Some(since), retries = maxRetries)
+    assert(activations.length == 1)
 
     println("Validating content of activation(s)")
     val matchingActivations = for {
