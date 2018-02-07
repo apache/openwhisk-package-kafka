@@ -446,6 +446,13 @@ class ConsumerProcess (Process):
         return offsets
 
     def __encodeMessageIfNeeded(self, value):
+        # let's make sure whatever data we're getting is utf-8 encoded
+        try:
+            value = value.encode('utf-8')
+        except UnicodeDecodeError:
+            logging.warn('[{}] Value contains non-unicode bytes. Replacing invalid bytes.'.format(self.trigger))
+            value = unicode(value, errors='replace').encode('utf-8')
+
         if self.encodeValueAsJSON:
             try:
                 parsed = json.loads(value)
@@ -454,6 +461,7 @@ class ConsumerProcess (Process):
             except ValueError:
                 # no big deal, just return the original value
                 logging.warn('[{}] I was asked to encode a message as JSON, but I failed.'.format(self.trigger))
+                value = "\"{}\"".format(value)
                 pass
         elif self.encodeValueAsBase64:
             try:
@@ -486,7 +494,7 @@ class ConsumerProcess (Process):
             if self.authErrors > self.maxAuthErrors:
                 logging.warning('[{}] Shutting down consumer and disabling trigger. Exceeded the allowable number of _AUTHENTICATION errors'.format(self.trigger))
                 self.setDesiredState(Consumer.State.Disabled)
-                message = 'Automatically disabled trigger. Consumer failed to authenticate with broker(s) after more than 30 attempts with apikey {}:{}'.format(self.username, self.password)
+                message = 'Automatically disabled trigger. Consumer was unable to connect to broker(s) after 30 attempts'.format()
                 self.database.disableTrigger(self.trigger, 403, message)
 
     def __on_assign(self, consumer, partitions):

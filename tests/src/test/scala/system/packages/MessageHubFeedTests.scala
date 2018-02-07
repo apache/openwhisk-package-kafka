@@ -167,8 +167,8 @@ class MessageHubFeedTests
       }
 
       println("Polling for activations")
-      val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = maxRetries)
-      assert(activations.length > 0)
+      val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = maxRetries)
+      assert(activations.length == 1)
 
       val matchingActivations = for {
         id <- activations
@@ -236,7 +236,7 @@ class MessageHubFeedTests
 
       // verify there are two trigger activations required to handle these messages
       println("Polling for activations")
-      val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = maxRetries)
+      val activations = wsk.activation.pollFor(N = 2, Some(triggerName), retries = maxRetries)
 
       println("Verifying activation content")
       val matchingActivations = for {
@@ -291,7 +291,7 @@ class MessageHubFeedTests
 
       // verify there are no activations that match
       println("Polling for activations")
-      val activations = wsk.activation.pollFor(N = 100, Some(triggerName), retries = maxRetries)
+      val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = maxRetries)
 
       println("Verifying activation content")
       val matchingActivations = for {
@@ -470,8 +470,8 @@ class MessageHubFeedTests
 
   def checkForActivations(triggerName: String, since: Instant, topic: String, key: String, value: String) = {
     println("Polling for activations")
-    val activations = wsk.activation.pollFor(N = 100, Some(triggerName), since = Some(since), retries = maxRetries)
-    assert(activations.length > 0)
+    val activations = wsk.activation.pollFor(N = 1, Some(triggerName), since = Some(since), retries = maxRetries)
+    assert(activations.length == 1)
 
     println("Validating content of activation(s)")
     val matchingActivations = for {
