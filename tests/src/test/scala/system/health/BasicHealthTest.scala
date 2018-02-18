@@ -17,9 +17,6 @@
 
 package system.health
 
-import java.time.Clock
-import java.time.Instant
-
 import system.utils.KafkaUtils
 
 import scala.concurrent.duration.DurationInt
@@ -30,9 +27,6 @@ import org.scalatest.junit.JUnitRunner
 import common.JsHelpers
 import common.TestHelpers
 import common.TestUtils
-import common.TestUtils.DONTCARE_EXIT
-import common.TestUtils.NOT_FOUND
-import common.TestUtils.SUCCESS_EXIT
 import common.Wsk
 import common.WskActorSystem
 import common.WskProps
@@ -142,23 +136,22 @@ class BasicHealthTest
         rule.create(name, trigger = triggerName, action = defaultActionName)
       }
 
+      // key to use for the produced message
+      val key = "TheKey"
+
+      println("Producing a message")
+      withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
+        "user" -> kafkaUtils.getAsJson("user"),
+        "password" -> kafkaUtils.getAsJson("password"),
+        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+        "topic" -> topic.toJson,
+        "key" -> key.toJson,
+        "value" -> currentTime.toJson
+      ))) {
+        _.response.success shouldBe true
+      }
+
       retry({
-        val start = Instant.now(Clock.systemUTC())
-        // key to use for the produced message
-        val key = "TheKey"
-
-        println("Producing a message")
-        withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
-          "user" -> kafkaUtils.getAsJson("user"),
-          "password" -> kafkaUtils.getAsJson("password"),
-          "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
-          "topic" -> topic.toJson,
-          "key" -> key.toJson,
-          "value" -> currentTime.toJson
-        ))) {
-          _.response.success shouldBe true
-        }
-
         println("Polling for activations")
         val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = maxRetries)
         assert(activations.nonEmpty)
