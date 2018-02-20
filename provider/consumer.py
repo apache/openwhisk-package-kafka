@@ -487,15 +487,6 @@ class ConsumerProcess (Process):
         logging.debug('[{}] Returning un-encoded message'.format(self.trigger))
         return key
 
-    def __error_callback(self, error):
-        if not self.connected and error.code() == KafkaError._AUTHENTICATION:
-            self.authErrors = self.authErrors + 1
-            if self.authErrors > self.maxAuthErrors:
-                logging.warning('[{}] Shutting down consumer and disabling trigger. Exceeded the allowable number of _AUTHENTICATION errors'.format(self.trigger))
-                self.setDesiredState(Consumer.State.Disabled)
-                message = 'Automatically disabled trigger. Consumer was unable to connect to broker(s) after 30 attempts'.format()
-                self.database.disableTrigger(self.trigger, 403, message)
-
     def __on_assign(self, consumer, partitions):
         logging.info('[{}] Completed partition assignment. Connected to broker(s)'.format(self.trigger))
         self.authErrors = 0
