@@ -267,8 +267,7 @@ class ConsumerProcess (Process):
                         'group.id': self.trigger,
                         'default.topic.config': {'auto.offset.reset': 'latest'},
                         'enable.auto.commit': False,
-                        'api.version.request': True,
-                        'error_cb': self.__error_callback
+                        'api.version.request': True
                     }
 
             if self.isMessageHub:
