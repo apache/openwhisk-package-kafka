@@ -132,7 +132,8 @@ class BasicHealthTest
       assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
         action.create(name, defaultAction)
       }
-      assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
+
+      assetHelper.withCleaner(wsk.rule, s"dummyMessageHub-helloKafka-$currentTime") { (rule, name) =>
         rule.create(name, trigger = triggerName, action = defaultActionName)
       }
 
