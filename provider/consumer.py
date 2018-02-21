@@ -131,20 +131,6 @@ class ConsumerProcess (Process):
         self.brokers = params["brokers"]
         self.topic = params["topic"]
 
-        self.authErrors = 0
-
-        # We want to account for the number of brokers when deciding the maximum number
-        # number of auth errors to allow
-        self.maxAuthErrors = len(self.brokers) * 30
-
-        # There is the possibility of being disconnected from one or more brokers while
-        # still maintaining a connection to one or more others. We'll use this flag to
-        # signal when we have been disconnected from all brokers. Value will be set to
-        # 'True' when we have received a partition assignment and 'False' when our
-        # partition assignment has been revoked. When disconnected we will begin to
-        # increment the 'authErrors' counter.
-        self.connected = False
-
         self.sharedDictionary = sharedDictionary
 
         if 'status' in params and params['status']['active'] == False:
@@ -489,9 +475,6 @@ class ConsumerProcess (Process):
 
     def __on_assign(self, consumer, partitions):
         logging.info('[{}] Completed partition assignment. Connected to broker(s)'.format(self.trigger))
-        self.authErrors = 0
-        self.connected = True
 
     def __on_revoke(self, consumer, partitions):
         logging.info('[{}] Partition assignment has been revoked. Disconnected from broker(s)'.format(self.trigger))
-        self.connected = False
