@@ -31,8 +31,8 @@ import common.Wsk
 import common.WskActorSystem
 import common.WskProps
 import common.WskTestHelpers
+import spray.json._
 import spray.json.DefaultJsonProtocol._
-import spray.json.{JsObject, pimpAny}
 import com.jayway.restassured.RestAssured
 import whisk.utils.retry;
 
@@ -87,12 +87,30 @@ class BasicHealthTest
         activation =>
           // should be successful
           activation.response.success shouldBe true
-          val uuid = activation.response.result.get.fields.get("uuid").get.toString
+          val uuid = activation.response.result.get.fields.get("uuid").get.toString().replaceAll("\"", "")
 
-          // get /health endpoint and ensure it contains the new uuid
+          // get /health endpoint(s) and ensure it contains the new uuid
+          val healthUrls = System.getProperty("health_url").split("\\s*,\\s*").filterNot(_.isEmpty)
+          healthUrls shouldNot be(empty)
+
           retry({
-            val response = RestAssured.given().get(System.getProperty("health_url"))
-            assert(response.statusCode() == 200 && response.asString().contains(uuid))
+            val uuids = healthUrls.flatMap(u => {
+              val response = RestAssured.given().get(u)
+              response.statusCode() should be(200)
+              response.asString()
+                .parseJson
+                .asJsObject
+                .getFields("consumers")
+                .head
+                .convertTo[JsArray]
+                .elements
+                .flatMap(c => {
+                  c.asJsObject.fields.keySet
+                })
+            }).toList
+
+            uuids should contain(uuid)
+
           }, N = 3, waitBeforeRetry = Some(1.second))
       }
   }
