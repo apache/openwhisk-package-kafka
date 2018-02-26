@@ -87,8 +87,14 @@ class BasicHealthTest
         activation =>
           // should be successful
           activation.response.success shouldBe true
+
+          // It takes a moment for the consumer to fully initialize.
+          println("Giving the consumer a moment to get ready")
+          Thread.sleep(consumerInitTime)
+
           val uuid = activation.response.result.get.fields.get("uuid").get.toString().replaceAll("\"", "")
 
+          println("Checking health endpoint(s) for existence of consumer uuid")
           // get /health endpoint(s) and ensure it contains the new uuid
           val healthUrls = System.getProperty("health_url").split("\\s*,\\s*").filterNot(_.isEmpty)
           healthUrls shouldNot be(empty)
@@ -111,7 +117,7 @@ class BasicHealthTest
 
             uuids should contain(uuid)
 
-          }, N = 3, waitBeforeRetry = Some(1.second))
+          }, N = 10, waitBeforeRetry = Some(1.second))
       }
   }
 
