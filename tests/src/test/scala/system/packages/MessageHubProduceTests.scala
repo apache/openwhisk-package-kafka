@@ -200,7 +200,7 @@ class MessageHubProduceTests
             // verify trigger fired
             println("Polling for activations")
             val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = maxRetries)
-            assert(activations.length == 1)
+            assert(activations.length > 0)
 
             val matchingActivations = for {
                 id <- activations
@@ -269,7 +269,7 @@ class MessageHubProduceTests
             // verify trigger fired
             println("Polling for activations")
             val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = maxRetries)
-            assert(activations.length == 1)
+            assert(activations.length > 0)
 
             val matchingActivations = for {
                 id <- activations
