@@ -2,13 +2,12 @@ apply plugin: 'scala'
 apply plugin: 'eclipse'
 compileTestScala.options.encoding = 'UTF-8'
 
-evaluationDependsOn(':whisktests')
-
 repositories {
   mavenCentral()
   flatDir {
     dirs 'libs'
   }
+  mavenLocal()
 }
 
 def commonConfiguration = {
@@ -49,8 +48,8 @@ task testHealth(type: Test) {
 dependencies {
   compile "org.scala-lang:scala-library:${gradle.scala.version}"
   compile 'com.ibm.messagehub:messagehub.login:1.0.0'
-  compile project(':whisktests')
-  compile project(':whisktests').sourceSets.test.output
+  compile "org.apache.openwhisk:openwhisk-tests:${gradle.openwhisk.version}:tests"
+  compile "org.apache.openwhisk:openwhisk-tests:${gradle.openwhisk.version}:test-sources"
 }
 
 tasks.withType(ScalaCompile) {
