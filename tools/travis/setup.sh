@@ -2,6 +2,7 @@
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 HOMEDIR="$SCRIPTDIR/../../../"
+WHISKDIR="$HOMEDIR/openwhisk"
 
 sudo gpasswd -a travis docker
 sudo -E bash -c 'echo '\''DOCKER_OPTS="-H tcp://0.0.0.0:4243 -H unix:///var/run/docker.sock --api-enable-cors --storage-driver=aufs"'\'' > /etc/default/docker'
@@ -28,4 +29,11 @@ git clone https://github.com/apache/incubator-openwhisk-utilities.git
 
 # OpenWhisk stuff
 cd $HOMEDIR
-git clone https://github.com/openwhisk/openwhisk.git
+git clone https://github.com/apache/incubator-openwhisk.git openwhisk
+cd $WHISKDIR
+
+TERM=dumb ./gradlew \
+:common:scala:install \
+:core:controller:install \
+:core:invoker:install \
+:tests:install
