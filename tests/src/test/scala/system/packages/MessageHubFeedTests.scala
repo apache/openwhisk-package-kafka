@@ -175,7 +175,7 @@ class MessageHubFeedTests
       retry({
         println("Polling for activations")
         val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = maxRetries)
-        assert(activations.length == 1)
+        assert(activations.nonEmpty)
 
         val matchingActivations = for {
           id <- activations
@@ -183,7 +183,7 @@ class MessageHubFeedTests
           if (activation.isRight && activation.right.get.fields.get("response").toString.contains(encodedCurrentTime))
         } yield activation.right.get
 
-        assert(matchingActivations.length > 0)
+        assert(matchingActivations.nonEmpty)
 
         val activation = matchingActivations.head
         activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
@@ -311,7 +311,7 @@ class MessageHubFeedTests
           if (activation.isRight && (activation.right.get.fields.get("response").toString.contains(s"first${currentTime}")))
         } yield activation.right.get
 
-        assert(matchingActivations.length == 0)
+        assert(matchingActivations.isEmpty)
       }, N = 3)
   }
 
@@ -481,7 +481,7 @@ class MessageHubFeedTests
     retry({
       println("Polling for activations")
       val activations = wsk.activation.pollFor(N = 1, Some(triggerName), since = Some(since), retries = maxRetries)
-      assert(activations.length == 1)
+      assert(activations.nonEmpty)
 
       println("Validating content of activation(s)")
       val matchingActivations = for {
@@ -490,7 +490,7 @@ class MessageHubFeedTests
         if (activation.isRight && activation.right.get.fields.get("response").toString.contains(value))
       } yield activation.right.get
 
-      assert(matchingActivations.length > 0)
+      assert(matchingActivations.nonEmpty)
 
       val activation = matchingActivations.head
       activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
