@@ -209,7 +209,7 @@ class MessageHubProduceTests
                     if (activation.isRight && activation.right.get.fields.get("response").toString.contains(decodedMessage))
                 } yield activation.right.get
 
-                assert(matchingActivations.length > 0)
+                assert(matchingActivations.nonEmpty)
 
                 val activation = matchingActivations.head
                 activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
@@ -278,7 +278,7 @@ class MessageHubProduceTests
                     if (activation.isRight && activation.right.get.fields.get("response").toString.contains(decodedKey))
                 } yield activation.right.get
 
-                assert(matchingActivations.length > 0)
+                assert(matchingActivations.nonEmpty)
 
                 val activation = matchingActivations.head
                 activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
