@@ -35,11 +35,14 @@ import common.Wsk
 import common.WskActorSystem
 import common.WskProps
 import common.WskTestHelpers
+
 import spray.json.DefaultJsonProtocol._
 import spray.json.pimpAny
 
 import java.util.Base64
 import java.nio.charset.StandardCharsets
+
+import whisk.utils.retry
 
 @RunWith(classOf[JUnitRunner])
 class MessageHubProduceTests
@@ -150,7 +153,6 @@ class MessageHubProduceTests
     }
 
     it should "Post a message with a binary value" in withAssetCleaner(wskprops) {
-        // create trigger
         val currentTime = s"${System.currentTimeMillis}"
 
         (wp, assetHelper) =>
@@ -169,53 +171,53 @@ class MessageHubProduceTests
             }
 
             withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
-                activation =>
-                    // should be successful
-                    activation.response.success shouldBe true
-            }
-
-            val defaultActionName = s"helloKafka-${currentTime}"
-
-            assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
-                action.create(name, defaultAction)
-            }
-            assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
-                rule.create(name, trigger = triggerName, action = defaultActionName)
+                _.response.success shouldBe true
             }
 
             // It takes a moment for the consumer to fully initialize.
             println("Giving the consumer a moment to get ready")
             Thread.sleep(consumerInitTime)
 
+            val defaultActionName = s"helloKafka-${currentTime}"
+
+            assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
+                action.create(name, defaultAction)
+            }
+
+            assetHelper.withCleaner(wsk.rule, s"dummyMessageHub-helloKafka-$currentTime") { (rule, name) =>
+                rule.create(name, trigger = triggerName, action = defaultActionName)
+            }
+
             // produce message
             val decodedMessage = "This will be base64 encoded"
             val encodedMessage = Base64.getEncoder.encodeToString(decodedMessage.getBytes(StandardCharsets.UTF_8))
             val base64ValueParams = validParameters + ("base64DecodeValue" -> true.toJson) + ("value" -> encodedMessage.toJson)
 
+            println("Producing a message")
             withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", base64ValueParams)) {
-                activation =>
-                    activation.response.success shouldBe true
+                _.response.success shouldBe true
             }
 
-            // verify trigger fired
-            println("Polling for activations")
-            val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = maxRetries)
-            assert(activations.length > 0)
+            retry({
+                println("Polling for activations")
+                val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = maxRetries)
+                assert(activations.nonEmpty)
 
-            val matchingActivations = for {
-                id <- activations
-                activation = wsk.activation.waitForActivation(id)
-                if (activation.isRight && activation.right.get.fields.get("response").toString.contains(decodedMessage))
-            } yield activation.right.get
+                val matchingActivations = for {
+                    id <- activations
+                    activation = wsk.activation.waitForActivation(id)
+                    if (activation.isRight && activation.right.get.fields.get("response").toString.contains(decodedMessage))
+                } yield activation.right.get
 
-            assert(matchingActivations.length == 1)
+                assert(matchingActivations.length > 0)
 
-            val activation = matchingActivations.head
-            activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
+                val activation = matchingActivations.head
+                activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
 
-            // assert that there exists a message in the activation which has the expected keys and values
-            val messages = KafkaUtils.messagesInActivation(activation, field = "value", value = decodedMessage)
-            assert(messages.length == 1)
+                // assert that there exists a message in the activation which has the expected keys and values
+                val messages = KafkaUtils.messagesInActivation(activation, field = "value", value = decodedMessage)
+                assert(messages.length == 1)
+            }, N = 3)
     }
 
     it should "Post a message with a binary key" in withAssetCleaner(wskprops) {
@@ -238,52 +240,52 @@ class MessageHubProduceTests
             }
 
             withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
-                activation =>
-                    // should be successful
-                    activation.response.success shouldBe true
-            }
-
-            val defaultActionName = s"helloKafka-${currentTime}"
-
-            assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
-                action.create(name, defaultAction)
-            }
-            assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
-                rule.create(name, trigger = triggerName, action = defaultActionName)
+                _.response.success shouldBe true
             }
 
             // It takes a moment for the consumer to fully initialize.
             println("Giving the consumer a moment to get ready")
             Thread.sleep(consumerInitTime)
 
+            val defaultActionName = s"helloKafka-${currentTime}"
+
+            assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
+                action.create(name, defaultAction)
+            }
+
+            assetHelper.withCleaner(wsk.rule, s"dummyMessageHub-helloKafka-$currentTime") { (rule, name) =>
+                rule.create(name, trigger = triggerName, action = defaultActionName)
+            }
+
             // produce message
             val decodedKey = "This will be base64 encoded"
             val encodedKey = Base64.getEncoder.encodeToString(decodedKey.getBytes(StandardCharsets.UTF_8))
             val base64ValueParams = validParameters + ("base64DecodeKey" -> true.toJson) + ("key" -> encodedKey.toJson)
 
+            println("Producing a message")
             withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", base64ValueParams)) {
-                activation =>
-                    activation.response.success shouldBe true
+                _.response.success shouldBe true
             }
 
-            // verify trigger fired
-            println("Polling for activations")
-            val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = maxRetries)
-            assert(activations.length > 0)
+            retry({
+                println("Polling for activations")
+                val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = maxRetries)
+                assert(activations.nonEmpty)
 
-            val matchingActivations = for {
-                id <- activations
-                activation = wsk.activation.waitForActivation(id)
-                if (activation.isRight && activation.right.get.fields.get("response").toString.contains(decodedKey))
-            } yield activation.right.get
+                val matchingActivations = for {
+                    id <- activations
+                    activation = wsk.activation.waitForActivation(id)
+                    if (activation.isRight && activation.right.get.fields.get("response").toString.contains(decodedKey))
+                } yield activation.right.get
 
-            assert(matchingActivations.length == 1)
+                assert(matchingActivations.length > 0)
 
-            val activation = matchingActivations.head
-            activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
+                val activation = matchingActivations.head
+                activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
 
-            // assert that there exists a message in the activation which has the expected keys and values
-            val messages = KafkaUtils.messagesInActivation(activation, field = "key", value = decodedKey)
-            assert(messages.length == 1)
+                // assert that there exists a message in the activation which has the expected keys and values
+                val messages = KafkaUtils.messagesInActivation(activation, field = "key", value = decodedKey)
+                assert(messages.length == 1)
+            }, N = 3)
     }
 }
