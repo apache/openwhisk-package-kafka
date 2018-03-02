@@ -141,9 +141,7 @@ class BasicHealthTest
       }
 
       withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
-        activation =>
-          // should be successful
-          activation.response.success shouldBe true
+        _.response.success shouldBe true
       }
 
       // It takes a moment for the consumer to fully initialize.
@@ -280,9 +278,7 @@ class BasicHealthTest
       }
 
       withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
-        activation =>
-          // should be successful
-          activation.response.success shouldBe true
+        _.response.success shouldBe true
       }
 
       val readRunResult = wsk.action.invoke(actionName, parameters = Map(
