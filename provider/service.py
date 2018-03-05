@@ -21,6 +21,8 @@
 import logging
 import os
 import time
+import requests
+import json
 
 from consumer import Consumer
 from database import Database
@@ -35,6 +37,8 @@ canaryInterval = 60  # seconds
 # How long the changes feed should poll before timing out
 changesFeedTimeout = 30  # seconds
 
+local_dev = os.getenv('LOCAL_DEV', 'False')
+check_ssl = (local_dev == 'False')
 
 class Service (Thread):
     def __init__(self, consumers):
@@ -47,6 +51,8 @@ class Service (Thread):
 
         self.consumers = consumers
         self.workerId = os.getenv("WORKER", "worker0")
+
+        self.session = requests.Session()
 
     def run(self):
         self.canaryGenerator.start()
@@ -95,8 +101,9 @@ class Service (Thread):
 
                             if not self.consumers.hasConsumerForTrigger(change["id"]):
                                 if triggerIsAssignedToMe:
-                                    logging.info('[{}] Found a new trigger to create'.format(change["id"]))
-                                    self.createAndRunConsumer(document)
+                                    if self.__isTriggerDocActive(document):
+                                        logging.info('[{}] Found a new trigger to create'.format(change["id"]))
+                                        self.createAndRunConsumer(document)
                                 else:
                                     logging.info("[{}] Found a new trigger, but is assigned to another worker: {}".format(change["id"], document["worker"]))
                             else:
@@ -106,7 +113,7 @@ class Service (Thread):
                                     # running trigger should become disabled
                                     # this should be done regardless of which worker the document claims to be assigned to
                                     logging.info('[{}] Existing running trigger should become disabled'.format(change["id"]))
-                                    existingConsumer.disable()
+                                    existingConsumer.shutdown()
                                 elif triggerIsAssignedToMe:
                                     logging.info('[{}] Found a change to an existing trigger'.format(change["id"]))
 
@@ -145,17 +152,46 @@ class Service (Thread):
     def createAndRunConsumer(self, doc):
         triggerFQN = doc['_id']
 
+        if doc['isMessageHub']:
+            retries = 0
+            max_retries = 5
+            url = '{}/admin/topics'.format(doc['kafka_admin_url'])
+            username = doc['username']
+            password = doc['password']
+            topic = doc['topic']
+
+            while retries < max_retries:
+                headers = {'X-Auth-Token': '{}{}'.format(username, password)}
+                response = self.session.get(url, headers=headers, stream=False, timeout=10.0, verify=check_ssl)
+                status_code = response.status_code
+
+                if status_code == 200:
+                    topics = json.loads(response.content)
+
+                    if topic in [t['name'] for t in topics]:
+                        break
+                    else:
+                        logging.warn('Topic {} for trigger {} no longer exists. This consumer will not be created and trigger will be disabled'.format(topic, triggerFQN))
+                        return
+                elif status_code == 403:
+                    logging.warn('[{}] Invalid authKey.  This consumer will not be created and trigger will be disabled'.format(triggerFQN))
+                    reason = 'Invalid authKey. {} returned 403 using authKey {}{}.'.format(url, username, password)
+                    self.database.disableTrigger(triggerFQN, 403, reason)
+                    return
+                else:
+                    sleepyTime = pow(2, retries)
+                    logging.info('Received status code {} for {} while validating authKey. Retrying in {} second(s)'.format(status_code, triggerFQN, sleepyTime))
+                    time.sleep(sleepyTime)
+                    retries += 1
+
         # Create a representation for this trigger, even if it is disabled
         # This allows it to appear in /health as well as allow it to be deleted
         # Creating this object is lightweight and does not initialize any connections
         consumer = Consumer(triggerFQN, doc)
         self.consumers.addConsumerForTrigger(triggerFQN, consumer)
 
-        if self.__isTriggerDocActive(doc):
-            logging.info('[{}] Trigger was determined to be active, starting...'.format(triggerFQN))
-            consumer.start()
-        else:
-            logging.info('[{}] Trigger was determined to be disabled, not starting...'.format(triggerFQN))
+        logging.info('[{}] Starting consumer...'.format(triggerFQN))
+        consumer.start()
 
     def __isTriggerDocActive(self, doc):
         return ('status' not in doc or doc['status']['active'] == True)
