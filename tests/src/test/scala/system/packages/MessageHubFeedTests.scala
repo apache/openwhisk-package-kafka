@@ -44,7 +44,6 @@ import ActionHelper._
 
 import java.util.Base64
 import java.nio.charset.StandardCharsets
-import java.time.{Clock, Instant}
 
 import whisk.utils.retry
 
@@ -414,8 +413,6 @@ class MessageHubFeedTests
       println("Giving the consumer a moment to get ready")
       Thread.sleep(consumerInitTime)
 
-      val first = Instant.now(Clock.systemUTC())
-
       println("Producing a message")
       withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
         "user" -> kafkaUtils.getAsJson("user"),
@@ -428,7 +425,7 @@ class MessageHubFeedTests
         _.response.success shouldBe true
       }
 
-      checkForActivations(triggerName, first, topic, key, currentTime)
+      checkForActivations(1, triggerName, topic, key, currentTime)
 
       println("Updating trigger")
 
@@ -446,7 +443,6 @@ class MessageHubFeedTests
       println("Giving the consumer a moment to get ready")
       Thread.sleep(consumerInitTime)
 
-      val second = Instant.now(Clock.systemUTC())
       val encodedCurrentTime = Base64.getEncoder.encodeToString(currentTime.getBytes(StandardCharsets.UTF_8))
 
       println("Producing a message")
@@ -461,7 +457,7 @@ class MessageHubFeedTests
         _.response.success shouldBe true
       }
 
-      checkForActivations(triggerName, second, topic, key, encodedCurrentTime)
+      checkForActivations(2, triggerName, topic, key, encodedCurrentTime)
   }
 
   def createTrigger(assetHelper: AssetCleaner, name: String, parameters: Map[String, spray.json.JsValue]) = {
@@ -477,10 +473,10 @@ class MessageHubFeedTests
     }
   }
 
-  def checkForActivations(triggerName: String, since: Instant, topic: String, key: String, value: String) = {
+  def checkForActivations(numActivations: Int, triggerName: String, topic: String, key: String, value: String) = {
     retry({
       println("Polling for activations")
-      val activations = wsk.activation.pollFor(N = 1, Some(triggerName), since = Some(since), retries = maxRetries)
+      val activations = wsk.activation.pollFor(N = numActivations, Some(triggerName), retries = maxRetries)
       assert(activations.nonEmpty)
 
       println("Validating content of activation(s)")
