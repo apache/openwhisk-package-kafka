@@ -110,7 +110,7 @@ class Service (Thread):
                                 existingConsumer = self.consumers.getConsumerForTrigger(change["id"])
 
                                 if existingConsumer.desiredState() == Consumer.State.Running and not self.__isTriggerDocActive(document):
-                                    # running trigger should become disabled
+                                    # running trigger should be shutdown and removed from the collection
                                     # this should be done regardless of which worker the document claims to be assigned to
                                     logging.info('[{}] Existing running trigger should become disabled'.format(change["id"]))
                                     existingConsumer.shutdown()
@@ -186,9 +186,6 @@ class Service (Thread):
                     time.sleep(sleepyTime)
                     retries += 1
 
-        # Create a representation for this trigger, even if it is disabled
-        # This allows it to appear in /health as well as allow it to be deleted
-        # Creating this object is lightweight and does not initialize any connections
         consumer = Consumer(triggerFQN, doc)
         self.consumers.addConsumerForTrigger(triggerFQN, consumer)
 
