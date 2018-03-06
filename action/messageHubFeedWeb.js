@@ -234,9 +234,12 @@ function checkMessageHubCredentials(params) {
             if (topicNames.indexOf(params.topic) < 0) {
                 return Promise.reject( 'Topic does not exist. You must create the topic first: ' + params.topic );
             }
-        }, function (authError) {
-            console.log(`authError: ${JSON.stringify(authError)}`);
-            return Promise.reject( 'Could not authenticate with Message Hub. Please check your credentials.' );
+        }, function (err) {
+            console.log(`Error: ${JSON.stringify(err)}`);
+
+            if (err.statusCode === 403) {
+                return Promise.reject( 'Could not authenticate with Message Hub. Please check your credentials.' );
+            }
         });
 }
 
