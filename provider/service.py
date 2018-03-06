@@ -172,6 +172,8 @@ class Service (Thread):
                         break
                     else:
                         logging.warn('Topic {} for trigger {} no longer exists. This consumer will not be created and trigger will be disabled'.format(topic, triggerFQN))
+                        reason = 'Topic does not exist. You must create the topic first: {}.'.format(url, topic)
+                        self.database.disableTrigger(triggerFQN, 404, reason)
                         return
                 elif status_code == 403:
                     logging.warn('[{}] Invalid authKey.  This consumer will not be created and trigger will be disabled'.format(triggerFQN))
