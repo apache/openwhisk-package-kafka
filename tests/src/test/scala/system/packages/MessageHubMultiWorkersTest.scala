@@ -25,7 +25,14 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import org.scalatest.junit.JUnitRunner
-import common._
+import common.JsHelpers
+import common.TestHelpers
+import common.StreamLogging
+import common.WhiskProperties
+import common.Wsk
+import common.WskActorSystem
+import common.WskProps
+import common.WskTestHelpers
 import spray.json.DefaultJsonProtocol._
 import spray.json.{pimpAny, _}
 import whisk.core.WhiskConfig
