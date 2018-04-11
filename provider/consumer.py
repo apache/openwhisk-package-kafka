@@ -44,6 +44,7 @@ processingManager = Manager()
 def newSharedDictionary():
     sharedDictionary = processingManager.dict()
     sharedDictionary['lastPoll'] = datetime.max
+    sharedDictionary['failures'] = 0
     return sharedDictionary
 
 class Consumer:
@@ -115,6 +116,9 @@ class Consumer:
 
     def secondsSinceLastPoll(self):
         return secondsSince(self.lastPoll())
+
+    def failures(self):
+        return self.sharedDictionary['failures']
 
 
 class ConsumerProcess (Process):
@@ -202,6 +206,9 @@ class ConsumerProcess (Process):
 
     def secondsSinceLastPoll(self):
         return secondsSince(self.lastPoll())
+
+    def incrementFailures(self):
+        self.sharedDictionary['failures'] += 1
 
     def run(self):
         try:
@@ -389,6 +396,8 @@ class ConsumerProcess (Process):
 
                         logging.error('[{}] Dumping the content of the request and response:\n{}'.format(self.trigger, response_dump))
 
+                        # mark this failed trigger fire so it's visible from health endpoint
+                        self.incrementFailures()
                         # abandon all hope?
                         self.setDesiredState(Consumer.State.Disabled)
                         # mark it disabled in the DB
@@ -406,6 +415,8 @@ class ConsumerProcess (Process):
                         time.sleep(sleepyTime)
                     else:
                         logging.warn("[{}] Skipping {} messages to offset {} of partition {}".format(self.trigger, len(messages), lastMessage.offset(), lastMessage.partition()))
+                        # mark this failed trigger fire so it's visible from health endpoint
+                        self.incrementFailures()
                         self.consumer.commit(offsets=self.__getOffsetList(messages), async=False)
                         retry = False
 

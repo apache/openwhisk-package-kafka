@@ -142,7 +142,8 @@ def getConsumers(consumers):
             'currentState': consumer.currentState(),
             'desiredState': consumer.desiredState(),
             'secondsSinceLastPoll': consumer.secondsSinceLastPoll(),
-            'restartCount': consumer.restartCount()
+            'restartCount': consumer.restartCount(),
+            'failures': consumer.failures()
         }
         consumerReports.append(consumerInfo)
 
