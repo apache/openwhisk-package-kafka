@@ -37,7 +37,7 @@ import common.WskProps
 import common.WskTestHelpers
 
 import spray.json.DefaultJsonProtocol._
-import spray.json.pimpAny
+import spray.json._
 
 import java.util.Base64
 import java.nio.charset.StandardCharsets

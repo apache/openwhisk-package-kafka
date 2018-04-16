@@ -29,9 +29,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import scala.collection.mutable.ListBuffer
 
 import spray.json.DefaultJsonProtocol._
-import spray.json.JsObject
-import spray.json.JsArray
-import spray.json.pimpAny
+import spray.json._
 
 import whisk.utils.JsHelpers
 
