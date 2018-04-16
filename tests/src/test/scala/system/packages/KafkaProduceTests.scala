@@ -35,7 +35,7 @@ import common.WskActorSystem
 import common.WskProps
 import common.WskTestHelpers
 import spray.json.DefaultJsonProtocol._
-import spray.json.pimpAny
+import spray.json._
 
 @RunWith(classOf[JUnitRunner])
 class KafkaProduceTests

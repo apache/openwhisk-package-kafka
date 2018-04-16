@@ -34,7 +34,7 @@ import common.WskActorSystem
 import common.WskProps
 import common.WskTestHelpers
 import spray.json.DefaultJsonProtocol._
-import spray.json.{pimpAny, _}
+import spray.json._
 import whisk.core.WhiskConfig
 import whisk.core.database.test.ExtendedCouchDbRestClient
 import whisk.utils.{JsHelpers, retry}
