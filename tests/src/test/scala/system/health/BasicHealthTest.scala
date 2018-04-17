@@ -17,6 +17,8 @@
 
 package system.health
 
+import java.util.concurrent.{TimeUnit, TimeoutException}
+
 import system.utils.KafkaUtils
 
 import scala.concurrent.duration.DurationInt
@@ -34,6 +36,7 @@ import common.WskTestHelpers
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 import com.jayway.restassured.RestAssured
+import org.apache.kafka.clients.producer.ProducerRecord
 import whisk.utils.retry;
 
 @RunWith(classOf[JUnitRunner])
@@ -163,15 +166,21 @@ class BasicHealthTest
       val key = "TheKey"
 
       println("Producing a message")
-      withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
-        "user" -> kafkaUtils.getAsJson("user"),
-        "password" -> kafkaUtils.getAsJson("password"),
-        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
-        "topic" -> topic.toJson,
-        "key" -> key.toJson,
-        "value" -> currentTime.toJson
-      ))) {
-        _.response.success shouldBe true
+      val producer = kafkaUtils.createProducer()
+      val record = new ProducerRecord(topic, key, currentTime)
+      val future = producer.send(record)
+
+      producer.flush()
+      producer.close()
+
+      try {
+        val result = future.get(60, TimeUnit.SECONDS)
+
+        println(s"Produced record to topic: ${result.topic()} on partition: ${result.partition()} at offset: ${result.offset()} with key: $key and value: $currentTime.")
+      } catch {
+        case e: TimeoutException =>
+          fail(s"TimeoutException received waiting for message to be produced to topic: $topic with key: $key and value: $value. ${e.getMessage}")
+        case e: Exception => throw e
       }
 
       retry({
