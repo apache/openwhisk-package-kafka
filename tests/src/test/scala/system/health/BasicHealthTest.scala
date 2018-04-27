@@ -144,12 +144,41 @@ class BasicHealthTest
       }
 
       withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
-        _.response.success shouldBe true
-      }
+        activation =>
+          // should be successful
+          activation.response.success shouldBe true
 
-      // It takes a moment for the consumer to fully initialize.
-      println("Giving the consumer a moment to get ready")
-      Thread.sleep(consumerInitTime)
+          // It takes a moment for the consumer to fully initialize.
+          println("Giving the consumer a moment to get ready")
+          Thread.sleep(consumerInitTime)
+
+          val uuid = activation.response.result.get.fields.get("uuid").get.toString().replaceAll("\"", "")
+
+          println("Checking health endpoint(s) for existence of consumer uuid")
+          // get /health endpoint(s) and ensure it contains the new uuid
+          val healthUrls = System.getProperty("health_url").split("\\s*,\\s*").filterNot(_.isEmpty)
+          healthUrls shouldNot be(empty)
+
+          retry({
+            val uuids = healthUrls.flatMap(u => {
+              val response = RestAssured.given().get(u)
+              response.statusCode() should be(200)
+              response.asString()
+                .parseJson
+                .asJsObject
+                .getFields("consumers")
+                .head
+                .convertTo[JsArray]
+                .elements
+                .flatMap(c => {
+                  c.asJsObject.fields.keySet
+                })
+            }).toList
+
+            uuids should contain(uuid)
+
+          }, N = 10, waitBeforeRetry = Some(1.second))
+      }
 
       val defaultAction = Some(TestUtils.getTestActionFilename("hello.js"))
       val defaultActionName = s"helloKafka-$currentTime"
@@ -165,7 +194,7 @@ class BasicHealthTest
       // key to use for the produced message
       val key = "TheKey"
 
-      println("Producing a message")
+      println(s"Producing message with key: $key and value: $currentTime")
       val producer = kafkaUtils.createProducer()
       val record = new ProducerRecord(topic, key, currentTime)
       val future = producer.send(record)
@@ -176,7 +205,7 @@ class BasicHealthTest
       try {
         val result = future.get(60, TimeUnit.SECONDS)
 
-        println(s"Produced record to topic: ${result.topic()} on partition: ${result.partition()} at offset: ${result.offset()} with key: $key and value: $currentTime.")
+        println(s"Produced message to topic: ${result.topic()} on partition: ${result.partition()} at offset: ${result.offset()} with timestamp: ${result.timestamp()}.")
       } catch {
         case e: TimeoutException =>
           fail(s"TimeoutException received waiting for message to be produced to topic: $topic with key: $key and value: $value. ${e.getMessage}")
