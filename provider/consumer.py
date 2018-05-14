@@ -31,6 +31,7 @@ from database import Database
 from datetime import datetime
 from datetimeutils import secondsSince
 from multiprocessing import Process, Manager
+from urlparse import urlparse
 
 local_dev = os.getenv('LOCAL_DEV', 'False')
 payload_limit = int(os.getenv('PAYLOAD_LIMIT', 900000))
@@ -127,7 +128,7 @@ class ConsumerProcess (Process):
 
         self.trigger = trigger
         self.isMessageHub = params["isMessageHub"]
-        self.triggerURL = params["triggerURL"]
+        self.triggerURL = self.__triggerURL(params["triggerURL"])
         self.brokers = params["brokers"]
         self.topic = params["topic"]
 
@@ -202,6 +203,20 @@ class ConsumerProcess (Process):
 
     def secondsSinceLastPoll(self):
         return secondsSince(self.lastPoll())
+
+    def __triggerURL(self, originalURL):
+        apiHost = os.getenv('API_HOST')
+
+        if apiHost is not None:
+            logging.info('[{}] Environment variable defined for API_HOST. Overriding host value defined for trigger in DB with {}'.format(self.trigger, apiHost))
+            parsed = urlparse(originalURL)
+            parts = parsed.netloc.split('@')
+            auth = parts[0]
+            newURL = parsed._replace(netloc='{}@{}'.format(auth, apiHost))
+
+            return newURL.geturl()
+        else:
+            return originalURL
 
     def run(self):
         try:
