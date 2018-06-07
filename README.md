@@ -25,6 +25,7 @@ In order to create a trigger that reacts when messages are posted to a Message H
 |isJSONData|Boolean (Optional - default=false)|When set to `true` this will cause the provider to attempt to parse the message value as JSON before passing it along as the trigger payload.|
 |isBinaryKey|Boolean (Optional - default=false)|When set to `true` this will cause the provider to encode the key value as Base64 before passing it along as the trigger payload.|
 |isBinaryValue|Boolean (Optional - default=false)|When set to `true` this will cause the provider to encode the message value as Base64 before passing it along as the trigger payload.|
+|wrapBase64Encoding|Boolean (Optional - default=true)|When set to `true` this will insert a newline every 76 characters for Base64 encoded values and keys.|
 
 While this list of parameters may seem daunting, they can be automatically set for you by using the package refresh CLI command:
 

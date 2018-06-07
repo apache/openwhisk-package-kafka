@@ -18,6 +18,7 @@
  */
 """
 
+import base64
 import json
 import logging
 import os
@@ -161,6 +162,11 @@ class ConsumerProcess (Process):
             self.encodeKeyAsBase64 = params["isBinaryKey"]
         else:
             self.encodeKeyAsBase64 = False
+
+        if "wrapBase64Encoding" in params:
+            self.wrapBase64 = params["wrapBase64Encoding"]
+        else:
+            self.wrapBase64 = True
 
         self.database = Database()
 
@@ -306,7 +312,8 @@ class ConsumerProcess (Process):
                 if (message is not None):
                     if not message.error():
                         logging.debug("Consumed message: {}".format(str(message)))
-                        messageSize = self.__sizeMessage(message)
+                        messagePayload = self.__getMessagePayload(message)
+                        messageSize = self.__sizeMessagePayload(messagePayload)
                         if totalPayloadSize + messageSize > payload_limit:
                             if len(messages) == 0:
                                 logging.error('[{}] Single message at offset {} exceeds payload size limit. Skipping this message!'.format(self.trigger, message.offset()))
@@ -319,7 +326,7 @@ class ConsumerProcess (Process):
                             batchMessages = False
                         else:
                             totalPayloadSize += messageSize
-                            messages.append(message)
+                            messages.append({'message': message, 'payload': messagePayload, 'size': messageSize})
                     elif message.error().code() != KafkaError._PARTITION_EOF:
                         logging.error('[{}] Error polling: {}'.format(self.trigger, message.error()))
                         batchMessages = False
@@ -344,15 +351,19 @@ class ConsumerProcess (Process):
     def __shouldDisable(self, status_code):
         return status_code in range(400, 500) and status_code not in [408, 429]
 
-    def __fireTrigger(self, messages):
+    # Fires a trigger and commits offset on success
+    # messages is a list of dictionaries with the following format:
+    #   [{message: "kafka-message-object", payload: "trigger-payload", size: "trigger-payload-size"}, ...]
+    def __fireTrigger(self, messagesDictionary):
         if self.__shouldRun():
-            lastMessage = messages[len(messages) - 1]
-
             # I'm sure there is a much more clever way to do this ;)
             mappedMessages = []
-            for message in messages:
-                mappedMessages.append(self.__getMessagePayload(message))
+            messages = []
+            for message in messagesDictionary:
+                messages.append(message['message'])
+                mappedMessages.append(message['payload'])
 
+            lastMessage = messages[len(messages) - 1]
             payload = {}
             payload['messages'] = mappedMessages
             retry = True
@@ -435,8 +446,7 @@ class ConsumerProcess (Process):
         }
 
     # return the size in bytes of the trigger payload for this message
-    def __sizeMessage(self, message):
-        messagePayload = self.__getMessagePayload(message)
+    def __sizeMessagePayload(self, messagePayload):
         return len(json.dumps(messagePayload).encode('utf-8'))
 
     # return list of TopicPartition which represent the _next_ offset to consume
@@ -449,8 +459,29 @@ class ConsumerProcess (Process):
 
         return offsets
 
+    def __base64Encode(self, value):
+        if self.wrapBase64:
+            # The encodestring method will wrap (insert a newline every 64 characters)
+            # This is a legacy base64 encoding often not handled by newer decoding libraries
+            return base64.encodestring(value).strip()
+        else:
+            # The b64encode method will not wrap encoded values
+            return base64.b64encode(value).strip()
+
     def __encodeMessageIfNeeded(self, value):
-        # let's make sure whatever data we're getting is utf-8 encoded
+        if self.encodeValueAsBase64:
+            # For binary data we do not have to encode as unicode at all. The value should remain of type 'str' which
+            # persists all 8 bits (0x-0xff) contrary to 'utf-8' which is a variable size encoding that only persists 7
+            # bits with the highest order bit having a special meaning (continuation character).
+            try:
+                parsed = self.__base64Encode(value)
+                logging.debug('[{}] Successfully encoded a binary message.'.format(self.trigger))
+                return parsed
+            except:
+                logging.error('[{}] Unable to encode a binary message, sending message with empty payload'.format(self.trigger))
+                return None
+
+        # For text-based encodings let's make sure whatever data we're getting is utf-8 encoded.
         try:
             value = value.encode('utf-8')
         except UnicodeDecodeError:
@@ -467,22 +498,14 @@ class ConsumerProcess (Process):
                 logging.warn('[{}] I was asked to encode a message as JSON, but I failed.'.format(self.trigger))
                 value = "\"{}\"".format(value)
                 pass
-        elif self.encodeValueAsBase64:
-            try:
-                parsed = value.encode("base64").strip()
-                logging.debug('[{}] Successfully encoded a binary message.'.format(self.trigger))
-                return parsed
-            except:
-                logging.warn('[{}] Unable to encode a binary message.'.format(self.trigger))
-                pass
 
         logging.debug('[{}] Returning un-encoded message'.format(self.trigger))
         return value
 
     def __encodeKeyIfNeeded(self, key):
-        if self.encodeKeyAsBase64:
+        if self.encodeKeyAsBase64 and key is not None:
             try:
-                parsed = key.encode("base64").strip()
+                parsed = self.__base64Encode(key)
                 logging.debug('[{}] Successfully encoded a binary key.'.format(self.trigger))
                 return parsed
             except:
