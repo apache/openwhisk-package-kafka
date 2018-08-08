@@ -23,6 +23,7 @@ import os
 import time
 
 from cloudant.client import CouchDB
+from cloudant.client import CouchDatabase
 from cloudant.result import Result
 from datetime import datetime
 
@@ -46,12 +47,13 @@ class Database:
         self.client = CouchDB(self.username, self.password, url=self.url, timeout=timeout, auto_renew=True)
         self.client.connect()
 
-        if self.dbname in self.client.all_dbs():
+        self.database = CouchDatabase(self.client, self.dbname)
+
+        if self.database.exists():
             logging.info('Database exists - connecting to it.')
-            self.database = self.client[self.dbname]
         else:
             logging.warn('Database does not exist - creating it.')
-            self.database = self.client.create_database(self.dbname)
+            self.database.create()
 
     def destroy(self):
         if self.client is not None:
