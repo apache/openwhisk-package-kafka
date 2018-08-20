@@ -450,13 +450,6 @@ class ConsumerProcess (Process):
         return offsets
 
     def __encodeMessageIfNeeded(self, value):
-        # let's make sure whatever data we're getting is utf-8 encoded
-        try:
-            value = value.encode('utf-8')
-        except UnicodeDecodeError:
-            logging.warn('[{}] Value contains non-unicode bytes. Replacing invalid bytes.'.format(self.trigger))
-            value = unicode(value, errors='replace').encode('utf-8')
-
         if self.encodeValueAsJSON:
             try:
                 parsed = json.loads(value)
