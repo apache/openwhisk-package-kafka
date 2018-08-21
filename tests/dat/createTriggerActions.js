@@ -6,6 +6,6 @@ var openwhisk = require('openwhisk');
 function main(params) {
     console.log(JSON.stringify(params));
     var name = params.messages[0].value;
-    var ow = openwhisk();
+    var ow = openwhisk({ignore_certs: true});
     return ow.triggers.create({name: name});
 }
