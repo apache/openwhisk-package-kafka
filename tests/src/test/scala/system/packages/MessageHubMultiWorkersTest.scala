@@ -73,7 +73,7 @@ class MessageHubMultiWorkersTest extends FlatSpec
 
   behavior of "Mussage Hub Feed"
 
-  it should "assign two triggers to same worker when only worker0 is available" in withAssetCleaner(wskprops) {
+  ignore should "assign two triggers to same worker when only worker0 is available" in withAssetCleaner(wskprops) {
 
     (wp, assetHelper) =>
       val firstTrigger = s"firstTrigger-${System.currentTimeMillis()}"
@@ -96,7 +96,7 @@ class MessageHubMultiWorkersTest extends FlatSpec
       })
   }
 
-  it should "assign a trigger to worker0 and a trigger to worker1 when both workers are available" in withAssetCleaner(wskprops) {
+  ignore should "assign a trigger to worker0 and a trigger to worker1 when both workers are available" in withAssetCleaner(wskprops) {
 
     (wp, assetHelper) =>
       val firstTrigger = s"firstTrigger-${System.currentTimeMillis()}"
@@ -120,7 +120,7 @@ class MessageHubMultiWorkersTest extends FlatSpec
       })
   }
 
-  it should "assign a trigger to worker1 when worker0 is removed and there is an assignment imbalance" in withAssetCleaner(wskprops) {
+  ignore should "assign a trigger to worker1 when worker0 is removed and there is an assignment imbalance" in withAssetCleaner(wskprops) {
 
     (wp, assetHelper) =>
       val firstTrigger = s"firstTrigger-${System.currentTimeMillis()}"
@@ -150,7 +150,7 @@ class MessageHubMultiWorkersTest extends FlatSpec
       })
   }
 
-  it should "balance the load accross workers when a worker is added" in withAssetCleaner(wskprops) {
+  ignore should "balance the load accross workers when a worker is added" in withAssetCleaner(wskprops) {
 
     (wp, assetHelper) =>
       val firstTrigger = s"firstTrigger-${System.currentTimeMillis()}"
