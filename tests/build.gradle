@@ -52,6 +52,16 @@ task testNoHealth(type: Test) {
   exclude 'system/packages/MessagingServiceTests.class'
 }
 
+task testMessageHub(type: Test) {
+  configure commonConfiguration
+  exclude 'system/stress/**'
+  exclude 'system/health/**'
+  exclude 'system/packages/MessagingServiceTests.class'
+  exclude 'system/packages/KafkaFeedTests.class'
+  exclude 'system/packages/KafkaFeedWebTests.class'
+  exclude 'system/packages/KafkaProduceTests.class'
+}
+
 dependencies {
   compile "org.scala-lang:scala-library:${gradle.scala.version}"
   compile 'com.ibm.messagehub:messagehub.login:1.0.0'
