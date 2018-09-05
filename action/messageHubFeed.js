@@ -18,6 +18,10 @@ function main(params) {
     var massagedParams = common.massageParamsForWeb(params);
     massagedParams.triggerName = common.getTriggerFQN(params.triggerName);
 
+    var iamKey = process.env.__OW_IAM_NAMESPACE_KEY;
+    massagedParams.authKey = iamKey || process.env.__OW_API_KEY;
+    massagedParams.isIamKey = iamKey != undefined;
+
     if (params.lifecycleEvent === 'CREATE') {
         return common.createTrigger(endpoint, massagedParams, webActionName);
     } else if (params.lifecycleEvent === 'READ') {

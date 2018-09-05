@@ -1,5 +1,6 @@
 const common = require('./lib/common');
 const Database = require('./lib/Database');
+const itm = require('@ibm-functions/iam-token-manager');
 var moment = require('moment');
 
 /**
@@ -32,7 +33,7 @@ function main(params) {
                     // do these in parallel!
                     return Promise.all([
                         db.ensureTriggerIsUnique(validatedParams.triggerName),
-                        common.verifyTriggerAuth(validatedParams.triggerURL),
+                        verifyTriggerAuth(validatedParams.triggerURL, params.authKey, params.isIamKey),
                         checkMessageHubCredentials(validatedParams)
                     ]);
                 })
@@ -66,9 +67,9 @@ function main(params) {
                     resolve(common.webResponse(statusCode, body));
                 });
         } else if (params.__ow_method === "get") {
-            const triggerURL = common.getTriggerURL(params.authKey, params.endpoint, params.triggerName);
+            const triggerURL = common.getTriggerURL(params.endpoint, params.triggerName);
 
-            return common.verifyTriggerAuth(triggerURL)
+            return verifyTriggerAuth(triggerURL, params.authKey, params.isIamKey)
                 .then(() => {
                     db = new Database(params.DB_URL, params.DB_NAME);
                     return db.getTrigger(params.triggerName);
@@ -99,9 +100,9 @@ function main(params) {
                     resolve(common.webResponse(500, error.toString()));
                 });
         } else if (params.__ow_method === "put") {
-            const triggerURL = common.getTriggerURL(params.authKey, params.endpoint, params.triggerName);
+            const triggerURL = common.getTriggerURL(params.endpoint, params.triggerName);
 
-            return common.verifyTriggerAuth(triggerURL)
+            return verifyTriggerAuth(triggerURL, params.authKey, params.isIamKey)
                 .then(() => {
                     db = new Database(params.DB_URL, params.DB_NAME);
                     return db.getTrigger(params.triggerName);
@@ -129,9 +130,9 @@ function main(params) {
                     resolve(common.webResponse(statusCode, body));
                 });
         } else if (params.__ow_method === "delete") {
-            const triggerURL = common.getTriggerURL(params.authKey, params.endpoint, params.triggerName);
+            const triggerURL = common.getTriggerURL(params.endpoint, params.triggerName);
 
-            return common.verifyTriggerAuth(triggerURL)
+            return verifyTriggerAuth(triggerURL, params.authKey, params.isIamKey)
                 .then(() => {
                     db = new Database(params.DB_URL, params.DB_NAME);
                     return db.deleteTrigger(params.triggerName);
@@ -162,6 +163,10 @@ function validateParameters(rawParams) {
             return;
         } else {
             validatedParams = commonValidationResult.validatedParams;
+
+            if (rawParams.isIamKey) {
+                validatedParams.isIamKey = true;
+            }
         }
 
         // kafka_brokers_sasl
@@ -241,6 +246,15 @@ function checkMessageHubCredentials(params) {
                 return Promise.reject( 'Could not authenticate with Message Hub. Please check your credentials.' );
             }
         });
+}
+
+function verifyTriggerAuth(triggerURL, apiKey, isIamKey) {
+    if (isIamKey) {
+        return itm({ 'iamApiKey': apiKey }).getToken().then( token => common.verifyTriggerAuth(triggerURL, { bearer: token }));
+    } else {
+        var auth = apiKey.split(':');
+        return common.verifyTriggerAuth(triggerURL, { user: auth[0], pass: auth[1] });
+    }
 }
 
 exports.main = main;

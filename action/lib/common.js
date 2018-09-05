@@ -9,19 +9,19 @@ function triggerComponents(triggerName) {
     };
 }
 
-function getTriggerURL(authKey, endpoint, triggerName) {
+function getTriggerURL(endpoint, triggerName) {
     var massagedAPIHost = endpoint.replace(/https?:\/\/(.*)/, "$1");
 
     var components = triggerComponents(triggerName);
     var namespace = components.namespace;
     var trigger = components.triggerName;
 
-    var url = `https://${authKey}@${massagedAPIHost}/api/v1/namespaces/${encodeURIComponent(namespace)}/triggers/${encodeURIComponent(trigger)}`;
+    var url = `https://${massagedAPIHost}/api/v1/namespaces/${encodeURIComponent(namespace)}/triggers/${encodeURIComponent(trigger)}`;
 
     return url;
 }
 
-function verifyTriggerAuth(triggerURL) {
+function verifyTriggerAuth(triggerURL, auth) {
     var options = {
         method: 'GET',
         url: triggerURL,
@@ -29,7 +29,8 @@ function verifyTriggerAuth(triggerURL) {
         headers: {
             'Content-Type': 'application/json',
             'User-Agent': 'whisk'
-        }
+        },
+        auth: auth
     };
 
     return request(options)
@@ -205,7 +206,7 @@ function performCommonParameterValidation(rawParams) {
     // now that everything else is valid, let's add these
     validatedParams.isBinaryKey = getBooleanFromArgs(rawParams, 'isBinaryKey');
     validatedParams.authKey = rawParams.authKey;
-    validatedParams.triggerURL = getTriggerURL(validatedParams.authKey, rawParams.endpoint, rawParams.triggerName);
+    validatedParams.triggerURL = getTriggerURL(rawParams.endpoint, rawParams.triggerName);
 
     const uuid = require('uuid');
     validatedParams.uuid = uuid.v4();
