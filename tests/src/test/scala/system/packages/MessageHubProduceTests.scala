@@ -122,16 +122,6 @@ class MessageHubProduceTests
         }
     }
 
-    it should "Reject with bad broker list" in {
-        val badBrokerParams = validParameters + ("kafka_brokers_sasl" -> List("localhost:0000").toJson)
-
-        withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", badBrokerParams), totalWait = 60 seconds) {
-            activation =>
-                activation.response.success shouldBe false
-                activation.response.result.get.toString should include("Timed out communicating with Message Hub")
-        }
-    }
-
     it should "Reject trying to decode a non-base64 key" in {
         val badKeyParams = validParameters + ("key" -> "?".toJson) + ("base64DecodeKey" -> true.toJson)
 
