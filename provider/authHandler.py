@@ -97,3 +97,4 @@ class IAMAuth(AuthBase):
     def __sendRequest(self, payload, headers):
         response = requests.post(self.endpoint, data=payload, headers=headers)
         return response.json()
+        
