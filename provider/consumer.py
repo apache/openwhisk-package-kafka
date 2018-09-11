@@ -32,6 +32,8 @@ from datetime import datetime
 from datetimeutils import secondsSince
 from multiprocessing import Process, Manager
 from urlparse import urlparse
+from authHandler import IAMAuth
+from requests.auth import HTTPBasicAuth
 
 local_dev = os.getenv('LOCAL_DEV', 'False')
 payload_limit = int(os.getenv('PAYLOAD_LIMIT', 900000))
@@ -144,6 +146,12 @@ class ConsumerProcess (Process):
         if self.isMessageHub:
             self.username = params["username"]
             self.password = params["password"]
+
+        if 'isIamKey' in params and params['isIamKey'] == True:
+            self.authHandler = IAMAuth(params['authKey'], params['iamUrl'])
+        else:
+            auth = params['authKey'].split(':')
+            self.authHandler = HTTPBasicAuth(auth[0], auth[1])
 
         # handle the case where there may be existing triggers that do not
         # have the isJSONData field set
@@ -362,7 +370,7 @@ class ConsumerProcess (Process):
 
             while retry:
                 try:
-                    response = requests.post(self.triggerURL, json=payload, timeout=10.0, verify=check_ssl)
+                    response = requests.post(self.triggerURL, json=payload, auth=self.authHandler, timeout=10.0, verify=check_ssl)
                     status_code = response.status_code
                     logging.info("[{}] Repsonse status code {}".format(self.trigger, status_code))
 

@@ -22,6 +22,10 @@ function main(params) {
     massagedParams.authKey = iamKey || process.env.__OW_API_KEY;
     massagedParams.isIamKey = iamKey != undefined;
 
+    if (massagedParams.isIamKey) {
+        massagedParams.iamUrl = process.env.__OW_IAM_API_URL;
+    }
+
     if (params.lifecycleEvent === 'CREATE') {
         return common.createTrigger(endpoint, massagedParams, webActionName);
     } else if (params.lifecycleEvent === 'READ') {
