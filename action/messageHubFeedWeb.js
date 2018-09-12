@@ -167,6 +167,10 @@ function validateParameters(rawParams) {
             if (rawParams.isIamKey) {
                 validatedParams.isIamKey = true;
             }
+
+            if (rawParams.iamUrl) {
+                validatedParams.iamUrl = rawParams.iamUrl;
+            }
         }
 
         // kafka_brokers_sasl
