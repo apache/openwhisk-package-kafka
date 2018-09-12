@@ -164,8 +164,10 @@ function validateParameters(rawParams) {
         } else {
             validatedParams = commonValidationResult.validatedParams;
 
-            if (rawParams.isIamKey) {
-                validatedParams.isIamKey = true;
+            if (rawParams.isIamKey != undefined) {
+                validatedParams.isIamKey = rawParams.isIamKey;
+            } else {
+                validatedParams.isIamKey = false
             }
 
             if (rawParams.iamUrl) {
