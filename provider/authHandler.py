@@ -20,7 +20,6 @@
 
 import requests
 import time
-import logging
 
 from requests.auth import AuthBase
 
