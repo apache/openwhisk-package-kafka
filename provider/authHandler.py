@@ -96,5 +96,4 @@ class IAMAuth(AuthBase):
 
     def __sendRequest(self, payload, headers):
         response = requests.post(self.endpoint, data=payload, headers=headers)
-        logging.info('[Token Manager] Content of token {}'.format(response.json()))
         return response.json()
