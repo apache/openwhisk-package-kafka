@@ -4,6 +4,9 @@ launchConfigurations/
 action/*.zip
 action/package.json
 tests/build
+action/node_modules/
+action/package-lock.json
+package-lock.json
 
 .idea/
 out/

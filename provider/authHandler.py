@@ -20,6 +20,7 @@
 
 import requests
 import time
+import logging
 
 from requests.auth import AuthBase
 
@@ -37,10 +38,10 @@ class IAMAuth(AuthBase):
 
 
     def __getToken(self):
-        if 'expires_in' not in self.tokenInfo or self.__isRefreshTokenExpired:
+        if 'expires_in' not in self.tokenInfo or self.__isRefreshTokenExpired():
             self.tokenInfo = self.__requestToken()
             return self.tokenInfo['access_token']
-        elif self.__isTokenExpired:
+        elif self.__isTokenExpired():
             self.tokenInfo = self.__refreshToken()
             return self.tokenInfo['access_token']
         else:
@@ -96,4 +97,5 @@ class IAMAuth(AuthBase):
 
     def __sendRequest(self, payload, headers):
         response = requests.post(self.endpoint, data=payload, headers=headers)
+        logging.info('[Token Manager] Content of token {}'.format(response.json()))
         return response.json()
