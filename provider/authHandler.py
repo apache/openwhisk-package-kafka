@@ -32,7 +32,7 @@ class IAMAuth(AuthBase):
         self.tokenInfo = {}
 
     def __call__(self, r):
-        r.headers['Authorization'] = 'bearer {}'.format(self.__getToken())
+        r.headers['Authorization'] = 'Bearer {}'.format(self.__getToken())
         return r
 
 
