@@ -93,7 +93,8 @@ then
 fi
 
 cp -f messageHubFeedWeb_package.json package.json
-zip -r messageHubFeedWeb.zip lib package.json messageHubFeedWeb.js
+npm install
+zip -r messageHubFeedWeb.zip lib package.json messageHubFeedWeb.js node_modules
 
 cd $OLD_PATH
 
