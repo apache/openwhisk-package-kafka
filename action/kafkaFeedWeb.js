@@ -30,7 +30,7 @@ function main(params) {
                     // do these in parallel!
                     return Promise.all([
                         db.ensureTriggerIsUnique(validatedParams.triggerName),
-                        common.verifyTriggerAuth(validatedParams.triggerURL)
+                        verifyTriggerAuth(validatedParams.triggerURL, params.authKey)
                     ]);
                 })
                 .then(() => {
@@ -63,9 +63,9 @@ function main(params) {
                     resolve(common.webResponse(statusCode, body));
                 });
         } else if (params.__ow_method === "get") {
-            const triggerURL = common.getTriggerURL(params.authKey, params.endpoint, params.triggerName);
+            const triggerURL = common.getTriggerURL(params.endpoint, params.triggerName);
 
-            return common.verifyTriggerAuth(triggerURL)
+            return verifyTriggerAuth(triggerURL, params.authKey)
                 .then(() => {
                     db = new Database(params.DB_URL, params.DB_NAME);
                     return db.getTrigger(params.triggerName);
@@ -93,9 +93,9 @@ function main(params) {
                     resolve(common.webResponse(500, error.toString()));
                 });
         } else if (params.__ow_method === "put") {
-            const triggerURL = common.getTriggerURL(params.authKey, params.endpoint, params.triggerName);
+            const triggerURL = common.getTriggerURL(params.endpoint, params.triggerName);
 
-            return common.verifyTriggerAuth(triggerURL)
+            return verifyTriggerAuth(triggerURL, params.authKey)
                 .then(() => {
                     db = new Database(params.DB_URL, params.DB_NAME);
                     return db.getTrigger(params.triggerName);
@@ -123,9 +123,9 @@ function main(params) {
                     resolve(common.webResponse(statusCode, body));
                 });
         } else if (params.__ow_method === "delete") {
-            const triggerURL = common.getTriggerURL(params.authKey, params.endpoint, params.triggerName);
+            const triggerURL = common.getTriggerURL(params.endpoint, params.triggerName);
 
-            return common.verifyTriggerAuth(triggerURL)
+            return verifyTriggerAuth(triggerURL, params.authKey)
                 .then(() => {
                     db = new Database(params.DB_URL, params.DB_NAME);
                     return db.deleteTrigger(params.triggerName);
@@ -176,6 +176,11 @@ function validateParameters(rawParams) {
     });
 
     return promise;
+}
+
+function verifyTriggerAuth(triggerURL, apiKey) {
+    var auth = apiKey.split(':');
+    return common.verifyTriggerAuth(triggerURL, { user: auth[0], pass: auth[1] });
 }
 
 exports.main = main;

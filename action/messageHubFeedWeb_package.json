@@ -1,5 +1,8 @@
 {
   "name": "messageHubFeedWeb",
   "version": "1.0.0",
-  "main": "messageHubFeedWeb.js"
+  "main": "messageHubFeedWeb.js",
+  "dependencies": {
+    "@ibm-functions/iam-token-manager": "^1.0.0"
+  }
 }
