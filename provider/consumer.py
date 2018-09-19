@@ -231,7 +231,7 @@ class ConsumerProcess (Process):
                 host = parts[1]
             else:
                 host = parts[0]
-                
+
             logging.info('[{}] Environment variable undefined for API_HOST. Using value in DB of {}'.format(self.trigger, host))
             newURL = parsed._replace(netloc=host)
 
