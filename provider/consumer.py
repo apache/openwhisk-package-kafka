@@ -213,18 +213,29 @@ class ConsumerProcess (Process):
         return secondsSince(self.lastPoll())
 
     def __triggerURL(self, originalURL):
+        parsed = urlparse(originalURL)
         apiHost = os.getenv('API_HOST')
 
         if apiHost is not None:
             logging.info('[{}] Environment variable defined for API_HOST. Overriding host value defined for trigger in DB with {}'.format(self.trigger, apiHost))
-            parsed = urlparse(originalURL)
-            parts = parsed.netloc.split('@')
-            auth = parts[0]
-            newURL = parsed._replace(netloc='{}@{}'.format(auth, apiHost))
+            newURL = parsed._replace(netloc=apiHost)
 
             return newURL.geturl()
         else:
-            return originalURL
+            # remove https://user:pass@host from url and replace it with just https://host
+            # we do this because we no longer need the basic auth in the url itself.
+            # we rely upon the HTTPBasicAuth handler or the IAMAuth handler
+            parts = parsed.netloc.split('@')
+
+            if len(parts) == 2:
+                host = parts[1]
+            else:
+                host = parts[0]
+
+            logging.info('[{}] Environment variable undefined for API_HOST. Using value in DB of {}'.format(self.trigger, host))
+            newURL = parsed._replace(netloc=host)
+
+            return newURL.geturl()
 
     def run(self):
         try:
