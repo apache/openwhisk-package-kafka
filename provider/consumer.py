@@ -218,7 +218,7 @@ class ConsumerProcess (Process):
 
         if apiHost is not None:
             logging.info('[{}] Environment variable defined for API_HOST. Overriding host value defined for trigger in DB with {}'.format(self.trigger, apiHost))
-            newURL = parsed._replace(netloc='{}'.format(apiHost))
+            newURL = parsed._replace(netloc=apiHost)
 
             return newURL.geturl()
         else:
@@ -233,7 +233,7 @@ class ConsumerProcess (Process):
                 host = parts[0]
                 
             logging.info('[{}] Environment variable undefined for API_HOST. Using value in DB of {}'.format(self.trigger, host))
-            newURL = parsed._replace(netloc='{}'.format(host))
+            newURL = parsed._replace(netloc=host)
 
             return newURL.geturl()
 
