@@ -30,7 +30,7 @@ import org.scalatest.junit.JUnitRunner
 
 import common.JsHelpers
 import common.TestHelpers
-import common.TestUtils
+import common.TestUtils.NOT_FOUND
 import common.Wsk
 import common.WskActorSystem
 import common.WskProps
@@ -69,8 +69,6 @@ class MessageHubProduceTests
     val kafkaUtils = new KafkaUtils
 
     val maxRetries = System.getProperty("max.retries", "60").toInt
-
-    val defaultAction = Some(TestUtils.getTestActionFilename("hello.js"))
 
     // these parameter values are 100% valid and should work as-is
     val validParameters = Map(
@@ -168,6 +166,7 @@ class MessageHubProduceTests
             println("Giving the consumer a moment to get ready")
             Thread.sleep(consumerInitTime)
 
+            val defaultAction = Some("dat/createTriggerActions.js")
             val defaultActionName = s"helloKafka-${currentTime}"
 
             assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
@@ -178,9 +177,14 @@ class MessageHubProduceTests
                 rule.create(name, trigger = triggerName, action = defaultActionName)
             }
 
+            val verificationName = s"trigger-$currentTime"
+
+            assetHelper.withCleaner(wsk.trigger, verificationName) { (trigger, name) =>
+                trigger.get(name, NOT_FOUND)
+            }
+
             // produce message
-            val decodedMessage = "This will be base64 encoded"
-            val encodedMessage = Base64.getEncoder.encodeToString(decodedMessage.getBytes(StandardCharsets.UTF_8))
+            val encodedMessage = Base64.getEncoder.encodeToString(verificationName.getBytes(StandardCharsets.UTF_8))
             val base64ValueParams = validParameters + ("base64DecodeValue" -> true.toJson) + ("value" -> encodedMessage.toJson)
 
             println("Producing a message")
@@ -188,26 +192,7 @@ class MessageHubProduceTests
                 _.response.success shouldBe true
             }
 
-            retry({
-                println("Polling for activations")
-                val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = maxRetries)
-                assert(activations.nonEmpty)
-
-                val matchingActivations = for {
-                    id <- activations
-                    activation = wsk.activation.waitForActivation(id)
-                    if (activation.isRight && activation.right.get.fields.get("response").toString.contains(decodedMessage))
-                } yield activation.right.get
-
-                assert(matchingActivations.nonEmpty)
-
-                val activation = matchingActivations.head
-                activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
-
-                // assert that there exists a message in the activation which has the expected keys and values
-                val messages = KafkaUtils.messagesInActivation(activation, field = "value", value = decodedMessage)
-                assert(messages.length == 1)
-            }, N = 3)
+            retry(wsk.trigger.get(verificationName), 60, Some(1.second))
     }
 
     it should "Post a message with a binary key" in withAssetCleaner(wskprops) {
@@ -237,6 +222,7 @@ class MessageHubProduceTests
             println("Giving the consumer a moment to get ready")
             Thread.sleep(consumerInitTime)
 
+            val defaultAction = Some("dat/createTriggerActionsFromKey.js")
             val defaultActionName = s"helloKafka-${currentTime}"
 
             assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
@@ -247,9 +233,14 @@ class MessageHubProduceTests
                 rule.create(name, trigger = triggerName, action = defaultActionName)
             }
 
+            val verificationName = s"trigger-$currentTime"
+
+            assetHelper.withCleaner(wsk.trigger, verificationName) { (trigger, name) =>
+                trigger.get(name, NOT_FOUND)
+            }
+
             // produce message
-            val decodedKey = "This will be base64 encoded"
-            val encodedKey = Base64.getEncoder.encodeToString(decodedKey.getBytes(StandardCharsets.UTF_8))
+            val encodedKey = Base64.getEncoder.encodeToString(verificationName.getBytes(StandardCharsets.UTF_8))
             val base64ValueParams = validParameters + ("base64DecodeKey" -> true.toJson) + ("key" -> encodedKey.toJson)
 
             println("Producing a message")
@@ -257,25 +248,6 @@ class MessageHubProduceTests
                 _.response.success shouldBe true
             }
 
-            retry({
-                println("Polling for activations")
-                val activations = wsk.activation.pollFor(N = 1, Some(triggerName), retries = maxRetries)
-                assert(activations.nonEmpty)
-
-                val matchingActivations = for {
-                    id <- activations
-                    activation = wsk.activation.waitForActivation(id)
-                    if (activation.isRight && activation.right.get.fields.get("response").toString.contains(decodedKey))
-                } yield activation.right.get
-
-                assert(matchingActivations.nonEmpty)
-
-                val activation = matchingActivations.head
-                activation.getFieldPath("response", "success") shouldBe Some(true.toJson)
-
-                // assert that there exists a message in the activation which has the expected keys and values
-                val messages = KafkaUtils.messagesInActivation(activation, field = "key", value = decodedKey)
-                assert(messages.length == 1)
-            }, N = 3)
+            retry(wsk.trigger.get(verificationName), 60, Some(1.second))
     }
 }

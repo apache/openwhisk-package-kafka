@@ -150,7 +150,7 @@ class MessageHubMultiWorkersTest extends FlatSpec
       })
   }
 
-  ignore should "balance the load accross workers when a worker is added" in withAssetCleaner(wskprops) {
+  ignore should "balance the load across workers when a worker is added" in withAssetCleaner(wskprops) {
 
     (wp, assetHelper) =>
       val firstTrigger = s"firstTrigger-${System.currentTimeMillis()}"
