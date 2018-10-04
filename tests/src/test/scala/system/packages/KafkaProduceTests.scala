@@ -45,7 +45,8 @@ class KafkaProduceTests
     with BeforeAndAfterAll
     with TestHelpers
     with WskTestHelpers
-    with JsHelpers {
+    with JsHelpers 
+    with KafkaUtils {
 
     val topic = "test"
     val sessionTimeout = 10 seconds
@@ -55,9 +56,7 @@ class KafkaProduceTests
 
     val actionName = "kafkaProduceAction"
     val actionFile = "../action/kafkaProduce.py"
-
-    val kafkaUtils = new KafkaUtils
-
+    
     behavior of "Kafka Produce action"
 
     override def beforeAll() {
@@ -73,7 +72,7 @@ class KafkaProduceTests
     def testMissingParameter(missingParam : String) = {
         var fullParamsMap = Map(
             "topic" -> topic.toJson,
-            "brokers" -> kafkaUtils.getAsJson("brokers"),
+            "brokers" -> getAsJson("brokers"),
             "value" -> "This will fail".toJson)
         var missingParamsMap = fullParamsMap.filterKeys(_ != missingParam)
 

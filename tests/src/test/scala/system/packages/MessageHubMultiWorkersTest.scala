@@ -19,7 +19,6 @@ package system.packages
 import system.utils.KafkaUtils
 
 import scala.concurrent.duration.DurationInt
-import scala.language.postfixOps
 import org.junit.runner.RunWith
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FlatSpec
@@ -49,7 +48,8 @@ class MessageHubMultiWorkersTest extends FlatSpec
   with TestHelpers
   with WskTestHelpers
   with JsHelpers
-  with StreamLogging {
+  with StreamLogging 
+  with KafkaUtils {
 
   val topic = "test"
 
@@ -58,7 +58,6 @@ class MessageHubMultiWorkersTest extends FlatSpec
 
   val messagingPackage = "/whisk.system/messaging"
   val messageHubFeed = "messageHubFeed"
-
   val dbProtocol = WhiskProperties.getProperty("db.protocol")
   val dbHost = WhiskProperties.getProperty("db.host")
   val dbPort = WhiskProperties.getProperty("db.port").toInt
@@ -66,11 +65,8 @@ class MessageHubMultiWorkersTest extends FlatSpec
   val dbPassword = WhiskProperties.getProperty("db.password")
   val dbPrefix = WhiskProperties.getProperty(WhiskConfig.dbPrefix)
   val dbName = s"${dbPrefix}ow_kafka_triggers"
-
   val client = new ExtendedCouchDbRestClient(dbProtocol, dbHost, dbPort, dbUsername, dbPassword, dbName)
-
-  val kafkaUtils = new KafkaUtils
-
+  
   behavior of "Mussage Hub Feed"
 
   ignore should "assign two triggers to same worker when only worker0 is available" in withAssetCleaner(wskprops) {
@@ -187,26 +183,13 @@ class MessageHubMultiWorkersTest extends FlatSpec
       })
   }
 
-  def createTrigger(assetHelper: AssetCleaner, name: String, parameters: Map[String, spray.json.JsValue]) = {
-    val feedCreationResult = assetHelper.withCleaner(wsk.trigger, name) {
-      (trigger, _) =>
-        trigger.create(name, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = parameters)
-    }
-
-    withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
-      activation =>
-        // should be successful
-        activation.response.success shouldBe true
-    }
-  }
-
   def constructParams(workers: List[String]) = {
     Map(
-      "user" -> kafkaUtils.getAsJson("user"),
-      "password" -> kafkaUtils.getAsJson("password"),
-      "api_key" -> kafkaUtils.getAsJson("api_key"),
-      "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
-      "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+      "user" -> getAsJson("user"),
+      "password" -> getAsJson("password"),
+      "api_key" -> getAsJson("api_key"),
+      "kafka_admin_url" -> getAsJson("kafka_admin_url"),
+      "kafka_brokers_sasl" -> getAsJson("brokers"),
       "topic" -> topic.toJson,
       "workers" -> workers.toJson
     )

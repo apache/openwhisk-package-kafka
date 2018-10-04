@@ -42,7 +42,8 @@ class BasicStressTest
     with Matchers
     with WskActorSystem
     with TestHelpers
-    with WskTestHelpers {
+    with WskTestHelpers 
+    with KafkaUtils {
 
     val topic = "test"
     val sessionTimeout = 10 seconds
@@ -53,8 +54,6 @@ class BasicStressTest
     val messagingPackage = "/whisk.system/messaging"
     val messageHubFeed = "messageHubFeed"
     val messageHubProduce = "messageHubProduce"
-
-    val kafkaUtils = new KafkaUtils
 
     behavior of "Message Hub provider"
 
@@ -80,11 +79,11 @@ class BasicStressTest
             val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
             println(s"\nCreating trigger #${iterationLabel}: ${triggerName}")
             val feedCreationResult = wsk.trigger.create(triggerName, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = Map(
-                    "user" -> kafkaUtils.getAsJson("user"),
-                    "password" -> kafkaUtils.getAsJson("password"),
-                    "api_key" -> kafkaUtils.getAsJson("api_key"),
-                    "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
-                    "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+                    "user" -> getAsJson("user"),
+                    "password" -> getAsJson("password"),
+                    "api_key" -> getAsJson("api_key"),
+                    "kafka_admin_url" -> getAsJson("kafka_admin_url"),
+                    "kafka_brokers_sasl" -> getAsJson("brokers"),
                     "topic" -> topic.toJson))
 
             println("Waiting for trigger create")
