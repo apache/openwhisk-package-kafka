@@ -59,7 +59,7 @@ class BasicHealthTest
 
   behavior of "Message Hub feed"
 
-  it should "create a consumer and fire a trigger when a message is posted to message hub" in withAssetCleaner(wskprops) {
+  it should "create a consumer and fire a trigger when a message is posted to messagehub" in withAssetCleaner(wskprops) {
     val currentTime = s"${System.currentTimeMillis}"
 
     (wp, assetHelper) =>

@@ -114,7 +114,7 @@ trait KafkaUtils extends TestHelpers with WskTestHelpers {
                       val consumer = c.asJsObject.fields.head
                       consumer match {
                           case (u, v) if u == uuid && v.asJsObject.getFields("currentState").head == "Running".toJson => Some(consumer)
-                          case (u, v) if u != uuid => None
+                          case _ => None
                       }
                   })
             })
