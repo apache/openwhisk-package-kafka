@@ -175,6 +175,38 @@ function validateParameters(rawParams) {
             }
         }
 
+        validatedParams.isMessageHub = true;
+
+        if (rawParams.__bx_creds && rawParams.__bx_creds.messagehub) {
+            return validateMessageHubParameters(rawParams.__bx_creds.messagehub)
+            .then(p => {
+                validatedParams = Object.assign(validatedParams, p)
+                resolve(validatedParams)
+            })
+            .catch(error => {
+                reject(error);
+                return;
+            })
+        } else {
+            return validateMessageHubParameters(rawParams)
+            .then(p => {
+                validatedParams = Object.assign(validatedParams, p)
+                resolve(validatedParams)
+            })
+            .catch(error => {
+                reject(error);
+                return;
+            })
+        }
+    });
+
+    return promise;
+}
+
+function validateMessageHubParameters(rawParams) {
+    var promise = new Promise((resolve, reject) => {
+        var validatedParams = {};
+
         // kafka_brokers_sasl
         if (rawParams.kafka_brokers_sasl) {
             validatedParams.brokers = common.validateBrokerParam(rawParams.kafka_brokers_sasl);
@@ -210,8 +242,6 @@ function validateParameters(rawParams) {
             reject( { validationError: "You must supply a 'kafka_admin_url' parameter." });
             return;
         }
-
-        validatedParams.isMessageHub = true;
 
         resolve(validatedParams);
     });
