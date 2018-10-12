@@ -477,6 +477,7 @@ class ConsumerProcess (Process):
             except ValueError:
                 # no big deal, just return the original value
                 logging.warn('[{}] I was asked to encode a message as JSON, but I failed.'.format(self.trigger))
+                value = "\"{}\"".format(value)
                 pass
         elif self.encodeValueAsBase64:
             try:
