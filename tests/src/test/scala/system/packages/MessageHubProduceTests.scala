@@ -110,16 +110,6 @@ class MessageHubProduceTests
         testMissingParameter("value")
     }
 
-    it should "Reject with bad credentials" in {
-        val badAuthParams = validParameters + ("user" -> "ThisWillNeverWork".toJson)
-
-        withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", badAuthParams), totalWait = 60 seconds) {
-            activation =>
-                activation.response.success shouldBe false
-                activation.response.result.get.toString should include("Authentication failed")
-        }
-    }
-
     it should "Reject trying to decode a non-base64 key" in {
         val badKeyParams = validParameters + ("key" -> "?".toJson) + ("base64DecodeKey" -> true.toJson)
 
