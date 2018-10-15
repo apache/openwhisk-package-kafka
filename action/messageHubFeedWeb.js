@@ -177,27 +177,15 @@ function validateParameters(rawParams) {
 
         validatedParams.isMessageHub = true;
 
-        if (rawParams.__bx_creds && rawParams.__bx_creds.messagehub) {
-            return validateMessageHubParameters(rawParams.__bx_creds.messagehub)
-            .then(p => {
-                validatedParams = Object.assign(validatedParams, p)
-                resolve(validatedParams)
-            })
-            .catch(error => {
-                reject(error);
-                return;
-            })
-        } else {
-            return validateMessageHubParameters(rawParams)
-            .then(p => {
-                validatedParams = Object.assign(validatedParams, p)
-                resolve(validatedParams)
-            })
-            .catch(error => {
-                reject(error);
-                return;
-            })
-        }
+        return validateMessageHubParameters(rawParams.__bx_creds && rawParams.__bx_creds.messagehub ? rawParams.__bx_creds.messagehub : rawParams)
+        .then(p => {
+            validatedParams = Object.assign(validatedParams, p)
+            resolve(validatedParams)
+        })
+        .catch(error => {
+            reject(error);
+            return;
+        })
     });
 
     return promise;
