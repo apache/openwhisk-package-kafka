@@ -173,6 +173,10 @@ function validateParameters(rawParams) {
             if (rawParams.iamUrl) {
                 validatedParams.iamUrl = rawParams.iamUrl;
             }
+
+            if (rawParams.namespaceCRN) {
+                validatedParams.namespaceCRN = rawParams.namespaceCRN;
+            }
         }
 
         // kafka_brokers_sasl

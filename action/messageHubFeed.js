@@ -24,6 +24,7 @@ function main(params) {
 
     if (massagedParams.isIamKey) {
         massagedParams.iamUrl = process.env.__OW_IAM_API_URL;
+        massagedParams.namespaceCRN = process.env.__OW_NAMESPACE_CRN;
     }
 
     if (params.lifecycleEvent === 'CREATE') {
