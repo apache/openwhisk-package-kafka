@@ -37,7 +37,7 @@ import common.WskProps
 import common.WskTestHelpers
 import ActionHelper._
 import common.TestUtils.NOT_FOUND
-import whisk.utils.retry
+import org.apache.openwhisk.utils.retry
 
 @RunWith(classOf[JUnitRunner])
 class MessageHubFeedTests

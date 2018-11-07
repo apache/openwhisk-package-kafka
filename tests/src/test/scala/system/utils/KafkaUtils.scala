@@ -30,14 +30,14 @@ import scala.collection.mutable.ListBuffer
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 import system.packages.ActionHelper._
-import whisk.utils.JsHelpers
+import org.apache.openwhisk.utils.JsHelpers
 
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 import common.TestHelpers
 import common.TestUtils
 import common.WskTestHelpers
-import whisk.utils.retry
+import org.apache.openwhisk.utils.retry
 
 trait KafkaUtils extends TestHelpers with WskTestHelpers {
     lazy val messageHubProps = KafkaUtils.initializeMessageHub()

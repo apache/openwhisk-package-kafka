@@ -28,7 +28,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Inside, Matchers}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 import system.utils.KafkaUtils
-import whisk.utils.retry
+import org.apache.openwhisk.utils.retry
 
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
