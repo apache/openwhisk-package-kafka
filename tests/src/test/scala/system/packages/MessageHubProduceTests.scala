@@ -52,7 +52,8 @@ class MessageHubProduceTests
     with BeforeAndAfterAll
     with TestHelpers
     with WskTestHelpers
-    with JsHelpers {
+    with JsHelpers
+    with KafkaUtils {
 
     val topic = "test"
     val sessionTimeout = 10 seconds
@@ -63,19 +64,15 @@ class MessageHubProduceTests
     val messagingPackage = "/whisk.system/messaging"
     val messageHubFeed = "messageHubFeed"
     val messageHubProduce = "messageHubProduce"
-
     val consumerInitTime = 10000 // ms
-
-    val kafkaUtils = new KafkaUtils
-
     val maxRetries = System.getProperty("max.retries", "60").toInt
 
     // these parameter values are 100% valid and should work as-is
     val validParameters = Map(
-        "user" -> kafkaUtils.getAsJson("user"),
-        "password" -> kafkaUtils.getAsJson("password"),
+        "user" -> getAsJson("user"),
+        "password" -> getAsJson("password"),
         "topic" -> topic.toJson,
-        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+        "kafka_brokers_sasl" -> getAsJson("brokers"),
         "value" -> "Big Trouble is actually a really good Tim Allen movie. Seriously.".toJson)
 
     behavior of "Message Hub Produce action"
@@ -135,26 +132,14 @@ class MessageHubProduceTests
 
         (wp, assetHelper) =>
             val triggerName = s"/_/binaryValueTrigger-$currentTime"
-            println(s"Creating trigger ${triggerName}")
 
-            val feedCreationResult = assetHelper.withCleaner(wsk.trigger, triggerName) {
-                (trigger, _) =>
-                    trigger.create(triggerName, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = Map(
-                        "user" -> kafkaUtils.getAsJson("user"),
-                        "password" -> kafkaUtils.getAsJson("password"),
-                        "api_key" -> kafkaUtils.getAsJson("api_key"),
-                        "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
-                        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
-                        "topic" -> topic.toJson))
-            }
-
-            withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
-                _.response.success shouldBe true
-            }
-
-            // It takes a moment for the consumer to fully initialize.
-            println("Giving the consumer a moment to get ready")
-            Thread.sleep(consumerInitTime)
+            createTrigger(assetHelper, triggerName, parameters = Map(
+                "user" -> getAsJson("user"),
+                "password" -> getAsJson("password"),
+                "api_key" -> getAsJson("api_key"),
+                "kafka_admin_url" -> getAsJson("kafka_admin_url"),
+                "kafka_brokers_sasl" -> getAsJson("brokers"),
+                "topic" -> topic.toJson))
 
             val defaultAction = Some("dat/createTriggerActions.js")
             val defaultActionName = s"helloKafka-${currentTime}"
@@ -191,26 +176,14 @@ class MessageHubProduceTests
 
         (wp, assetHelper) =>
             val triggerName = s"/_/binaryKeyTrigger-$currentTime"
-            println(s"Creating trigger ${triggerName}")
 
-            val feedCreationResult = assetHelper.withCleaner(wsk.trigger, triggerName) {
-                (trigger, _) =>
-                    trigger.create(triggerName, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = Map(
-                        "user" -> kafkaUtils.getAsJson("user"),
-                        "password" -> kafkaUtils.getAsJson("password"),
-                        "api_key" -> kafkaUtils.getAsJson("api_key"),
-                        "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
-                        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
-                        "topic" -> topic.toJson))
-            }
-
-            withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
-                _.response.success shouldBe true
-            }
-
-            // It takes a moment for the consumer to fully initialize.
-            println("Giving the consumer a moment to get ready")
-            Thread.sleep(consumerInitTime)
+            createTrigger(assetHelper, triggerName, parameters = Map(
+                "user" -> getAsJson("user"),
+                "password" -> getAsJson("password"),
+                "api_key" -> getAsJson("api_key"),
+                "kafka_admin_url" -> getAsJson("kafka_admin_url"),
+                "kafka_brokers_sasl" -> getAsJson("brokers"),
+                "topic" -> topic.toJson))
 
             val defaultAction = Some("dat/createTriggerActionsFromKey.js")
             val defaultActionName = s"helloKafka-${currentTime}"

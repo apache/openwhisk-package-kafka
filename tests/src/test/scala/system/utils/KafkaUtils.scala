@@ -17,24 +17,29 @@
 
 package system.utils
 
-import common.TestUtils
-
 import java.util.HashMap
 import java.util.Properties
+
+import com.jayway.restassured.RestAssured
+import com.jayway.restassured.config.{RestAssuredConfig, SSLConfig}
 import javax.security.auth.login.Configuration
 import javax.security.auth.login.AppConfigurationEntry
-
-import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.KafkaProducer
 
 import scala.collection.mutable.ListBuffer
-
 import spray.json.DefaultJsonProtocol._
 import spray.json._
-
+import system.packages.ActionHelper._
 import whisk.utils.JsHelpers
 
+import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
+import common.TestHelpers
+import common.TestUtils
+import common.WskTestHelpers
+import whisk.utils.retry
 
-class KafkaUtils {
+trait KafkaUtils extends TestHelpers with WskTestHelpers {
     lazy val messageHubProps = KafkaUtils.initializeMessageHub()
 
     def createProducer() : KafkaProducer[String, String] = {
@@ -52,9 +57,71 @@ class KafkaUtils {
             case key => this(key).asInstanceOf[String].toJson
         }
     }
+
+    val sslconfig = {
+        val inner = new SSLConfig().allowAllHostnames()
+        val config = inner.relaxedHTTPSValidation()
+        new RestAssuredConfig().sslConfig(config)
+    }
+
+    def createTrigger(assetHelper: AssetCleaner, name: String, parameters: Map[String, spray.json.JsValue]) = {
+        println(s"Creating trigger $name")
+
+        val feedCreationResult = assetHelper.withCleaner(wsk.trigger, name) {
+            (trigger, _) =>
+                trigger.create(name, feed = Some(s"/whisk.system/messaging/messageHubFeed"), parameters = parameters)
+        }
+
+        withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
+            activation =>
+                // should be successful
+                activation.response.success shouldBe true
+
+                // It takes a moment for the consumer to fully initialize.
+                println("Giving the consumer a moment to get ready")
+                Thread.sleep(KafkaUtils.consumerInitTime)
+
+                val uuid = activation.response.result.get.fields.get("uuid").get.toString().replaceAll("\"", "")
+                consumerExists(uuid)
+        }
+    }
+
+
+    def consumerExists(uuid: String) = {
+        println("Checking health endpoint(s) for existence of consumer uuid")
+        // get /health endpoint(s) and ensure it contains the new uuid
+        val healthUrls: Array[String] = System.getProperty("health_url").split("\\s*,\\s*").filterNot(_.isEmpty)
+        assert(healthUrls.size != 0)
+
+        retry({
+            val uuids: Array[(String, JsValue)] = healthUrls.flatMap(u => {
+                val response = RestAssured.given().config(sslconfig).get(u)
+                assert(response.statusCode() == 200)
+
+                response.asString()
+                  .parseJson
+                  .asJsObject
+                  .getFields("consumers")
+                  .head
+                  .convertTo[JsArray]
+                  .elements
+                  .flatMap(c => {
+                      val consumer = c.asJsObject.fields.head
+                      consumer match {
+                          case (u, v) if u == uuid && v.asJsObject.getFields("currentState").head == "Running".toJson => Some(consumer)
+                          case _ => None
+                      }
+                  })
+            })
+
+            assert(uuids.nonEmpty)
+        }, N = 60, waitBeforeRetry = Some(1.second))
+    }
 }
 
 object KafkaUtils {
+    val consumerInitTime = 10000 // ms
+
     def asKafkaProducerProps(props : Map[String,Object]) : Properties = {
         val requiredKeys = List("brokers",
                                 "user",

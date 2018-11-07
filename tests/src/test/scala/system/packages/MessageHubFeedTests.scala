@@ -36,7 +36,6 @@ import common.WskActorSystem
 import common.WskProps
 import common.WskTestHelpers
 import ActionHelper._
-
 import common.TestUtils.NOT_FOUND
 import whisk.utils.retry
 
@@ -49,19 +48,15 @@ class MessageHubFeedTests
   with BeforeAndAfterAll
   with TestHelpers
   with WskTestHelpers
-  with JsHelpers {
+  with JsHelpers
+  with KafkaUtils {
 
   val topic = "test"
   val sessionTimeout = 10 seconds
-
   val messagingPackage = "/whisk.system/messaging"
   val messageHubFeed = "messageHubFeed"
   val messageHubProduce = "messageHubProduce"
-
   val consumerInitTime = 10000 // ms
-
-  val kafkaUtils = new KafkaUtils
-
   val maxRetries = System.getProperty("max.retries", "60").toInt
 
   implicit val wskprops = WskProps()
@@ -126,14 +121,13 @@ class MessageHubFeedTests
 
     (wp, assetHelper) =>
       val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
-      println(s"Creating trigger ${triggerName}")
 
       createTrigger(assetHelper, triggerName, parameters = Map(
-        "user" -> kafkaUtils.getAsJson("user"),
-        "password" -> kafkaUtils.getAsJson("password"),
-        "api_key" -> kafkaUtils.getAsJson("api_key"),
-        "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
-        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+        "user" -> getAsJson("user"),
+        "password" -> getAsJson("password"),
+        "api_key" -> getAsJson("api_key"),
+        "kafka_admin_url" -> getAsJson("kafka_admin_url"),
+        "kafka_brokers_sasl" -> getAsJson("brokers"),
         "topic" -> topic.toJson,
         "isBinaryKey" -> false.toJson,
         "isBinaryValue" -> false.toJson))
@@ -158,20 +152,15 @@ class MessageHubFeedTests
         trigger.get(name, NOT_FOUND)
       }
 
-      // It takes a moment for the consumer to fully initialize.
-      println("Giving the consumer a moment to get ready")
-      Thread.sleep(consumerInitTime)
-
       // Rapidly produce two messages whose size are each greater than half the allowed payload limit.
       // This should ensure that the feed fires these as two separate triggers.
       println("Rapidly producing two large messages")
-      val producer = kafkaUtils.createProducer()
+      val producer = createProducer()
       val firstMessage = new ProducerRecord(topic, verificationName1, generateMessage(s"first${currentTime}", testPayloadSize))
       val secondMessage = new ProducerRecord(topic, verificationName2, generateMessage(s"second${currentTime}", testPayloadSize))
       producer.send(firstMessage)
       producer.send(secondMessage)
       producer.close()
-
       retry(wsk.trigger.get(verificationName1), 60, Some(1.second))
       retry(wsk.trigger.get(verificationName2), 60, Some(1.second))
   }
@@ -185,14 +174,13 @@ class MessageHubFeedTests
 
     (wp, assetHelper) =>
       val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
-      println(s"Creating trigger ${triggerName}")
 
       createTrigger(assetHelper, triggerName, parameters = Map(
-        "user" -> kafkaUtils.getAsJson("user"),
-        "password" -> kafkaUtils.getAsJson("password"),
-        "api_key" -> kafkaUtils.getAsJson("api_key"),
-        "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
-        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+        "user" -> getAsJson("user"),
+        "password" -> getAsJson("password"),
+        "api_key" -> getAsJson("api_key"),
+        "kafka_admin_url" -> getAsJson("kafka_admin_url"),
+        "kafka_brokers_sasl" -> getAsJson("brokers"),
         "topic" -> topic.toJson,
         "isBinaryKey" -> false.toJson,
         "isBinaryValue" -> false.toJson))
@@ -211,12 +199,8 @@ class MessageHubFeedTests
 
       wsk.trigger.get(verificationName, NOT_FOUND)
 
-      // It takes a moment for the consumer to fully initialize.
-      println("Giving the consumer a moment to get ready")
-      Thread.sleep(consumerInitTime)
-
       println("Producing an oversized message")
-      val producer = kafkaUtils.createProducer()
+      val producer = createProducer()
       val bigMessage = new ProducerRecord(topic, verificationName, generateMessage(s"${currentTime}", testPayloadSize))
       producer.send(bigMessage)
       producer.close()
@@ -229,17 +213,15 @@ class MessageHubFeedTests
 
     (wp, assetHelper) =>
       val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
-      println(s"Creating trigger ${triggerName}")
-
-      val username = kafkaUtils.getAsJson("user")
-      val password = kafkaUtils.getAsJson("password")
-      val admin_url = kafkaUtils.getAsJson("kafka_admin_url")
-      val brokers = kafkaUtils.getAsJson("brokers")
+      val username = getAsJson("user")
+      val password = getAsJson("password")
+      val admin_url = getAsJson("kafka_admin_url")
+      val brokers = getAsJson("brokers")
 
       createTrigger(assetHelper, triggerName, parameters = Map(
         "user" -> username,
         "password" -> password,
-        "api_key" -> kafkaUtils.getAsJson("api_key"),
+        "api_key" -> getAsJson("api_key"),
         "kafka_admin_url" -> admin_url,
         "kafka_brokers_sasl" -> brokers,
         "topic" -> topic.toJson,
@@ -263,17 +245,15 @@ class MessageHubFeedTests
 
     (wp, assetHelper) =>
       val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
-      println(s"Creating trigger $triggerName")
-
-      val username = kafkaUtils.getAsJson("user")
-      val password = kafkaUtils.getAsJson("password")
-      val admin_url = kafkaUtils.getAsJson("kafka_admin_url")
-      val brokers = kafkaUtils.getAsJson("brokers")
+      val username = getAsJson("user")
+      val password = getAsJson("password")
+      val admin_url = getAsJson("kafka_admin_url")
+      val brokers = getAsJson("brokers")
 
       createTrigger(assetHelper, triggerName, parameters = Map(
         "user" -> username,
         "password" -> password,
-        "api_key" -> kafkaUtils.getAsJson("api_key"),
+        "api_key" -> getAsJson("api_key"),
         "kafka_admin_url" -> admin_url,
         "kafka_brokers_sasl" -> brokers,
         "topic" -> topic.toJson,
@@ -299,31 +279,22 @@ class MessageHubFeedTests
 
     (wp, assetHelper) =>
       val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
-      println(s"Creating trigger $triggerName")
+      val username = getAsJson("user")
+      val password = getAsJson("password")
+      val admin_url = getAsJson("kafka_admin_url")
+      val brokers = getAsJson("brokers")
 
-      val username = kafkaUtils.getAsJson("user")
-      val password = kafkaUtils.getAsJson("password")
-      val admin_url = kafkaUtils.getAsJson("kafka_admin_url")
-      val brokers = kafkaUtils.getAsJson("brokers")
-
-      val feedCreationResult = assetHelper.withCleaner(wsk.trigger, triggerName) {
-        (trigger, _) =>
-          trigger.create(triggerName, feed = Some(actionName), parameters = Map(
-            "user" -> username,
-            "password" -> password,
-            "api_key" -> kafkaUtils.getAsJson("api_key"),
-            "kafka_admin_url" -> admin_url,
-            "kafka_brokers_sasl" -> brokers,
-            "topic" -> topic.toJson,
-            "isJSONData" -> true.toJson,
-            "isBinaryKey" -> false.toJson,
-            "isBinaryValue" -> false.toJson
-          ))
-      }
-
-      withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
-        _.response.success shouldBe true
-      }
+      createTrigger(assetHelper, triggerName, parameters = Map(
+        "user" -> username,
+        "password" -> password,
+        "api_key" -> getAsJson("api_key"),
+        "kafka_admin_url" -> admin_url,
+        "kafka_brokers_sasl" -> brokers,
+        "topic" -> topic.toJson,
+        "isJSONData" -> true.toJson,
+        "isBinaryKey" -> false.toJson,
+        "isBinaryValue" -> false.toJson
+      ))
 
       val readRunResult = wsk.action.invoke(actionName, parameters = Map(
         "triggerName" -> triggerName.toJson,
@@ -384,14 +355,13 @@ class MessageHubFeedTests
     (wp, assetHelper) =>
       val key = "TheKey"
       val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
-      println(s"Creating trigger $triggerName")
 
       createTrigger(assetHelper, triggerName, parameters = Map(
-        "user" -> kafkaUtils.getAsJson("user"),
-        "password" -> kafkaUtils.getAsJson("password"),
-        "api_key" -> kafkaUtils.getAsJson("api_key"),
-        "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
-        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+        "user" -> getAsJson("user"),
+        "password" -> getAsJson("password"),
+        "api_key" -> getAsJson("api_key"),
+        "kafka_admin_url" -> getAsJson("kafka_admin_url"),
+        "kafka_brokers_sasl" -> getAsJson("brokers"),
         "topic" -> topic.toJson
       ))
 
@@ -411,14 +381,11 @@ class MessageHubFeedTests
         trigger.get(name, NOT_FOUND)
       }
 
-      println("Giving the consumer a moment to get ready")
-      Thread.sleep(consumerInitTime)
-
       println("Producing a message")
       withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
-        "user" -> kafkaUtils.getAsJson("user"),
-        "password" -> kafkaUtils.getAsJson("password"),
-        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+        "user" -> getAsJson("user"),
+        "password" -> getAsJson("password"),
+        "kafka_brokers_sasl" -> getAsJson("brokers"),
         "topic" -> topic.toJson,
         "key" -> key.toJson,
         "value" -> verificationName1.toJson
@@ -455,9 +422,9 @@ class MessageHubFeedTests
 
       println("Producing a message")
       withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
-        "user" -> kafkaUtils.getAsJson("user"),
-        "password" -> kafkaUtils.getAsJson("password"),
-        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+        "user" -> getAsJson("user"),
+        "password" -> getAsJson("password"),
+        "kafka_brokers_sasl" -> getAsJson("brokers"),
         "topic" -> topic.toJson,
         "key" -> key.toJson,
         "value" -> verificationName2.toJson
@@ -474,16 +441,15 @@ class MessageHubFeedTests
     (wp, assetHelper) =>
       val key = "TheKey"
       val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
-      println(s"Creating trigger $triggerName")
 
       createTrigger(assetHelper, triggerName, parameters = Map(
         "__bx_creds" -> Map(
           "messagehub" -> Map(
-            "user" -> kafkaUtils.getAsJson("user"),
-            "password" -> kafkaUtils.getAsJson("password"),
-            "api_key" -> kafkaUtils.getAsJson("api_key"),
-            "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
-            "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"))).toJson,
+            "user" -> getAsJson("user"),
+            "password" -> getAsJson("password"),
+            "api_key" -> getAsJson("api_key"),
+            "kafka_admin_url" -> getAsJson("kafka_admin_url"),
+            "kafka_brokers_sasl" -> getAsJson("brokers"))).toJson,
         "topic" -> topic.toJson
       ))
 
@@ -508,9 +474,9 @@ class MessageHubFeedTests
 
       println("Producing a message")
       withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
-        "user" -> kafkaUtils.getAsJson("user"),
-        "password" -> kafkaUtils.getAsJson("password"),
-        "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
+        "user" -> getAsJson("user"),
+        "password" -> getAsJson("password"),
+        "kafka_brokers_sasl" -> getAsJson("brokers"),
         "topic" -> topic.toJson,
         "key" -> key.toJson,
         "value" -> verificationName1.toJson
@@ -519,19 +485,6 @@ class MessageHubFeedTests
       }
 
       retry(wsk.trigger.get(verificationName1), 60, Some(1.second))
-  }
-
-  def createTrigger(assetHelper: AssetCleaner, name: String, parameters: Map[String, spray.json.JsValue]) = {
-    val feedCreationResult = assetHelper.withCleaner(wsk.trigger, name) {
-      (trigger, _) =>
-        trigger.create(name, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = parameters)
-    }
-
-    withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
-      activation =>
-        // should be successful
-        activation.response.success shouldBe true
-    }
   }
 
   def generateMessage(prefix: String, size: Int): String = {

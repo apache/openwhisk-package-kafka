@@ -19,7 +19,6 @@ package system.health
 
 import java.util.concurrent.{TimeUnit, TimeoutException}
 
-import com.jayway.restassured.RestAssured
 import common.TestUtils.NOT_FOUND
 import common._
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -43,7 +42,8 @@ class BasicHealthTest
   with TestHelpers
   with WskTestHelpers
   with Inside
-  with JsHelpers {
+  with JsHelpers
+  with KafkaUtils {
 
   val topic = "test"
   val sessionTimeout = 10 seconds
@@ -55,125 +55,24 @@ class BasicHealthTest
   val messageHubFeed = "messageHubFeed"
   val messageHubProduce = "messageHubProduce"
   val actionName = s"$messagingPackage/$messageHubFeed"
-
-  val consumerInitTime = 10000 // ms
-
-  val kafkaUtils = new KafkaUtils
-
   val maxRetries = System.getProperty("max.retries", "60").toInt
 
   behavior of "Message Hub feed"
 
-  it should "create a new trigger" in withAssetCleaner(wskprops) {
-    val triggerName = s"newTrigger-${System.currentTimeMillis}"
-    println(s"Creating trigger $triggerName")
-
-    (wp, assetHelper) =>
-      val feedCreationResult = assetHelper.withCleaner(wsk.trigger, triggerName) {
-        (trigger, _) =>
-          trigger.create(triggerName, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = Map(
-            "user" -> kafkaUtils.getAsJson("user"),
-            "password" -> kafkaUtils.getAsJson("password"),
-            "api_key" -> kafkaUtils.getAsJson("api_key"),
-            "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
-            "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
-            "topic" -> topic.toJson
-          ))
-      }
-
-      withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
-        activation =>
-          // should be successful
-          activation.response.success shouldBe true
-
-          // It takes a moment for the consumer to fully initialize.
-          println("Giving the consumer a moment to get ready")
-          Thread.sleep(consumerInitTime)
-
-          val uuid = activation.response.result.get.fields.get("uuid").get.toString().replaceAll("\"", "")
-
-          println("Checking health endpoint(s) for existence of consumer uuid")
-          // get /health endpoint(s) and ensure it contains the new uuid
-          val healthUrls = System.getProperty("health_url").split("\\s*,\\s*").filterNot(_.isEmpty)
-          healthUrls shouldNot be(empty)
-
-          retry({
-            val uuids = healthUrls.flatMap(u => {
-              val response = RestAssured.given().get(u)
-              response.statusCode() should be(200)
-              response.asString()
-                .parseJson
-                .asJsObject
-                .getFields("consumers")
-                .head
-                .convertTo[JsArray]
-                .elements
-                .flatMap(c => {
-                  c.asJsObject.fields.keySet
-                })
-            }).toList
-
-            uuids should contain(uuid)
-
-          }, N = 10, waitBeforeRetry = Some(1.second))
-      }
-  }
-
-  it should "fire a trigger when a message is posted to message hub" in withAssetCleaner(wskprops) {
+  it should "create a consumer and fire a trigger when a message is posted to messagehub" in withAssetCleaner(wskprops) {
     val currentTime = s"${System.currentTimeMillis}"
 
     (wp, assetHelper) =>
       val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
-      println(s"Creating trigger $triggerName")
 
-      val feedCreationResult = assetHelper.withCleaner(wsk.trigger, triggerName) {
-        (trigger, _) =>
-          trigger.create(triggerName, feed = Some(actionName), parameters = Map(
-            "user" -> kafkaUtils.getAsJson("user"),
-            "password" -> kafkaUtils.getAsJson("password"),
-            "api_key" -> kafkaUtils.getAsJson("api_key"),
-            "kafka_admin_url" -> kafkaUtils.getAsJson("kafka_admin_url"),
-            "kafka_brokers_sasl" -> kafkaUtils.getAsJson("brokers"),
-            "topic" -> topic.toJson
-          ))
-      }
-
-      withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
-        activation =>
-          // should be successful
-          activation.response.success shouldBe true
-
-          // It takes a moment for the consumer to fully initialize.
-          println("Giving the consumer a moment to get ready")
-          Thread.sleep(consumerInitTime)
-
-          val uuid = activation.response.result.get.fields.get("uuid").get.toString().replaceAll("\"", "")
-
-          println("Checking health endpoint(s) for existence of consumer uuid")
-          // get /health endpoint(s) and ensure it contains the new uuid
-          val healthUrls = System.getProperty("health_url").split("\\s*,\\s*").filterNot(_.isEmpty)
-          healthUrls shouldNot be(empty)
-
-          retry({
-            val uuids = healthUrls.flatMap(u => {
-              val response = RestAssured.given().get(u)
-              response.statusCode() should be(200)
-              response.asString()
-                .parseJson
-                .asJsObject
-                .getFields("consumers")
-                .head
-                .convertTo[JsArray]
-                .elements
-                .flatMap(c => {
-                  c.asJsObject.fields.keySet
-                })
-            }).toList
-
-            uuids should contain(uuid)
-
-          }, N = 10, waitBeforeRetry = Some(1.second))
-      }
+      createTrigger(assetHelper, triggerName, parameters = Map(
+        "user" -> getAsJson("user"),
+        "password" -> getAsJson("password"),
+        "api_key" -> getAsJson("api_key"),
+        "kafka_admin_url" -> getAsJson("kafka_admin_url"),
+        "kafka_brokers_sasl" -> getAsJson("brokers"),
+        "topic" -> topic.toJson
+      ))
 
       // This action creates a trigger if it gets executed.
       // The name of the trigger will be the message, that has been send to kafka.
@@ -201,7 +100,7 @@ class BasicHealthTest
       }
 
       println(s"Producing message with key: $key and value: $verificationName")
-      val producer = kafkaUtils.createProducer()
+      val producer = createProducer()
       val record = new ProducerRecord(topic, key, verificationName)
       val future = producer.send(record)
 
@@ -231,17 +130,17 @@ class BasicHealthTest
       val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
       println(s"Creating trigger $triggerName")
 
-      val username = kafkaUtils.getAsJson("user")
-      val password = kafkaUtils.getAsJson("password")
-      val admin_url = kafkaUtils.getAsJson("kafka_admin_url")
-      val brokers = kafkaUtils.getAsJson("brokers")
+      val username = getAsJson("user")
+      val password = getAsJson("password")
+      val admin_url = getAsJson("kafka_admin_url")
+      val brokers = getAsJson("brokers")
 
       val feedCreationResult = assetHelper.withCleaner(wsk.trigger, triggerName) {
         (trigger, _) =>
           trigger.create(triggerName, feed = Some(actionName), parameters = Map(
             "user" -> username,
             "password" -> password,
-            "api_key" -> kafkaUtils.getAsJson("api_key"),
+            "api_key" -> getAsJson("api_key"),
             "kafka_admin_url" -> admin_url,
             "kafka_brokers_sasl" -> brokers,
             "topic" -> topic.toJson,
