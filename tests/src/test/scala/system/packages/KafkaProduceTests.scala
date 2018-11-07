@@ -45,7 +45,7 @@ class KafkaProduceTests
     with BeforeAndAfterAll
     with TestHelpers
     with WskTestHelpers
-    with JsHelpers 
+    with JsHelpers
     with KafkaUtils {
 
     val topic = "test"
@@ -56,7 +56,7 @@ class KafkaProduceTests
 
     val actionName = "kafkaProduceAction"
     val actionFile = "../action/kafkaProduce.py"
-    
+
     behavior of "Kafka Produce action"
 
     override def beforeAll() {

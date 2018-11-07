@@ -42,7 +42,7 @@ class BasicStressTest
     with Matchers
     with WskActorSystem
     with TestHelpers
-    with WskTestHelpers 
+    with WskTestHelpers
     with KafkaUtils {
 
     val topic = "test"

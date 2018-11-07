@@ -48,7 +48,7 @@ class MessageHubMultiWorkersTest extends FlatSpec
   with TestHelpers
   with WskTestHelpers
   with JsHelpers
-  with StreamLogging 
+  with StreamLogging
   with KafkaUtils {
 
   val topic = "test"
@@ -66,7 +66,7 @@ class MessageHubMultiWorkersTest extends FlatSpec
   val dbPrefix = WhiskProperties.getProperty(WhiskConfig.dbPrefix)
   val dbName = s"${dbPrefix}ow_kafka_triggers"
   val client = new ExtendedCouchDbRestClient(dbProtocol, dbHost, dbPort, dbUsername, dbPassword, dbName)
-  
+
   behavior of "Mussage Hub Feed"
 
   ignore should "assign two triggers to same worker when only worker0 is available" in withAssetCleaner(wskprops) {

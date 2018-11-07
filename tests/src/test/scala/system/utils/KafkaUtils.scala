@@ -17,7 +17,6 @@
 
 package system.utils
 
-//import common.TestUtils
 import java.util.HashMap
 import java.util.Properties
 
@@ -61,11 +60,7 @@ trait KafkaUtils extends TestHelpers with WskTestHelpers {
 
     val sslconfig = {
         val inner = new SSLConfig().allowAllHostnames()
-        //val config = if (!skipKeyStore && trustStorePassword != null) {
-        //    inner.keystore("keystore", trustStorePassword)
-        //} else {
-        val config =     inner.relaxedHTTPSValidation()
-        //}
+        val config = inner.relaxedHTTPSValidation()
         new RestAssuredConfig().sslConfig(config)
     }
 
