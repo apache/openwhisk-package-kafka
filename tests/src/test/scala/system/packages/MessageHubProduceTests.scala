@@ -42,7 +42,7 @@ import spray.json._
 import java.util.Base64
 import java.nio.charset.StandardCharsets
 
-import whisk.utils.retry
+import org.apache.openwhisk.utils.retry
 
 @RunWith(classOf[JUnitRunner])
 class MessageHubProduceTests
