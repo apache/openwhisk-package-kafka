@@ -15,7 +15,7 @@ WSK_CLI="$OPENWHISK_HOME/bin/wsk"
 
 if [ $# -eq 0 ]
 then
-echo "Usage: ./installCatalog.sh <authkey> <edgehost> <dburl> <dbprefix> <apihost> <workers> <installproduceaction>"
+echo "Usage: ./installCatalog.sh <authkey> <edgehost> <dburl> <dbprefix> <apihost> <workers>"
 fi
 
 AUTH="$1"
@@ -24,7 +24,6 @@ DB_URL="$3"
 DB_NAME="${4}ow_kafka_triggers"
 APIHOST="$5"
 WORKERS="$6"
-INSTALL_PRODUCE_ACTION="$7"
 INSTALL_PRODUCE_ACTION=${INSTALL_PRODUCE_ACTION:="true"}
 
 # If the auth key file exists, read the key in the file. Otherwise, take the
