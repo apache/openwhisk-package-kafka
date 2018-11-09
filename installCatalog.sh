@@ -15,7 +15,7 @@ WSK_CLI="$OPENWHISK_HOME/bin/wsk"
 
 if [ $# -eq 0 ]
 then
-echo "Usage: ./installCatalog.sh <authkey> <edgehost> <dburl> <dbprefix> <apihost>"
+echo "Usage: ./installCatalog.sh <authkey> <edgehost> <dburl> <dbprefix> <apihost> <workers> <installproduceaction>"
 fi
 
 AUTH="$1"
@@ -24,6 +24,8 @@ DB_URL="$3"
 DB_NAME="${4}ow_kafka_triggers"
 APIHOST="$5"
 WORKERS="$6"
+INSTALL_PRODUCE_ACTION="$7"
+INSTALL_PRODUCE_ACTION=${INSTALL_PRODUCE_ACTION:="true"}
 
 # If the auth key file exists, read the key in the file. Otherwise, take the
 # first argument as the key itself.
@@ -105,10 +107,12 @@ $WSK_CLI -i --apihost "$EDGEHOST" action update --kind nodejs:6 messagingWeb/mes
     -a description 'Write a new trigger to MH provider DB' \
     -a parameters '[ {"name":"kafka_brokers_sasl", "required":true, "description": "Array of Message Hub brokers"},{"name":"user", "required":true, "description": "Message Hub username"},{"name":"password", "required":true, "description": "Message Hub password", "type":"password"},{"name":"topic", "required":true, "description": "Topic to subscribe to"},{"name":"isJSONData", "required":false, "description": "Attempt to parse message value as JSON"},{"name":"isBinaryKey", "required":false, "description": "Encode key as Base64"},{"name":"isBinaryValue", "required":false, "description": "Encode message value as Base64"},{"name":"endpoint", "required":true, "description": "Hostname and port of OpenWhisk deployment"},{"name":"kafka_admin_url", "required":true, "description": "Your Message Hub admin REST URL"}]'
 
-$WSK_CLI -i --apihost "$EDGEHOST" action update messaging/messageHubProduce "$PACKAGE_HOME/action/messageHubProduce.py" \
-    --auth "$AUTH" \
-    --kind python:3 \
-    -a deprecated true \
-    -a description 'Deprecated - Produce a message to Message Hub' \
-    -a parameters '[ {"name":"kafka_brokers_sasl", "required":true, "description": "Array of Message Hub brokers"},{"name":"user", "required":true, "description": "Message Hub username"},{"name":"password", "required":true, "description": "Message Hub password", "type":"password"},{"name":"topic", "required":true, "description": "Topic that you wish to produce a message to"},{"name":"value", "required":true, "description": "The value for the message you want to produce"},{"name":"key", "required":false, "description": "The key for the message you want to produce"},{"name":"base64DecodeValue", "required":false, "description": "If true, the message will be produced with a Base64 decoded version of the value parameter"},{"name":"base64DecodeKey", "required":false, "description": "If true, the message will be produced with a Base64 decoded version of the key parameter"}]' \
-    -a sampleInput '{"kafka_brokers_sasl":"[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\"]", "username":"someUsername", "password":"somePassword", "topic":"mytopic", "value": "This is my message"}'
+if [ $INSTALL_PRODUCE_ACTION == "true" ]; then
+  $WSK_CLI -i --apihost "$EDGEHOST" action update messaging/messageHubProduce "$PACKAGE_HOME/action/messageHubProduce.py" \
+      --auth "$AUTH" \
+      --kind python:3 \
+      -a deprecated true \
+      -a description 'Deprecated - Produce a message to Message Hub' \
+      -a parameters '[ {"name":"kafka_brokers_sasl", "required":true, "description": "Array of Message Hub brokers"},{"name":"user", "required":true, "description": "Message Hub username"},{"name":"password", "required":true, "description": "Message Hub password", "type":"password"},{"name":"topic", "required":true, "description": "Topic that you wish to produce a message to"},{"name":"value", "required":true, "description": "The value for the message you want to produce"},{"name":"key", "required":false, "description": "The key for the message you want to produce"},{"name":"base64DecodeValue", "required":false, "description": "If true, the message will be produced with a Base64 decoded version of the value parameter"},{"name":"base64DecodeKey", "required":false, "description": "If true, the message will be produced with a Base64 decoded version of the key parameter"}]' \
+      -a sampleInput '{"kafka_brokers_sasl":"[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\"]", "username":"someUsername", "password":"somePassword", "topic":"mytopic", "value": "This is my message"}'
+fi
