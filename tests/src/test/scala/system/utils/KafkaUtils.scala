@@ -117,6 +117,16 @@ trait KafkaUtils extends TestHelpers with WskTestHelpers {
             assert(uuids.nonEmpty)
         }, N = 60, waitBeforeRetry = Some(1.second))
     }
+
+    def produceMessage(topic: String, key: String, value: String) = {
+        println(s"Producing message with key: $key and value: $value")
+        val producer = createProducer()
+        val record = new ProducerRecord(topic, key, value)
+        val future = producer.send(record)
+
+        producer.flush()
+        producer.close()
+    }
 }
 
 object KafkaUtils {

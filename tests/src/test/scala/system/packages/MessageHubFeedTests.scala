@@ -55,7 +55,6 @@ class MessageHubFeedTests
   val sessionTimeout = 10 seconds
   val messagingPackage = "/whisk.system/messaging"
   val messageHubFeed = "messageHubFeed"
-  val messageHubProduce = "messageHubProduce"
   val consumerInitTime = 10000 // ms
   val maxRetries = System.getProperty("max.retries", "60").toInt
 
@@ -198,12 +197,8 @@ class MessageHubFeedTests
       val verificationName = s"trigger-$currentTime"
 
       wsk.trigger.get(verificationName, NOT_FOUND)
-
       println("Producing an oversized message")
-      val producer = createProducer()
-      val bigMessage = new ProducerRecord(topic, verificationName, generateMessage(s"${currentTime}", testPayloadSize))
-      producer.send(bigMessage)
-      producer.close()
+      produceMessage(topic, verificationName, generateMessage(s"${currentTime}", testPayloadSize))
 
       a[Exception] should be thrownBy retry(wsk.trigger.get(verificationName), 60, Some(1.second))
   }
@@ -381,18 +376,7 @@ class MessageHubFeedTests
         trigger.get(name, NOT_FOUND)
       }
 
-      println("Producing a message")
-      withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
-        "user" -> getAsJson("user"),
-        "password" -> getAsJson("password"),
-        "kafka_brokers_sasl" -> getAsJson("brokers"),
-        "topic" -> topic.toJson,
-        "key" -> key.toJson,
-        "value" -> verificationName1.toJson
-      ))) {
-        _.response.success shouldBe true
-      }
-
+      produceMessage(topic, key, verificationName1)
       retry(wsk.trigger.get(verificationName1), 60, Some(1.second))
 
       println("Updating trigger")
@@ -419,19 +403,7 @@ class MessageHubFeedTests
 
       println("Giving the consumer a moment to get ready")
       Thread.sleep(consumerInitTime)
-
-      println("Producing a message")
-      withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
-        "user" -> getAsJson("user"),
-        "password" -> getAsJson("password"),
-        "kafka_brokers_sasl" -> getAsJson("brokers"),
-        "topic" -> topic.toJson,
-        "key" -> key.toJson,
-        "value" -> verificationName2.toJson
-      ))) {
-        _.response.success shouldBe true
-      }
-
+      produceMessage(topic, key, verificationName2)
       retry(wsk.trigger.get(verificationName2), 60, Some(1.second))
   }
 
@@ -471,19 +443,7 @@ class MessageHubFeedTests
 
       println("Giving the consumer a moment to get ready")
       Thread.sleep(consumerInitTime)
-
-      println("Producing a message")
-      withActivation(wsk.activation, wsk.action.invoke(s"$messagingPackage/$messageHubProduce", Map(
-        "user" -> getAsJson("user"),
-        "password" -> getAsJson("password"),
-        "kafka_brokers_sasl" -> getAsJson("brokers"),
-        "topic" -> topic.toJson,
-        "key" -> key.toJson,
-        "value" -> verificationName1.toJson
-      ))) {
-        _.response.success shouldBe true
-      }
-
+      produceMessage(topic, key, verificationName1)
       retry(wsk.trigger.get(verificationName1), 60, Some(1.second))
   }
 

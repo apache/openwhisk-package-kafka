@@ -45,10 +45,16 @@ task testHealth(type: Test) {
   include 'system/health/**'
 }
 
-task testNoHealth(type: Test) {
+task testWithProducer(type: Test) {
+  configure commonConfiguration
+  exclude 'system/packages/MessageHubProduceTests.class'
+  exclude 'system/packages/MessagingServiceTests.class'
+  exclude 'system/stress/**'
+}
+
+task testWithProducerAndProducerAction(type: Test) {
   configure commonConfiguration
   exclude 'system/stress/**'
-  exclude 'system/health/**'
   exclude 'system/packages/MessagingServiceTests.class'
 }
 

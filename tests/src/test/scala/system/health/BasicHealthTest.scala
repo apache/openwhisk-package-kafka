@@ -99,13 +99,7 @@ class BasicHealthTest
         trigger.get(name, NOT_FOUND)
       }
 
-      println(s"Producing message with key: $key and value: $verificationName")
-      val producer = createProducer()
-      val record = new ProducerRecord(topic, key, verificationName)
-      val future = producer.send(record)
-
-      producer.flush()
-      producer.close()
+      produceMessage(topic, key, verificationName)
 
       try {
         val result = future.get(60, TimeUnit.SECONDS)
