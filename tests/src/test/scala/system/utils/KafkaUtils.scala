@@ -150,7 +150,8 @@ object KafkaUtils {
                                 "password",
                                 "key.serializer",
                                 "value.serializer",
-                                "security.protocol")
+                                "security.protocol",
+                                "max.request.size")
 
         val propertyMap = props.filterKeys(
             requiredKeys.contains(_)
@@ -188,7 +189,7 @@ object KafkaUtils {
         val security_protocol = ("security.protocol", "SASL_SSL");
         val keySerializer = ("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         val valueSerializer = ("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-
+        val maxRequestSize = ("max.request.size", "3000000");
         var brokerList = new ListBuffer[String]()
         val jsonArray = credentials.get("kafka_brokers_sasl").getAsJsonArray()
         val brokerIterator = jsonArray.iterator()
@@ -202,7 +203,7 @@ object KafkaUtils {
         System.setProperty("java.security.auth.login.config", "")
         setMessageHubSecurityConfiguration(user._2, password._2)
 
-        Map(user, password, kafka_admin_url, api_key, brokers, security_protocol, keySerializer, valueSerializer)
+        Map(user, password, kafka_admin_url, api_key, brokers, security_protocol, keySerializer, valueSerializer, maxRequestSize)
     }
 
     private def setMessageHubSecurityConfiguration(user: String, password: String) = {
