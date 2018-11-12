@@ -38,6 +38,7 @@ import common.WskTestHelpers
 import ActionHelper._
 import common.TestUtils.NOT_FOUND
 import org.apache.openwhisk.utils.retry
+import java.util.concurrent.ExecutionException
 
 @RunWith(classOf[JUnitRunner])
 class MessageHubFeedTests
@@ -197,9 +198,8 @@ class MessageHubFeedTests
       val verificationName = s"trigger-$currentTime"
 
       wsk.trigger.get(verificationName, NOT_FOUND)
-      println("Producing an oversized message")
-      produceMessage(topic, verificationName, generateMessage(s"${currentTime}", testPayloadSize))
 
+      a[ExecutionException] should be thrownBy produceMessage(topic, verificationName, generateMessage(s"${currentTime}", testPayloadSize))
       a[Exception] should be thrownBy retry(wsk.trigger.get(verificationName), 60, Some(1.second))
   }
 
