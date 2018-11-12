@@ -17,11 +17,8 @@
 
 package system.health
 
-import java.util.concurrent.{TimeUnit, TimeoutException}
-
 import common.TestUtils.NOT_FOUND
 import common._
-import org.apache.kafka.clients.producer.ProducerRecord
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Inside, Matchers}
@@ -100,16 +97,6 @@ class BasicHealthTest
       }
 
       produceMessage(topic, key, verificationName)
-
-      try {
-        val result = future.get(60, TimeUnit.SECONDS)
-
-        println(s"Produced message to topic: ${result.topic()} on partition: ${result.partition()} at offset: ${result.offset()} with timestamp: ${result.timestamp()}.")
-      } catch {
-        case e: TimeoutException =>
-          fail(s"TimeoutException received waiting for message to be produced to topic: $topic with key: $key and value: $value. ${e.getMessage}")
-        case e: Exception => throw e
-      }
 
       // Check if the trigger, that should have been created as reaction on the kafka-message, has been created.
       // The trigger should have been created by the action, that has been triggered by the kafka message.

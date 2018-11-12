@@ -19,6 +19,7 @@ package system.utils
 
 import java.util.HashMap
 import java.util.Properties
+import java.util.concurrent.{TimeUnit, TimeoutException}
 
 import com.jayway.restassured.RestAssured
 import com.jayway.restassured.config.{RestAssuredConfig, SSLConfig}
@@ -38,6 +39,7 @@ import common.TestHelpers
 import common.TestUtils
 import common.WskTestHelpers
 import org.apache.openwhisk.utils.retry
+import org.apache.kafka.clients.producer.ProducerRecord
 
 trait KafkaUtils extends TestHelpers with WskTestHelpers {
     lazy val messageHubProps = KafkaUtils.initializeMessageHub()
@@ -126,6 +128,16 @@ trait KafkaUtils extends TestHelpers with WskTestHelpers {
 
         producer.flush()
         producer.close()
+
+        try {
+          val result = future.get(60, TimeUnit.SECONDS)
+
+          println(s"Produced message to topic: ${result.topic()} on partition: ${result.partition()} at offset: ${result.offset()} with timestamp: ${result.timestamp()}.")
+        } catch {
+          case e: TimeoutException =>
+            fail(s"TimeoutException received waiting for message to be produced to topic: $topic with key: $key and value: $value. ${e.getMessage}")
+          case e: Exception => throw e
+        }
     }
 }
 
