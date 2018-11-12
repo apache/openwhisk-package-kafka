@@ -199,6 +199,7 @@ class MessageHubFeedTests
 
       wsk.trigger.get(verificationName, NOT_FOUND)
 
+      // The producer will generate an error as the payload size is too large for the MessageHub brokers
       a[ExecutionException] should be thrownBy produceMessage(topic, verificationName, generateMessage(s"${currentTime}", testPayloadSize))
       a[Exception] should be thrownBy retry(wsk.trigger.get(verificationName), 60, Some(1.second))
   }
