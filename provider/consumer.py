@@ -359,9 +359,9 @@ class ConsumerProcess (Process):
 
     # decide whether or not to disable a trigger based on the status code returned
     # from firing the trigger. Specifically, disable on all 4xx status codes
-    # except 408 (gateway timeout) and 429 (throttle)
+    # except 408 (gateway timeout), 409 (document update conflict), and 429 (throttle)
     def __shouldDisable(self, status_code):
-        return status_code in range(400, 500) and status_code not in [408, 429]
+        return status_code in range(400, 500) and status_code not in [408, 409, 429]
 
     def __fireTrigger(self, messages):
         if self.__shouldRun():
