@@ -1,4 +1,4 @@
-FROM python:3.6-alpine
+FROM python:3.6
 
 # install system deps
 RUN apt-get update
