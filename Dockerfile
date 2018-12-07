@@ -1,9 +1,13 @@
-FROM python:3.6-alpine
+FROM buildpack-deps:xenial
 
 # install system deps
 RUN apt-get update
 RUN apt-get install -y \
+    python-pip \
+    python-dev \
     git \
+    gcc \
+    make \
     zlib1g-dev \
     libsasl2-dev \
     libsasl2-modules \
