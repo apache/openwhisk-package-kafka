@@ -1,30 +1,21 @@
-FROM buildpack-deps:xenial
-
-# install system deps
-RUN apt-get update
-RUN apt-get install -y \
-    python-pip \
-    python-dev \
-    git \
-    gcc \
-    make \
-    zlib1g-dev \
-    libsasl2-dev \
-    libsasl2-modules \
-    psmisc
+FROM python:2.7.15
 
 # install librdkafka
-RUN git clone --depth 1 --branch v0.9.5 https://github.com/edenhill/librdkafka.git librdkafka \
+ENV LIBRDKAFKA_VERSION 0.11.6
+RUN git clone --depth 1 --branch v${LIBRDKAFKA_VERSION} https://github.com/edenhill/librdkafka.git librdkafka \
     && cd librdkafka \
     && ./configure \
     && make \
-    && make install
-ENV LD_LIBRARY_PATH=/usr/local/lib
-RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-    && ldconfig
+    && make install \
+    && make clean \
+    && ./configure --clean
 
-RUN pip install gevent==1.1.2 flask==0.11.1 confluent-kafka==0.9.4 \
-        requests==2.10.0 cloudant==2.5.0 psutil==5.0.0
+ENV CPLUS_INCLUDE_PATH /usr/local/include
+ENV LIBRARY_PATH /usr/local/lib
+ENV LD_LIBRARY_PATH /usr/local/lib
+
+RUN pip install gevent==1.1.2 flask==0.11.1 confluent-kafka==${LIBRDKAFKA_VERSION} \
+    requests==2.10.0 cloudant==2.5.0 psutil==5.0.0
 
 # while I expect these will be overridden during deployment, we might as well
 # set reasonable defaults
@@ -42,3 +33,4 @@ ADD provider/*.py /KafkaFeedProvider/
 HEALTHCHECK --interval=5m --timeout=1m CMD curl -m 30 --fail http://localhost:5000/health || killall python
 
 CMD ["/bin/bash", "-c", "cd KafkaFeedProvider && python -u app.py"]
+
