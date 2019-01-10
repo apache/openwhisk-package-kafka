@@ -479,6 +479,9 @@ class ConsumerProcess (Process):
             except UnicodeDecodeError:
                 logging.warn('[{}] Value contains non-unicode bytes. Replacing invalid bytes.'.format(self.trigger))
                 value = unicode(value, errors='replace').encode('utf-8')
+        except AttributeError:
+           logging.warn('[{}] Cannot decode a NoneType message value'.format(self.trigger))
+           return value
 
         if self.encodeValueAsJSON:
             try:
