@@ -24,6 +24,8 @@ DB_URL="$3"
 DB_NAME="${4}ow_kafka_triggers"
 APIHOST="$5"
 WORKERS="$6"
+NODE_VERSION="$7"
+NODE_VERSION=${NODE_VERSION:="6"}
 INSTALL_PRODUCE_ACTION=${INSTALL_PRODUCE_ACTION:="true"}
 
 # If the auth key file exists, read the key in the file. Otherwise, take the
@@ -60,7 +62,7 @@ fi
 cp -f messageHubFeed_package.json package.json
 zip -r messageHubFeed.zip lib package.json messageHubFeed.js
 
-$WSK_CLI -i --apihost "$EDGEHOST" action update --kind nodejs:6 messaging/messageHubFeed "$PACKAGE_HOME/action/messageHubFeed.zip" \
+$WSK_CLI -i --apihost "$EDGEHOST" action update --kind "nodejs:$NODE_VERSION" messaging/messageHubFeed "$PACKAGE_HOME/action/messageHubFeed.zip" \
     --auth "$AUTH" \
     -a feed true \
     -a description 'Feed to list to Message Hub messages' \
@@ -100,7 +102,7 @@ zip -r messageHubFeedWeb.zip lib package.json messageHubFeedWeb.js node_modules
 cd $OLD_PATH
 
 
-$WSK_CLI -i --apihost "$EDGEHOST" action update --kind nodejs:6 messagingWeb/messageHubFeedWeb "$PACKAGE_HOME/action/messageHubFeedWeb.zip" \
+$WSK_CLI -i --apihost "$EDGEHOST" action update --kind "nodejs:$NODE_VERSION" messagingWeb/messageHubFeedWeb "$PACKAGE_HOME/action/messageHubFeedWeb.zip" \
     --auth "$AUTH" \
     --web true \
     -a description 'Write a new trigger to MH provider DB' \
