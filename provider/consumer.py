@@ -485,7 +485,7 @@ class ConsumerProcess (Process):
 
         if self.encodeValueAsJSON:
             try:
-                parsed = json.loads(value)
+                parsed = json.loads(value, parse_constant=self.__errorOnJSONConstant)
                 logging.debug('[{}] Successfully encoded a message as JSON.'.format(self.trigger))
                 return parsed
             except ValueError:
@@ -523,3 +523,6 @@ class ConsumerProcess (Process):
 
     def __on_revoke(self, consumer, partitions):
         logging.info('[{}] Partition assignment has been revoked. Disconnected from broker(s)'.format(self.trigger))
+
+    def __errorOnJSONConstant(message):
+    	raise(ValueError('Invalid JSON detected.'))
