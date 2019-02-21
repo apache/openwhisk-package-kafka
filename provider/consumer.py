@@ -524,5 +524,5 @@ class ConsumerProcess (Process):
     def __on_revoke(self, consumer, partitions):
         logging.info('[{}] Partition assignment has been revoked. Disconnected from broker(s)'.format(self.trigger))
 
-    def __errorOnJSONConstant(message):
+    def __errorOnJSONConstant(self, data):
     	raise(ValueError('Invalid JSON detected.'))
