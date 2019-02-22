@@ -19,7 +19,7 @@ function main(params) {
     massagedParams.triggerName = common.getTriggerFQN(params.triggerName);
 
     var iamKey = process.env.__OW_IAM_NAMESPACE_API_KEY;
-    massagedParams.authKey = iamKey || process.env.__OW_API_KEY;
+    massagedParams.authKey = iamKey || params.authKey;
     massagedParams.isIamKey = iamKey !== undefined;
 
     if (massagedParams.isIamKey) {
