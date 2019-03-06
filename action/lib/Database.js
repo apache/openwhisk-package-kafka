@@ -1,3 +1,6 @@
+// Licensed to the Apache Software Foundation (ASF) under one or more contributor
+// license agreements; and to You under the Apache License, Version 2.0.
+
 // constructor for DB object - a thin, promise-loving wrapper around nano
 module.exports = function(dbURL, dbName) {
     var nano = require('nano')(dbURL);
