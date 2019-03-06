@@ -24,7 +24,7 @@
 
 This project is an OpenWhisk package that allows you to communicate with Kafka or IBM Message Hub instances for publishing and consuming messages using native high performance Kafka API.
 
-OpenWhisk is a cloud-first distributed event-based programming service and represents an event-action platform that allows you to execute code in response to an event. These events can come from many different sources, such as Object Storage, direct HTTP, Cloudant database, etc. One of the popular event sources is Message Hub and Kafka, both of which can also be used as an effective instriment to publish events from OpenWhisk to the rest of the world and allow for highly scalable and performant asynchronous communication for event driven applications.
+OpenWhisk is a cloud-first distributed event-based programming service and represents an event-action platform that allows you to execute code in response to an event. These events can come from many different sources, such as Object Storage, direct HTTP, Cloudant database, etc. One of the popular event sources is Message Hub and Kafka, both of which can also be used as an effective instrument to publish events from OpenWhisk to the rest of the world and allow for highly scalable and performant asynchronous communication for event driven applications.
 
 ## Using the Messaging package
 This package allows you to create triggers that react when messages are posted to either an [IBM Message Hub](https://developer.ibm.com/messaging/message-hub/) instance, or to a generic Kafka instance. Since the parameters required for each of these situations are different, there are two separate feeds to handle them: `/messaging/messageHubFeed` and `messaging/kafkaFeed`.
