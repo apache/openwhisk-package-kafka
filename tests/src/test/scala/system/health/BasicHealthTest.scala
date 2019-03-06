@@ -26,6 +26,7 @@ import spray.json.DefaultJsonProtocol._
 import spray.json._
 import system.utils.KafkaUtils
 import org.apache.openwhisk.utils.retry
+import org.apache.openwhisk.core.entity.WhiskAction
 
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
@@ -78,7 +79,7 @@ class BasicHealthTest
       val defaultActionName = s"helloKafka-$currentTime"
 
       assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
-        action.create(name, defaultAction)
+        action.create(name, defaultAction, annotations = Map(WhiskAction.provideApiKeyAnnotationName -> JsBoolean(true)))
       }
 
       assetHelper.withCleaner(wsk.rule, s"dummyMessageHub-helloKafka-$currentTime") { (rule, name) =>
