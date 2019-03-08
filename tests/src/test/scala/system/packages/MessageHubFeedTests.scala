@@ -38,6 +38,7 @@ import common.WskTestHelpers
 import ActionHelper._
 import common.TestUtils.NOT_FOUND
 import org.apache.openwhisk.utils.retry
+import org.apache.openwhisk.core.entity.WhiskAction
 import java.util.concurrent.ExecutionException
 
 @RunWith(classOf[JUnitRunner])
@@ -136,7 +137,7 @@ class MessageHubFeedTests
       val defaultActionName = s"helloKafka-${currentTime}"
 
       assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
-        action.create(name, defaultAction)
+        action.create(name, defaultAction, annotations = Map(WhiskAction.provideApiKeyAnnotationName -> JsBoolean(true)))
       }
       assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
         rule.create(name, trigger = triggerName, action = defaultActionName)
@@ -189,7 +190,7 @@ class MessageHubFeedTests
       val defaultActionName = s"helloKafka-${currentTime}"
 
       assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
-        action.create(name, defaultAction)
+        action.create(name, defaultAction, annotations = Map(WhiskAction.provideApiKeyAnnotationName -> JsBoolean(true)))
       }
       assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
         rule.create(name, trigger = triggerName, action = defaultActionName)
@@ -365,7 +366,7 @@ class MessageHubFeedTests
       val defaultActionName = s"helloKafka-${currentTime}"
 
       assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
-        action.create(name, defaultAction1)
+        action.create(name, defaultAction1, annotations = Map(WhiskAction.provideApiKeyAnnotationName -> JsBoolean(true)))
       }
       assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
         rule.create(name, trigger = triggerName, action = defaultActionName)
@@ -400,7 +401,7 @@ class MessageHubFeedTests
       }
 
       val defaultAction2 = Some("dat/createTriggerActionsFromEncodedMessage.js")
-      wsk.action.create(defaultActionName, defaultAction2, update = true)
+      wsk.action.create(defaultActionName, defaultAction2, update = true, annotations = Map(WhiskAction.provideApiKeyAnnotationName -> JsBoolean(true)))
 
       println("Giving the consumer a moment to get ready")
       Thread.sleep(consumerInitTime)
@@ -430,7 +431,7 @@ class MessageHubFeedTests
       val defaultActionName = s"helloKafka-${currentTime}"
 
       assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
-        action.create(name, defaultAction1)
+        action.create(name, defaultAction1, annotations = Map(WhiskAction.provideApiKeyAnnotationName -> JsBoolean(true)))
       }
       assetHelper.withCleaner(wsk.rule, "rule") { (rule, name) =>
         rule.create(name, trigger = triggerName, action = defaultActionName)
