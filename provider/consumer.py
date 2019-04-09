@@ -488,9 +488,9 @@ class ConsumerProcess (Process):
                 parsed = json.loads(value, parse_constant=self.__errorOnJSONConstant, parse_float=self.__parseFloat)
                 logging.debug('[{}] Successfully encoded a message as JSON.'.format(self.trigger))
                 return parsed
-            except ValueError:
+            except ValueError as e:
                 # no big deal, just return the original value
-                logging.warn('[{}] I was asked to encode a message as JSON, but I failed.'.format(self.trigger))
+                logging.warn('[{}] I was asked to encode a message as JSON, but I failed with "{}".'.format(self.trigger, e))
                 value = "\"{}\"".format(value)
                 pass
         elif self.encodeValueAsBase64:
@@ -525,7 +525,7 @@ class ConsumerProcess (Process):
         logging.info('[{}] Partition assignment has been revoked. Disconnected from broker(s)'.format(self.trigger))
 
     def __errorOnJSONConstant(self, data):
-    	raise(ValueError('Invalid JSON detected.'))
+    	raise(ValueError('Constant "{}" detected in JSON.'.format(data)))
 
     def __parseFloat(self, data):
         res = float(data)
