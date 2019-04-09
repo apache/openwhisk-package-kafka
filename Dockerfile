@@ -1,4 +1,4 @@
-FROM python:2.7.15
+FROM python:2.7.16
 
 # install librdkafka
 ENV LIBRDKAFKA_VERSION 0.11.6
