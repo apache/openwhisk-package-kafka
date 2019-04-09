@@ -485,7 +485,7 @@ class ConsumerProcess (Process):
 
         if self.encodeValueAsJSON:
             try:
-                parsed = json.loads(value, parse_constant=self.__errorOnJSONConstant)
+                parsed = json.loads(value, parse_constant=self.__errorOnJSONConstant, parse_float=self.__parseFloat)
                 logging.debug('[{}] Successfully encoded a message as JSON.'.format(self.trigger))
                 return parsed
             except ValueError:
@@ -526,3 +526,14 @@ class ConsumerProcess (Process):
 
     def __errorOnJSONConstant(self, data):
     	raise(ValueError('Invalid JSON detected.'))
+
+    def __parseFloat(self, data):
+        res = float(data)
+
+        if res == float('inf'):
+            raise(ValueError('Parsing float value "{}" would result in "Infinity".'.format(data)))
+
+        if res == float('-inf'):
+            raise(ValueError('Parsing float value "{}" would result in "-Infinity".'.format(data)))
+
+        return res
