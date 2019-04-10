@@ -1,5 +1,7 @@
 FROM python:2.7.16
 
+RUN apt-get update && apt-get upgrade -y
+
 # install librdkafka
 ENV LIBRDKAFKA_VERSION 0.11.6
 RUN git clone --depth 1 --branch v${LIBRDKAFKA_VERSION} https://github.com/edenhill/librdkafka.git librdkafka \
