@@ -17,7 +17,7 @@
 #
 -->
 
-# OpenWhisk package for communication with Kafka or IBM Message Hub
+# Apache OpenWhisk package for communication with Kafka or IBM Message Hub
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 [![Build Status](https://travis-ci.org/apache/incubator-openwhisk-package-kafka.svg?branch=master)](https://travis-ci.org/apache/incubator-openwhisk-package-kafka)
@@ -386,6 +386,10 @@ If you wish to deploy the feed service yourself, please refer to the [Developmen
 - [OpenWhisk](https://www.ibm.com/cloud-computing/bluemix/openwhisk)
 - [IBM Message Hub](https://developer.ibm.com/messaging/message-hub/)
 - [Apache Kafka](https://kafka.apache.org/)
+
+# Building from Source
+
+To build this package from source, execute the command `./gradlew distDocker`
 
 # Disclaimer
 
