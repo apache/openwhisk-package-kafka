@@ -39,6 +39,7 @@ from datetime import datetime, timedelta
 local_dev = os.getenv('LOCAL_DEV', 'False')
 payload_limit = int(os.getenv('PAYLOAD_LIMIT', 900000))
 check_ssl = (local_dev == 'False')
+seconds_in_day = 86400
 
 processingManager = Manager()
 
@@ -101,7 +102,7 @@ class Consumer:
         timeBetweenRestarts = datetime.now() - self.__lastRestart
         self.__lastRestart = datetime.now()
 
-        if timeBetweenRestarts.total_seconds() >= timedelta(seconds=24*60*60).total_seconds():
+        if timeBetweenRestarts.total_seconds() >= seconds_in_day:
             self.__restartCount = 1
         else:
             self.__restartCount += 1
