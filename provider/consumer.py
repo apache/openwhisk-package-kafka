@@ -34,10 +34,12 @@ from multiprocessing import Process, Manager
 from urlparse import urlparse
 from authHandler import IAMAuth
 from requests.auth import HTTPBasicAuth
+from datetime import datetime, timedelta
 
 local_dev = os.getenv('LOCAL_DEV', 'False')
 payload_limit = int(os.getenv('PAYLOAD_LIMIT', 900000))
 check_ssl = (local_dev == 'False')
+seconds_in_day = 86400
 
 processingManager = Manager()
 
@@ -66,6 +68,7 @@ class Consumer:
 
         self.process = ConsumerProcess(trigger, params, self.sharedDictionary)
         self.__restartCount = 0
+        self.__lastRestart = datetime.now()
 
     def currentState(self):
         return self.sharedDictionary['currentState']
@@ -96,7 +99,13 @@ class Consumer:
             logging.info('[{}] Request to restart a consumer that is already slated for deletion.'.format(self.trigger))
             return
 
-        self.__restartCount += 1
+        timeBetweenRestarts = datetime.now() - self.__lastRestart
+        self.__lastRestart = datetime.now()
+
+        if timeBetweenRestarts.total_seconds() >= seconds_in_day:
+            self.__restartCount = 1
+        else:
+            self.__restartCount += 1
 
         logging.info('[{}] Quietly shutting down consumer for restart'.format(self.trigger))
         self.setDesiredState(Consumer.State.Restart)
