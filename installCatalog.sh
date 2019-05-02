@@ -62,7 +62,7 @@ then
 fi
 
 cp -f messageHubFeed_package.json package.json
-zip -r messageHubFeed.zip lib package.json messageHubFeed.js
+zip -r messageHubFeed.zip lib package.json messageHubFeed.js -q
 
 $WSK_CLI -i --apihost "$EDGEHOST" action update --kind "$ACTION_RUNTIME_VERSION" messaging/messageHubFeed "$PACKAGE_HOME/action/messageHubFeed.zip" \
     --auth "$AUTH" \
@@ -99,7 +99,7 @@ fi
 
 cp -f messageHubFeedWeb_package.json package.json
 npm install
-zip -r messageHubFeedWeb.zip lib package.json messageHubFeedWeb.js node_modules
+zip -r messageHubFeedWeb.zip lib package.json messageHubFeedWeb.js node_modules -q
 
 cd $OLD_PATH
 
