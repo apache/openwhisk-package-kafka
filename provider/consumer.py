@@ -329,7 +329,6 @@ class ConsumerProcess (Process):
 
                 if self.secondsSinceLastPoll() < 0:
                     logging.info('[{}] Completed first poll'.format(self.trigger))
-                    self.__recordState(Consumer.State.Running)
 
                 if (message is not None):
                     if not message.error():
@@ -529,6 +528,10 @@ class ConsumerProcess (Process):
 
     def __on_assign(self, consumer, partitions):
         logging.info('[{}] Completed partition assignment. Connected to broker(s)'.format(self.trigger))
+
+        if self.currentState() == Consumer.State.Initializing and self.__shouldRun():
+            logging.info('[{}] Setting consumer state to runnning.'.format(self.trigger))
+            self.__recordState(Consumer.State.Running)
 
     def __on_revoke(self, consumer, partitions):
         logging.info('[{}] Partition assignment has been revoked. Disconnected from broker(s)'.format(self.trigger))
