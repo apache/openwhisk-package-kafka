@@ -179,7 +179,12 @@ class ConsumerProcess (Process):
         else:
             self.encodeKeyAsBase64 = False
 
-        self.database = Database()
+        # when failing to establish a database connection, mark the consumer as dead to restart the consumer
+        try:
+            self.database = Database()
+        except Exception as e:
+            logging.error('[{}] Uncaught exception: {}'.format(self.trigger, e))
+            self.__recordState(Consumer.State.Dead)
 
         # always init consumer to None in case the consumer needs to shut down
         # before the KafkaConsumer is fully initialized/assigned
