@@ -179,13 +179,6 @@ class ConsumerProcess (Process):
         else:
             self.encodeKeyAsBase64 = False
 
-        # when failing to establish a database connection, mark the consumer as dead to restart the consumer
-        try:
-            self.database = Database()
-        except Exception as e:
-            logging.error('[{}] Uncaught exception: {}'.format(self.trigger, e))
-            self.__recordState(Consumer.State.Dead)
-
         # always init consumer to None in case the consumer needs to shut down
         # before the KafkaConsumer is fully initialized/assigned
         self.consumer = None
@@ -440,7 +433,17 @@ class ConsumerProcess (Process):
                         # abandon all hope?
                         self.setDesiredState(Consumer.State.Disabled)
                         # mark it disabled in the DB
-                        self.database.disableTrigger(self.trigger, status_code)
+
+                        # when failing to establish a database connection, mark the consumer as dead to restart the consumer
+                        try:
+                            self.database = Database()
+                            self.database.disableTrigger(self.trigger, status_code)
+                        except Exception as e:
+                            logging.error('[{}] Uncaught exception: {}'.format(self.trigger, e))
+                            self.__recordState(Consumer.State.Dead)
+                        finally:
+                            self.database.destroy()
+
                         retry = False
                 except requests.exceptions.RequestException as e:
                     logging.error('[{}] Error talking to OpenWhisk: {}'.format(self.trigger, e))
