@@ -21,7 +21,7 @@ import org.scalatest.BeforeAndAfter
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import org.scalatest.junit.JUnitRunner
-import com.jayway.restassured.RestAssured
+import io.restassured.RestAssured
 
 @RunWith(classOf[JUnitRunner])
 class MessagingServiceTests

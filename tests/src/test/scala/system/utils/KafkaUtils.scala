@@ -21,8 +21,8 @@ import java.util.HashMap
 import java.util.Properties
 import java.util.concurrent.{TimeUnit, TimeoutException}
 
-import com.jayway.restassured.RestAssured
-import com.jayway.restassured.config.{RestAssuredConfig, SSLConfig}
+import io.restassured.RestAssured
+import io.restassured.config.{RestAssuredConfig, SSLConfig}
 import javax.security.auth.login.Configuration
 import javax.security.auth.login.AppConfigurationEntry
 import org.apache.kafka.clients.producer.KafkaProducer

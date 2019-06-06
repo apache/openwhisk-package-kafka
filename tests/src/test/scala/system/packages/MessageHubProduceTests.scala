@@ -43,7 +43,7 @@ import java.util.Base64
 import java.nio.charset.StandardCharsets
 
 import org.apache.openwhisk.utils.retry
-import org.apache.openwhisk.core.entity.WhiskAction
+import org.apache.openwhisk.core.entity.Annotations
 
 @RunWith(classOf[JUnitRunner])
 class MessageHubProduceTests
@@ -146,7 +146,7 @@ class MessageHubProduceTests
             val defaultActionName = s"helloKafka-${currentTime}"
 
             assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
-                action.create(name, defaultAction, annotations = Map(WhiskAction.provideApiKeyAnnotationName -> JsBoolean(true)))
+                action.create(name, defaultAction, annotations = Map(Annotations.ProvideApiKeyAnnotationName -> JsBoolean(true)))
             }
 
             assetHelper.withCleaner(wsk.rule, s"dummyMessageHub-helloKafka-$currentTime") { (rule, name) =>
@@ -190,7 +190,7 @@ class MessageHubProduceTests
             val defaultActionName = s"helloKafka-${currentTime}"
 
             assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
-                action.create(name, defaultAction, annotations = Map(WhiskAction.provideApiKeyAnnotationName -> JsBoolean(true)))
+                action.create(name, defaultAction, annotations = Map(Annotations.ProvideApiKeyAnnotationName -> JsBoolean(true)))
             }
 
             assetHelper.withCleaner(wsk.rule, s"dummyMessageHub-helloKafka-$currentTime") { (rule, name) =>
