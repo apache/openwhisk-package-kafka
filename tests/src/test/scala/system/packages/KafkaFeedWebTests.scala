@@ -23,8 +23,8 @@ import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import org.scalatest.junit.JUnitRunner
 
-import com.jayway.restassured.RestAssured
-import com.jayway.restassured.config.SSLConfig
+import io.restassured.RestAssured
+import io.restassured.config.SSLConfig
 
 import common.Wsk
 import common.WskProps
