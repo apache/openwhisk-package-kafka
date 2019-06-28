@@ -42,9 +42,9 @@ script:
   - ./tools/travis/build.sh
 
 deploy:
-  # deploy latest
+  # deploy nightly
   - provider: script
-    script: ./tools/travis/deploy.sh openwhisk kafkaprovider latest
+    script: ./tools/travis/deploy.sh openwhisk kafkaprovider nightly
     on:
       branch: master
   # deploy tag
