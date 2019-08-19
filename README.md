@@ -20,7 +20,7 @@
 # Apache OpenWhisk package for communication with Kafka or IBM Message Hub
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
-[![Build Status](https://travis-ci.org/apache/incubator-openwhisk-package-kafka.svg?branch=master)](https://travis-ci.org/apache/incubator-openwhisk-package-kafka)
+[![Build Status](https://travis-ci.org/apache/openwhisk-package-kafka.svg?branch=master)](https://travis-ci.org/apache/openwhisk-package-kafka)
 
 This project is an OpenWhisk package that allows you to communicate with Kafka or IBM Message Hub instances for publishing and consuming messages using native high performance Kafka API.
 
@@ -390,7 +390,3 @@ If you wish to deploy the feed service yourself, please refer to the [Developmen
 # Building from Source
 
 To build this package from source, execute the command `./gradlew distDocker`
-
-# Disclaimer
-
-Apache OpenWhisk Package Kafka is an effort undergoing incubation at The Apache Software Foundation (ASF), sponsored by the Apache Incubator. Incubation is required of all newly accepted projects until a further review indicates that the infrastructure, communications, and decision making process have stabilized in a manner consistent with other successful ASF projects. While incubation status is not necessarily a reflection of the completeness or stability of the code, it does indicate that the project has yet to be fully endorsed by the ASF.

@@ -42,11 +42,11 @@ pip install --user ansible==2.1.2.0
 
 # clone OpenWhisk repo. in order to run scanCode.py
 cd $HOMEDIR
-git clone https://github.com/apache/incubator-openwhisk-utilities.git
+git clone https://github.com/apache/openwhisk-utilities.git
 
 # OpenWhisk stuff
 cd $HOMEDIR
-git clone https://github.com/apache/incubator-openwhisk.git openwhisk
+git clone https://github.com/apache/openwhisk.git openwhisk
 cd $WHISKDIR
 
 TERM=dumb ./gradlew \
