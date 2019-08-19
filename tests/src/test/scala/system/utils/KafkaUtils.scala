@@ -34,10 +34,10 @@ import system.packages.ActionHelper._
 import org.apache.openwhisk.utils.JsHelpers
 
 import scala.concurrent.duration.DurationInt
-import scala.language.postfixOps
 import common.TestHelpers
 import common.TestUtils
 import common.WskTestHelpers
+import common.ActivationResult
 import org.apache.openwhisk.utils.retry
 import org.apache.kafka.clients.producer.ProducerRecord
 
@@ -66,7 +66,7 @@ trait KafkaUtils extends TestHelpers with WskTestHelpers {
         new RestAssuredConfig().sslConfig(config)
     }
 
-    def createTrigger(assetHelper: AssetCleaner, name: String, parameters: Map[String, spray.json.JsValue]) = {
+    def createTrigger(assetHelper: AssetCleaner, name: String, parameters: Map[String, spray.json.JsValue]): String = {
         println(s"Creating trigger $name")
 
         val feedCreationResult = assetHelper.withCleaner(wsk.trigger, name) {
@@ -74,18 +74,19 @@ trait KafkaUtils extends TestHelpers with WskTestHelpers {
                 trigger.create(name, feed = Some(s"/whisk.system/messaging/messageHubFeed"), parameters = parameters)
         }
 
-        withActivation(wsk.activation, feedCreationResult, initialWait = 5 seconds, totalWait = 60 seconds) {
-            activation =>
-                // should be successful
-                activation.response.success shouldBe true
+        val activation = wsk.parseJsonString(feedCreationResult.stdout.substring(0, feedCreationResult.stdout.indexOf("ok: created trigger"))).convertTo[ActivationResult]
 
-                // It takes a moment for the consumer to fully initialize.
-                println("Giving the consumer a moment to get ready")
-                Thread.sleep(KafkaUtils.consumerInitTime)
+        // should be successful
+        activation.response.success shouldBe true
 
-                val uuid = activation.response.result.get.fields.get("uuid").get.toString().replaceAll("\"", "")
-                consumerExists(uuid)
-        }
+        // It takes a moment for the consumer to fully initialize.
+        println("Giving the consumer a moment to get ready")
+        Thread.sleep(KafkaUtils.consumerInitTime)
+
+        val uuid = activation.response.result.get.fields.get("uuid").get.toString().replaceAll("\"", "")
+        consumerExists(uuid)
+
+        uuid
     }
 
 

@@ -281,7 +281,7 @@ class MessageHubFeedTests
       val admin_url = getAsJson("kafka_admin_url")
       val brokers = getAsJson("brokers")
 
-      createTrigger(assetHelper, triggerName, parameters = Map(
+      val uuid = createTrigger(assetHelper, triggerName, parameters = Map(
         "user" -> username,
         "password" -> password,
         "api_key" -> getAsJson("api_key"),
@@ -312,6 +312,8 @@ class MessageHubFeedTests
           }
       }
 
+      consumerExists(uuid)
+
       val updateRunResult = wsk.action.invoke(actionName, parameters = Map(
         "triggerName" -> triggerName.toJson,
         "lifecycleEvent" -> "UPDATE".toJson,
@@ -325,6 +327,8 @@ class MessageHubFeedTests
         activation =>
           activation.response.success shouldBe true
       }
+
+      consumerExists(uuid)
 
       val run = wsk.action.invoke(actionName, parameters = Map(
         "triggerName" -> triggerName.toJson,
@@ -344,6 +348,8 @@ class MessageHubFeedTests
               config should contain("isJSONData" -> false.toJson)
           }
       }
+
+      consumerExists(uuid)
   }
 
   it should "fire a trigger when a message is posted to message hub before and after update" in withAssetCleaner(wskprops) {
@@ -353,7 +359,7 @@ class MessageHubFeedTests
       val key = "TheKey"
       val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
 
-      createTrigger(assetHelper, triggerName, parameters = Map(
+      val uuid = createTrigger(assetHelper, triggerName, parameters = Map(
         "user" -> getAsJson("user"),
         "password" -> getAsJson("password"),
         "api_key" -> getAsJson("api_key"),
@@ -405,6 +411,9 @@ class MessageHubFeedTests
 
       println("Giving the consumer a moment to get ready")
       Thread.sleep(consumerInitTime)
+
+      consumerExists(uuid)
+
       produceMessage(topic, key, verificationName2)
       retry(wsk.trigger.get(verificationName2), 60, Some(1.second))
   }
