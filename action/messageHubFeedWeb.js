@@ -267,7 +267,7 @@ function checkMessageHubCredentials(params) {
         url: topicURL,
         json: true,
         headers: {
-            'X-Auth-Token': params.username + params.password
+            'X-Auth-Token': params.username.toLowerCase() == "token" ? params.password : params.username + params.password
         }
     };
 
