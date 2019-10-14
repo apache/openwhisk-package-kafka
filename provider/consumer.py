@@ -485,8 +485,7 @@ class ConsumerProcess (Process):
 
         return offsets
 
-    def __encodeMessageIfNeeded(self, value):
-        # let's make sure whatever data we're getting is utf-8 encoded
+    def __getUTF8Encoding(self, value):
         try:
             value.decode('utf-8')
         except UnicodeDecodeError:
@@ -497,8 +496,13 @@ class ConsumerProcess (Process):
                 logging.warn('[{}] Value contains non-unicode bytes. Replacing invalid bytes.'.format(self.trigger))
                 value = unicode(value, errors='replace').encode('utf-8')
         except AttributeError:
-           logging.warn('[{}] Cannot decode a NoneType message value'.format(self.trigger))
-           return value
+            logging.warn('[{}] Cannot decode a NoneType message value'.format(self.trigger))
+
+        return value
+
+
+def __encodeMessageIfNeeded(self, value):
+        value = self.__getUTF8Encoding(value)
 
         if self.encodeValueAsJSON:
             try:
@@ -506,9 +510,9 @@ class ConsumerProcess (Process):
                 logging.debug('[{}] Successfully encoded a message as JSON.'.format(self.trigger))
                 return parsed
             except ValueError as e:
-                # no big deal, just return the original value
+                # message is not a JSON object, return the message as a JSON value
                 logging.warn('[{}] I was asked to encode a message as JSON, but I failed with "{}".'.format(self.trigger, e))
-                value = "\"{}\"".format(value)
+                value = self.__getUTF8Encoding("\"{}\"".format(value))
                 pass
         elif self.encodeValueAsBase64:
             try:
