@@ -501,7 +501,7 @@ class ConsumerProcess (Process):
         return value
 
 
-def __encodeMessageIfNeeded(self, value):
+    def __encodeMessageIfNeeded(self, value):
         value = self.__getUTF8Encoding(value)
 
         if self.encodeValueAsJSON:
@@ -512,8 +512,8 @@ def __encodeMessageIfNeeded(self, value):
             except ValueError as e:
                 # message is not a JSON object, return the message as a JSON value
                 logging.warn('[{}] I was asked to encode a message as JSON, but I failed with "{}".'.format(self.trigger, e))
-                value = self.__getUTF8Encoding("\"{}\"".format(value))
-                pass
+                value = "\"{}\"".format(value)
+                return value
         elif self.encodeValueAsBase64:
             try:
                 parsed = value.encode("base64").strip()
@@ -535,6 +535,8 @@ def __encodeMessageIfNeeded(self, value):
             except:
                 logging.warn('[{}] Unable to encode a binary key.'.format(self.trigger))
                 pass
+
+        key = self.__getUTF8Encoding(key)
 
         logging.debug('[{}] Returning un-encoded message'.format(self.trigger))
         return key
