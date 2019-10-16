@@ -32,6 +32,7 @@ from datetime import datetime
 from datetimeutils import secondsSince
 from multiprocessing import Process, Manager
 from urlparse import urlparse
+from authHandler import AuthHandlerException
 from authHandler import IAMAuth
 from requests.auth import HTTPBasicAuth
 from datetime import datetime, timedelta
@@ -409,46 +410,19 @@ class ConsumerProcess (Process):
                         self.consumer.commit(offsets=self.__getOffsetList(messages), async=False)
                         retry = False
                     elif self.__shouldDisable(status_code):
-                        logging.error('[{}] Error talking to OpenWhisk, status code {}'.format(self.trigger, status_code))
-                        response_dump = {
-                            'request': {
-                                'method': response.request.method,
-                                'url': response.request.url,
-                                'path_url': response.request.path_url,
-                                'headers': response.request.headers,
-                                'body': response.request.body
-                            },
-                            'response': {
-                                'status_code': response.status_code,
-                                'ok': response.ok,
-                                'reason': response.reason,
-                                'url': response.url,
-                                'headers': response.headers,
-                                'content': response.content
-                            }
-                        }
-
-                        logging.error('[{}] Dumping the content of the request and response:\n{}'.format(self.trigger, response_dump))
-
-                        # abandon all hope?
-                        self.setDesiredState(Consumer.State.Disabled)
-                        # mark it disabled in the DB
-
-                        # when failing to establish a database connection, mark the consumer as dead to restart the consumer
-                        try:
-                            self.database = Database()
-                            self.database.disableTrigger(self.trigger, status_code)
-                        except Exception as e:
-                            logging.error('[{}] Uncaught exception: {}'.format(self.trigger, e))
-                            self.__recordState(Consumer.State.Dead)
-                        finally:
-                            self.database.destroy()
-
                         retry = False
+                        logging.error('[{}] Error talking to OpenWhisk, status code {}'.format(self.trigger, status_code))
+                        self.__dumpRequestResponse(response)
+                        self.__disableTrigger(status_code)
                 except requests.exceptions.RequestException as e:
                     logging.error('[{}] Error talking to OpenWhisk: {}'.format(self.trigger, e))
+                except AuthHandlerException as e:
+                    retry = False
+                    logging.error("[{}] Encountered an exception from auth handler, status code {}").format(self.trigger, e.response.status_code)
+                    self.__dumpRequestResponse(e.response)
+                    self.__disableTrigger(e.status_code)
 
-                if retry:
+            if retry:
                     retry_count += 1
 
                     if retry_count <= self.max_retries:
@@ -459,6 +433,40 @@ class ConsumerProcess (Process):
                         logging.warn("[{}] Skipping {} messages to offset {} of partition {}".format(self.trigger, len(messages), lastMessage.offset(), lastMessage.partition()))
                         self.consumer.commit(offsets=self.__getOffsetList(messages), async=False)
                         retry = False
+
+    def __disableTrigger(self, status_code):
+        self.setDesiredState(Consumer.State.Disabled)
+
+        # when failing to establish a database connection, mark the consumer as dead to restart the consumer
+        try:
+            self.database = Database()
+            self.database.disableTrigger(self.trigger, status_code)
+        except Exception as e:
+            logging.error('[{}] Uncaught exception: {}'.format(self.trigger, e))
+            self.__recordState(Consumer.State.Dead)
+        finally:
+            self.database.destroy()
+
+    def __dumpRequestResponse(self, response):
+        response_dump = {
+            'request': {
+                'method': response.request.method,
+                'url': response.request.url,
+                'path_url': response.request.path_url,
+                'headers': response.request.headers,
+                'body': response.request.body
+            },
+            'response': {
+                'status_code': response.status_code,
+                'ok': response.ok,
+                'reason': response.reason,
+                'url': response.url,
+                'headers': response.headers,
+                'content': response.content
+            }
+        }
+
+        logging.error('[{}] Dumping the content of the request and response:\n{}'.format(self.trigger, response_dump))
 
     # return the dict that will be sent as the trigger payload
     def __getMessagePayload(self, message):
