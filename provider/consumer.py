@@ -417,10 +417,11 @@ class ConsumerProcess (Process):
                 except requests.exceptions.RequestException as e:
                     logging.error('[{}] Error talking to OpenWhisk: {}'.format(self.trigger, e))
                 except AuthHandlerException as e:
+                    logging.error("[{}] Encountered an exception from auth handler, status code {}").format(self.trigger, e.response.status_code)
+                    self.__dumpRequestResponse(e.response)
+
                     if self.__shouldDisable(e.response.status_code):
                         retry = False
-                        logging.error("[{}] Encountered an exception from auth handler, status code {}").format(self.trigger, e.response.status_code)
-                        self.__dumpRequestResponse(e.response)
                         self.__disableTrigger(e.status_code)
 
                 if retry:
