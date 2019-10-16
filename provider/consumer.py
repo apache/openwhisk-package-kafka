@@ -422,7 +422,7 @@ class ConsumerProcess (Process):
                     self.__dumpRequestResponse(e.response)
                     self.__disableTrigger(e.status_code)
 
-            if retry:
+                if retry:
                     retry_count += 1
 
                     if retry_count <= self.max_retries:
