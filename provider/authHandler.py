@@ -38,18 +38,17 @@ class IAMAuth(AuthBase):
         r.headers['Authorization'] = 'Bearer {}'.format(self.__getToken())
         return r
 
-
     def __getToken(self):
         if 'expires_in' not in self.tokenInfo or self.__isRefreshTokenExpired():
             response = self.__requestToken()
-            if response.status_code == 200 and 'access_token' in response.json():
+            if response.ok and 'access_token' in response.json():
                 self.tokenInfo = response.json()
                 return self.tokenInfo['access_token']
             else:
                 raise AuthHandlerException(response)
         elif self.__isTokenExpired():
             response = self.__refreshToken()
-            if response.status_code == 200 and 'access_token' in response.json():
+            if response.ok and 'access_token' in response.json():
                 self.tokenInfo = response.json()
                 return self.tokenInfo['access_token']
             else:
