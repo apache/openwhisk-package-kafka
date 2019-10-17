@@ -23,6 +23,9 @@ import time
 
 from requests.auth import AuthBase
 
+class AuthHandlerException(Exception):
+    def __init__(self, response):
+        self.response = response
 
 class IAMAuth(AuthBase):
 
@@ -35,17 +38,23 @@ class IAMAuth(AuthBase):
         r.headers['Authorization'] = 'Bearer {}'.format(self.__getToken())
         return r
 
-
     def __getToken(self):
         if 'expires_in' not in self.tokenInfo or self.__isRefreshTokenExpired():
-            self.tokenInfo = self.__requestToken()
-            return self.tokenInfo['access_token']
+            response = self.__requestToken()
+            if response.ok and 'access_token' in response.json():
+                self.tokenInfo = response.json()
+                return self.tokenInfo['access_token']
+            else:
+                raise AuthHandlerException(response)
         elif self.__isTokenExpired():
-            self.tokenInfo = self.__refreshToken()
-            return self.tokenInfo['access_token']
+            response = self.__refreshToken()
+            if response.ok and 'access_token' in response.json():
+                self.tokenInfo = response.json()
+                return self.tokenInfo['access_token']
+            else:
+                raise AuthHandlerException(response)
         else:
             return self.tokenInfo['access_token']
-
 
     def __requestToken(self):
         headers = {
@@ -86,7 +95,7 @@ class IAMAuth(AuthBase):
 
     def __isRefreshTokenExpired(self):
         if 'expiration' not in self.tokenInfo:
-            return true
+            return True
 
         sevenDays = 7 * 24 * 3600
         currentTime = int(time.time())
@@ -96,4 +105,4 @@ class IAMAuth(AuthBase):
 
     def __sendRequest(self, payload, headers):
         response = requests.post(self.endpoint, data=payload, headers=headers)
-        return response.json()
+        return response
