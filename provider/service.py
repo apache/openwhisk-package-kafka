@@ -50,6 +50,7 @@ class Service (Thread):
 
     def run(self):
         self.canaryGenerator.start()
+        self.lastCanaryTime = datetime.now()
 
         while True:
             try:
@@ -60,8 +61,6 @@ class Service (Thread):
                 logging.info("Starting changes feed")
                 self.database = Database(timeout=changesFeedTimeout)
                 self.changes = self.database.changesFeed(timeout=changesFeedTimeout, since=self.lastSequence)
-
-                self.lastCanaryTime = datetime.now()
 
                 for change in self.changes:
                     # change could be None because the changes feed will timeout
