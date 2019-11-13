@@ -500,13 +500,13 @@ class ConsumerProcess (Process):
             value.decode('utf-8')
         except UnicodeDecodeError:
             try:
-                logging.warn('[{}] Value is not UTF-8 encoded. Attempting encoding...'.format(self.trigger))
+                logging.debug('[{}] Value is not UTF-8 encoded. Attempting encoding...'.format(self.trigger))
                 value = value.encode('utf-8')
             except UnicodeDecodeError:
-                logging.warn('[{}] Value contains non-unicode bytes. Replacing invalid bytes.'.format(self.trigger))
+                logging.debug('[{}] Value contains non-unicode bytes. Replacing invalid bytes.'.format(self.trigger))
                 value = unicode(value, errors='replace').encode('utf-8')
         except AttributeError:
-            logging.warn('[{}] Cannot decode a NoneType message value'.format(self.trigger))
+            logging.debug('[{}] Cannot decode a NoneType message value'.format(self.trigger))
 
         return value
 
@@ -521,7 +521,7 @@ class ConsumerProcess (Process):
                 return parsed
             except ValueError as e:
                 # message is not a JSON object, return the message as a JSON value
-                logging.warn('[{}] I was asked to encode a message as JSON, but I failed with "{}".'.format(self.trigger, e))
+                logging.debug('[{}] I was asked to encode a message as JSON, but I failed with "{}".'.format(self.trigger, e))
                 value = "\"{}\"".format(value)
                 return value
         elif self.encodeValueAsBase64:
@@ -530,7 +530,7 @@ class ConsumerProcess (Process):
                 logging.debug('[{}] Successfully encoded a binary message.'.format(self.trigger))
                 return parsed
             except:
-                logging.warn('[{}] Unable to encode a binary message.'.format(self.trigger))
+                logging.debug('[{}] Unable to encode a binary message.'.format(self.trigger))
                 pass
 
         logging.debug('[{}] Returning un-encoded message'.format(self.trigger))
@@ -543,7 +543,7 @@ class ConsumerProcess (Process):
                 logging.debug('[{}] Successfully encoded a binary key.'.format(self.trigger))
                 return parsed
             except:
-                logging.warn('[{}] Unable to encode a binary key.'.format(self.trigger))
+                logging.debug('[{}] Unable to encode a binary key.'.format(self.trigger))
                 pass
 
         key = self.__getUTF8Encoding(key)
