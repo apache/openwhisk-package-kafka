@@ -38,7 +38,7 @@ function getTriggerURL(endpoint, triggerName) {
     return url;
 }
 
-function verifyTriggerAuth(triggerURL, auth) {
+function verifyTriggerAuth(triggerURL, auth, rejectNotFound) {
     var options = {
         method: 'GET',
         url: triggerURL,
@@ -52,8 +52,12 @@ function verifyTriggerAuth(triggerURL, auth) {
 
     return request(options)
         .catch(err => {
-            console.log(`Trigger auth error: ${JSON.stringify(err)}`);
-            return Promise.reject({ authError: 'You are not authorized for this trigger.'});
+            if (err.statusCode && err.statusCode === 404 && !rejectNotFound) {
+                return Promise.resolve()
+            } else {
+                console.log(`Trigger auth error: ${JSON.stringify(err)}`);
+                return Promise.reject({ authError: 'You are not authorized for this trigger.'});
+            }
         });
 }
 
