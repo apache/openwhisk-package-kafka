@@ -64,7 +64,7 @@ module.exports = function(dbURL, dbName) {
                         .then(() => this.getTrigger(params.triggerName))
                         .then(doc => this.updateTrigger(doc, params))
                         .then(result => resolve(result))
-                        .catch(err => reject(`Failed to update existing trigger: ${err.statusCode})`));
+                        .catch(err => reject(err));
                     } else {
                         reject(err);
                     }
@@ -174,6 +174,7 @@ module.exports = function(dbURL, dbName) {
                     }
                 });
             });
-        });
+        })
+        .catch(err => Promise.reject(err));
     };
 };
