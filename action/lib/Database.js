@@ -58,7 +58,26 @@ module.exports = function(dbURL, dbName) {
         return new Promise((resolve, reject) => {
             this.db.insert(params, (err, result) => {
                 if(err) {
-                    reject(err);
+                    if(err.statusCode && err.statusCode === 409) {
+                        this.getTrigger(params.triggerName)
+                        .then(() => {
+                            return this.disableTrigger(params.triggerName);
+                        })
+                        .then(() => {
+                            return this.getTrigger(params.triggerName);
+                        })
+                        .then(doc => {
+                            this.updateTrigger(doc, params);
+                        })
+                        .then(() => {
+                            resolve();
+                        })
+                        .catch(err => {
+                            reject(`Failed to update existing trigger: ${err.statusCode})`)
+                        })
+                    } else {
+                        reject(err);
+                    }
                 } else {
                     resolve(result);
                 }
@@ -122,7 +141,7 @@ module.exports = function(dbURL, dbName) {
         });
     };
 
-    this.updateTrigger = function(existing, params) {
+    this.disableTrigger = function(existing) {
         return new Promise((resolve, reject) => {
             var message = 'Automatically disabled trigger while updating';
             var status = {
@@ -139,6 +158,10 @@ module.exports = function(dbURL, dbName) {
                 }
             });
         })
+    }
+
+    this.updateTrigger = function(existing, params) {
+        this.disableTrigger(existing)
         .then(() => this.getTrigger(existing.triggerName))
         .then(doc => {
             for (var key in params) {
