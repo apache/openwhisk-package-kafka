@@ -60,21 +60,11 @@ module.exports = function(dbURL, dbName) {
                 if(err) {
                     if(err.statusCode && err.statusCode === 409) {
                         this.getTrigger(params.triggerName)
-                        .then(() => {
-                            return this.disableTrigger(params.triggerName);
-                        })
-                        .then(() => {
-                            return this.getTrigger(params.triggerName);
-                        })
-                        .then(doc => {
-                            this.updateTrigger(doc, params);
-                        })
-                        .then(() => {
-                            resolve();
-                        })
-                        .catch(err => {
-                            reject(`Failed to update existing trigger: ${err.statusCode})`)
-                        })
+                        .then(() => this.disableTrigger(params.triggerName))
+                        .then(() => this.getTrigger(params.triggerName))
+                        .then(doc => this.updateTrigger(doc, params))
+                        .then(result => resolve(result))
+                        .catch(err => reject(`Failed to update existing trigger: ${err.statusCode})`));
                     } else {
                         reject(err);
                     }
