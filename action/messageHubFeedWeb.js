@@ -129,11 +129,11 @@ function main(params) {
                         return resolve(common.webResponse(400, `${params.triggerName} cannot be updated because it is disabled`));
                     }
 
-                    return db.disableTrigger(triggerDoc)
-                    .then(() => db.getTrigger(params.triggerName))
-                    .then(doc => {
-                        return common.performUpdateParameterValidation(params, doc)
-                        .then(updatedParams => db.updateTrigger(doc, updatedParams))
+                    return common.performUpdateParameterValidation(params, triggerDoc)
+                    .then(updatedParams => {
+                        return db.disableTrigger(triggerDoc)
+                        .then(() => db.getTrigger(params.triggerName))
+                        .then(doc => db.updateTrigger(doc, updatedParams));
                     });
                 })
                 .then(() => {
