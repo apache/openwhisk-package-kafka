@@ -126,7 +126,7 @@ function main(params) {
                 })
                 .then(triggerDoc => {
                     if (!triggerDoc.status.active) {
-                        resolve(common.webResponse(400, `${params.triggerName} cannot be updated because it is disabled`));
+                        return resolve(common.webResponse(400, `${params.triggerName} cannot be updated because it is disabled`));
                     }
 
                     return db.disableTrigger(triggerDoc)
