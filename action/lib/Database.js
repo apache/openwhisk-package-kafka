@@ -62,7 +62,7 @@ module.exports = function(dbURL, dbName) {
                         this.getTrigger(params.triggerName)
                         .then(doc => this.disableTrigger(doc))
                         .then(() => this.getTrigger(params.triggerName))
-                        .then(doc => this.updateTrigger(doc, params))
+                        .then(doc => this.updateTrigger(params, {_rev: doc._rev}))
                         .then(result => resolve(result))
                         .catch(err => reject(err));
                     } else {
@@ -151,30 +151,25 @@ module.exports = function(dbURL, dbName) {
     }
 
     this.updateTrigger = function(existing, params) {
-        this.disableTrigger(existing)
-        .then(() => this.getTrigger(existing.triggerName))
-        .then(doc => {
-            for (var key in params) {
-                if (params[key] !== undefined) {
-                    doc[key] = params[key];
-                }
+        for (var key in params) {
+            if (params[key] !== undefined) {
+                existing[key] = params[key];
             }
-            var status = {
-                'active': true,
-                'dateChanged': Date.now()
-            };
-            doc.status = status;
+        }
+        var status = {
+            'active': true,
+            'dateChanged': Date.now()
+        };
+        existing.status = status;
 
-            return new Promise((resolve, reject) => {
-                this.db.insert(doc, (err, result) => {
-                    if(err) {
-                        reject(err);
-                    } else {
-                        resolve(result);
-                    }
-                });
+        return new Promise((resolve, reject) => {
+            this.db.insert(existing, (err, result) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
             });
-        })
-        .catch(err => Promise.reject(err));
+        });
     };
 };
