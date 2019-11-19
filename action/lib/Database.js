@@ -148,7 +148,7 @@ module.exports = function(dbURL, dbName) {
                 }
             });
         })
-    }
+    };
 
     this.updateTrigger = function(existing, params) {
         for (var key in params) {
