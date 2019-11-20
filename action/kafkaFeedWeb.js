@@ -47,7 +47,7 @@ function main(params) {
                     // do these in parallel!
                     return Promise.all([
                         db.ensureTriggerIsUnique(validatedParams.triggerName),
-                        verifyTriggerAuth(validatedParams.triggerURL, params.authKey)
+                        verifyTriggerAuth(validatedParams.triggerURL, params.authKey, true)
                     ]);
                 })
                 .then(() => {
@@ -82,7 +82,7 @@ function main(params) {
         } else if (params.__ow_method === "get") {
             const triggerURL = common.getTriggerURL(params.endpoint, params.triggerName);
 
-            return verifyTriggerAuth(triggerURL, params.authKey)
+            return verifyTriggerAuth(triggerURL, params.authKey, true)
                 .then(() => {
                     db = new Database(params.DB_URL, params.DB_NAME);
                     return db.getTrigger(params.triggerName);
@@ -112,7 +112,7 @@ function main(params) {
         } else if (params.__ow_method === "put") {
             const triggerURL = common.getTriggerURL(params.endpoint, params.triggerName);
 
-            return verifyTriggerAuth(triggerURL, params.authKey)
+            return verifyTriggerAuth(triggerURL, params.authKey, true)
                 .then(() => {
                     db = new Database(params.DB_URL, params.DB_NAME);
                     return db.getTrigger(params.triggerName);
@@ -142,7 +142,7 @@ function main(params) {
         } else if (params.__ow_method === "delete") {
             const triggerURL = common.getTriggerURL(params.endpoint, params.triggerName);
 
-            return verifyTriggerAuth(triggerURL, params.authKey)
+            return verifyTriggerAuth(triggerURL, params.authKey, false)
                 .then(() => {
                     db = new Database(params.DB_URL, params.DB_NAME);
                     return db.deleteTrigger(params.triggerName);
@@ -195,9 +195,9 @@ function validateParameters(rawParams) {
     return promise;
 }
 
-function verifyTriggerAuth(triggerURL, apiKey) {
+function verifyTriggerAuth(triggerURL, apiKey, rejectNotFound) {
     var auth = apiKey.split(':');
-    return common.verifyTriggerAuth(triggerURL, { user: auth[0], pass: auth[1] });
+    return common.verifyTriggerAuth(triggerURL, { user: auth[0], pass: auth[1] }, rejectNotFound);
 }
 
 exports.main = main;

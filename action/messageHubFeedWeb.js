@@ -50,7 +50,7 @@ function main(params) {
                     // do these in parallel!
                     return Promise.all([
                         db.ensureTriggerIsUnique(validatedParams.triggerName),
-                        verifyTriggerAuth(validatedParams.triggerURL, params.authKey, params.isIamKey, params.iamUrl),
+                        verifyTriggerAuth(validatedParams.triggerURL, params.authKey, params.isIamKey, params.iamUrl, true),
                         checkMessageHubCredentials(validatedParams)
                     ]);
                 })
@@ -86,7 +86,7 @@ function main(params) {
         } else if (params.__ow_method === "get") {
             const triggerURL = common.getTriggerURL(params.endpoint, params.triggerName);
 
-            return verifyTriggerAuth(triggerURL, params.authKey, params.isIamKey, params.iamUrl)
+            return verifyTriggerAuth(triggerURL, params.authKey, params.isIamKey, params.iamUrl, true)
                 .then(() => {
                     db = new Database(params.DB_URL, params.DB_NAME);
                     return db.getTrigger(params.triggerName);
@@ -119,7 +119,7 @@ function main(params) {
         } else if (params.__ow_method === "put") {
             const triggerURL = common.getTriggerURL(params.endpoint, params.triggerName);
 
-            return verifyTriggerAuth(triggerURL, params.authKey, params.isIamKey, params.iamUrl)
+            return verifyTriggerAuth(triggerURL, params.authKey, params.isIamKey, params.iamUrl, true)
                 .then(() => {
                     db = new Database(params.DB_URL, params.DB_NAME);
                     return db.getTrigger(params.triggerName);
@@ -149,7 +149,7 @@ function main(params) {
         } else if (params.__ow_method === "delete") {
             const triggerURL = common.getTriggerURL(params.endpoint, params.triggerName);
 
-            return verifyTriggerAuth(triggerURL, params.authKey, params.isIamKey, params.iamUrl)
+            return verifyTriggerAuth(triggerURL, params.authKey, params.isIamKey, params.iamUrl, false)
                 .then(() => {
                     db = new Database(params.DB_URL, params.DB_NAME);
                     return db.deleteTrigger(params.triggerName);
@@ -293,12 +293,12 @@ function checkMessageHubCredentials(params) {
         });
 }
 
-function verifyTriggerAuth(triggerURL, apiKey, isIamKey, iamUrl) {
+function verifyTriggerAuth(triggerURL, apiKey, isIamKey, iamUrl, rejectNotFound) {
     if (isIamKey === true) {
         return new itm({ 'iamApikey': apiKey, 'iamUrl': iamUrl }).getToken().then( token => common.verifyTriggerAuth(triggerURL, { bearer: token }));
     } else {
         var auth = apiKey.split(':');
-        return common.verifyTriggerAuth(triggerURL, { user: auth[0], pass: auth[1] });
+        return common.verifyTriggerAuth(triggerURL, { user: auth[0], pass: auth[1] }, rejectNotFound);
     }
 }
 
