@@ -58,7 +58,16 @@ module.exports = function(dbURL, dbName) {
         return new Promise((resolve, reject) => {
             this.db.insert(params, (err, result) => {
                 if(err) {
-                    reject(err);
+                    if(err.statusCode && err.statusCode === 409) {
+                        this.getTrigger(params.triggerName)
+                        .then(doc => this.disableTrigger(doc))
+                        .then(() => this.getTrigger(params.triggerName))
+                        .then(doc => this.updateTrigger(params, {_rev: doc._rev}))
+                        .then(result => resolve(result))
+                        .catch(err => reject(err));
+                    } else {
+                        reject(err);
+                    }
                 } else {
                     resolve(result);
                 }
@@ -122,7 +131,7 @@ module.exports = function(dbURL, dbName) {
         });
     };
 
-    this.updateTrigger = function(existing, params) {
+    this.disableTrigger = function(existing) {
         return new Promise((resolve, reject) => {
             var message = 'Automatically disabled trigger while updating';
             var status = {
@@ -139,27 +148,27 @@ module.exports = function(dbURL, dbName) {
                 }
             });
         })
-        .then(() => this.getTrigger(existing.triggerName))
-        .then(doc => {
-            for (var key in params) {
-                if (params[key] !== undefined) {
-                    doc[key] = params[key];
-                }
-            }
-            var status = {
-                'active': true,
-                'dateChanged': Date.now()
-            };
-            doc.status = status;
+    };
 
-            return new Promise((resolve, reject) => {
-                this.db.insert(doc, (err, result) => {
-                    if(err) {
-                        reject(err);
-                    } else {
-                        resolve(result);
-                    }
-                });
+    this.updateTrigger = function(existing, params) {
+        for (var key in params) {
+            if (params[key] !== undefined) {
+                existing[key] = params[key];
+            }
+        }
+        var status = {
+            'active': true,
+            'dateChanged': Date.now()
+        };
+        existing.status = status;
+
+        return new Promise((resolve, reject) => {
+            this.db.insert(existing, (err, result) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
             });
         });
     };

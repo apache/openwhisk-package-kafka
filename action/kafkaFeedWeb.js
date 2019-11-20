@@ -119,10 +119,15 @@ function main(params) {
                 })
                 .then(triggerDoc => {
                     if (!triggerDoc.status.active) {
-                        resolve(common.webResponse(400, `${params.triggerName} cannot be updated because it is disabled`));
+                        return resolve(common.webResponse(400, `${params.triggerName} cannot be updated because it is disabled`));
                     }
+
                     return common.performUpdateParameterValidation(params, triggerDoc)
-                    .then(updatedParams => db.updateTrigger(triggerDoc, updatedParams))
+                    .then(updatedParams => {
+                        return db.disableTrigger(triggerDoc)
+                        .then(() => db.getTrigger(params.triggerName))
+                        .then(doc => db.updateTrigger(doc, updatedParams));
+                    });
                 })
                 .then(() => {
                     console.log('successfully updated the trigger');
