@@ -26,7 +26,7 @@ from consumercollection import ConsumerCollection
 from database import Database
 from thedoctor import TheDoctor
 from health import generateHealthReport
-from gevent.wsgi import WSGIServer
+from gevent.pywsgi import WSGIServer
 from service import Service
 
 

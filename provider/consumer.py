@@ -23,6 +23,7 @@ import logging
 import os
 import requests
 import time
+import base64
 
 # HEADS UP! I'm importing confluent_kafka.Consumer as KafkaConsumer to avoid a
 # naming conflict with my own Consumer class
@@ -31,7 +32,7 @@ from database import Database
 from datetime import datetime
 from datetimeutils import secondsSince
 from multiprocessing import Process, Manager
-from urlparse import urlparse
+from urllib.parse import urlparse
 from authHandler import AuthHandlerException
 from authHandler import IAMAuth
 from requests.auth import HTTPBasicAuth
@@ -336,7 +337,7 @@ class ConsumerProcess (Process):
                         if totalPayloadSize + messageSize > payload_limit:
                             if len(messages) == 0:
                                 logging.error('[{}] Single message at offset {} exceeds payload size limit. Skipping this message!'.format(self.trigger, message.offset()))
-                                self.consumer.commit(message=message, async=False)
+                                self.consumer.commit(message=message, asynchronous=False)
                             else:
                                 logging.debug('[{}] Message at offset {} would cause payload to exceed the size limit. Queueing up for the next round...'.format(self.trigger, message.offset()))
                                 self.queuedMessage = message
@@ -406,7 +407,7 @@ class ConsumerProcess (Process):
                         # the consumer may have consumed messages that did not make it into the messages array.
                         # the consumer may have consumed messages that did not make it into the messages array.
                         # be sure to only commit to the messages that were actually fired.
-                        self.consumer.commit(offsets=self.__getOffsetList(messages), async=False)
+                        self.consumer.commit(offsets=self.__getOffsetList(messages), asynchronous=False)
                         retry = False
                     elif self.__shouldDisable(status_code):
                         retry = False
@@ -432,7 +433,7 @@ class ConsumerProcess (Process):
                         time.sleep(sleepyTime)
                     else:
                         logging.warn("[{}] Skipping {} messages to offset {} of partition {}".format(self.trigger, len(messages), lastMessage.offset(), lastMessage.partition()))
-                        self.consumer.commit(offsets=self.__getOffsetList(messages), async=False)
+                        self.consumer.commit(offsets=self.__getOffsetList(messages), asynchronous=False)
                         retry = False
 
     def __disableTrigger(self, status_code):
@@ -472,17 +473,18 @@ class ConsumerProcess (Process):
     # return the dict that will be sent as the trigger payload
     def __getMessagePayload(self, message):
         return {
-            'value': self.__encodeMessageIfNeeded(message.value()),
+            'value': self.__encodeMessageIfNeeded(message.value()).decode('utf-8'),
             'topic': message.topic(),
             'partition': message.partition(),
             'offset': message.offset(),
-            'key': self.__encodeKeyIfNeeded(message.key())
+            'key': self.__encodeKeyIfNeeded(message.key()).decode('utf-8')
         }
 
     # return the size in bytes of the trigger payload for this message
     def __sizeMessage(self, message):
         messagePayload = self.__getMessagePayload(message)
         return len(json.dumps(messagePayload).encode('utf-8'))
+
 
     # return list of TopicPartition which represent the _next_ offset to consume
     def __getOffsetList(self, messages):
@@ -494,7 +496,11 @@ class ConsumerProcess (Process):
 
         return offsets
 
+    # Unicode -> UTF8
     def __getUTF8Encoding(self, value):
+        if value is None:
+            return "".encode('utf-8')
+
         try:
             value.decode('utf-8')
         except UnicodeDecodeError:
@@ -505,12 +511,17 @@ class ConsumerProcess (Process):
                 logging.debug('[{}] Value contains non-unicode bytes. Replacing invalid bytes.'.format(self.trigger))
                 value = unicode(value, errors='replace').encode('utf-8')
         except AttributeError:
-            logging.debug('[{}] Cannot decode a NoneType message value'.format(self.trigger))
+            try:
+                logging.debug('[{}] Value is not UTF-8 encoded. Attempting encoding...'.format(self.trigger))
+                value = value.encode('utf-8')
+            except UnicodeDecodeError:
+                logging.debug('[{}] Value contains non-unicode bytes. Replacing invalid bytes.'.format(self.trigger))
+                value = unicode(value, errors='replace').encode('utf-8')
 
         return value
 
-
     def __encodeMessageIfNeeded(self, value):
+        # Value needs to be UTF-8 bytes for JSON serialization
         value = self.__getUTF8Encoding(value)
 
         if self.encodeValueAsJSON:
@@ -525,7 +536,7 @@ class ConsumerProcess (Process):
                 return value
         elif self.encodeValueAsBase64:
             try:
-                parsed = value.encode("base64").strip()
+                parsed = base64.b64encode(value)
                 logging.debug('[{}] Successfully encoded a binary message.'.format(self.trigger))
                 return parsed
             except:
@@ -536,16 +547,17 @@ class ConsumerProcess (Process):
         return value
 
     def __encodeKeyIfNeeded(self, key):
+        # Value needs to be UTF-8 bytes for JSON serialization
+        key = self.__getUTF8Encoding(key)
+
         if self.encodeKeyAsBase64:
             try:
-                parsed = key.encode("base64").strip()
+                parsed = base64.b64encode(key)
                 logging.debug('[{}] Successfully encoded a binary key.'.format(self.trigger))
                 return parsed
             except:
                 logging.debug('[{}] Unable to encode a binary key.'.format(self.trigger))
                 pass
-
-        key = self.__getUTF8Encoding(key)
 
         logging.debug('[{}] Returning un-encoded message'.format(self.trigger))
         return key
