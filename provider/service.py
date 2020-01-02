@@ -68,11 +68,6 @@ class Service (Thread):
                     # check whether or not the feed is capable of detecting canary
                     # documents
                     if change != None:
-                        # Record the sequence in case the changes feed needs to be
-                        # restarted. This way the new feed can pick up right where
-                        # the old one left off.
-                        self.lastSequence = change['seq']
-
                         if "deleted" in change and change["deleted"] == True:
                             logging.info('[changes] Found a delete')
                             consumer = self.consumers.getConsumerForTrigger(change['id'])
@@ -109,7 +104,20 @@ class Service (Thread):
                                 elif triggerIsAssignedToMe:
                                     logging.info('[{}] Found a change to an existing trigger'.format(change["id"]))
 
-                                    if existingConsumer.desiredState() == Consumer.State.Disabled and self.__isTriggerDocActive(document):
+                                    if existingConsumer.desiredState() == Consumer.State.Dead and self.__isTriggerDocActive(document):
+                                        # if a delete occurs followed quickly by a create the consumer might get stuck in a dead state,
+                                        # so we need to forcefully delete the process before recreating it.
+                                        logging.info('[{}] A create event occurred for a trigger that is shutting down'.format(change["id"]))
+
+                                        if existingConsumer.process.is_alive():
+                                            logging.info('[{}] Joining dead process.'.format(existingConsumer.trigger))
+                                            existingConsumer.process.join(1)
+                                        else:
+                                            logging.info('[{}] Process is already dead.'.format(existingConsumer.trigger))
+
+                                        self.consumers.removeConsumerForTrigger(existingConsumer.trigger)
+                                        self.createAndRunConsumer(document)
+                                    elif existingConsumer.desiredState() == Consumer.State.Disabled and self.__isTriggerDocActive(document):
                                         # disabled trigger has become active
                                         logging.info('[{}] Existing disabled trigger should become active'.format(change["id"]))
                                         self.createAndRunConsumer(document)
@@ -123,6 +131,11 @@ class Service (Thread):
                             self.lastCanaryTime = datetime.now()
                         else:
                             logging.debug('[changes] Found a change for a non-trigger document')
+
+                        # Record the sequence in case the changes feed needs to be
+                        # restarted. This way the new feed can pick up right where
+                        # the old one left off.
+                        self.lastSequence = change['seq']
             except Exception as e:
                 logging.error('[canary] Exception caught from changes feed. Restarting changes feed...')
                 logging.error(e)
