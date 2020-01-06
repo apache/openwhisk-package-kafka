@@ -16,10 +16,9 @@
  */
 package system.packages
 
-import system.utils.KafkaUtils
-
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
+import system.utils.KafkaUtils
 import org.junit.runner.RunWith
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FlatSpec
@@ -40,6 +39,8 @@ import common.TestUtils.NOT_FOUND
 import org.apache.openwhisk.utils.retry
 import org.apache.openwhisk.core.entity.Annotations
 import java.util.concurrent.ExecutionException
+import common.ActivationResult
+import common.TestUtils.SUCCESS_EXIT
 
 @RunWith(classOf[JUnitRunner])
 class MessageHubFeedTests
@@ -111,6 +112,62 @@ class MessageHubFeedTests
       "error" -> JsString("isJSONData and isBinaryValue cannot both be enabled."))
 
     runActionWithExpectedResult(actionName, "dat/multipleValueTypes.json", expectedOutput, false)
+  }
+
+  it should "create a trigger, delete that trigger, and quickly create it again with successful trigger fires" in withAssetCleaner(wskprops) {
+    val currentTime = s"${System.currentTimeMillis}"
+
+    (wp, assetHelper) =>
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
+      val ruleName = s"dummyMessageHub-helloKafka-$currentTime"
+      val parameters = Map(
+        "user" -> getAsJson("user"),
+        "password" -> getAsJson("password"),
+        "api_key" -> getAsJson("api_key"),
+        "kafka_admin_url" -> getAsJson("kafka_admin_url"),
+        "kafka_brokers_sasl" -> getAsJson("brokers"),
+        "topic" -> topic.toJson
+      )
+
+      val key = "TheKey"
+      val verificationName = s"trigger-$currentTime"
+      val defaultAction = Some("dat/createTriggerActions.js")
+      val defaultActionName = s"helloKafka-$currentTime"
+
+      createTrigger(assetHelper, triggerName, parameters)
+
+      assetHelper.withCleaner(wsk.action, defaultActionName) { (action, name) =>
+        action.create(name, defaultAction, annotations = Map(Annotations.ProvideApiKeyAnnotationName -> JsBoolean(true)))
+      }
+
+      assetHelper.withCleaner(wsk.rule, ruleName) { (rule, name) =>
+        rule.create(name, trigger = triggerName, action = defaultActionName)
+      }
+
+      assetHelper.withCleaner(wsk.trigger, verificationName) { (trigger, name) =>
+        trigger.get(name, NOT_FOUND)
+      }
+
+      produceMessage(topic, key, verificationName)
+      retry(wsk.trigger.get(verificationName), 60, Some(1.second))
+
+      wsk.trigger.delete(verificationName, expectedExitCode = SUCCESS_EXIT)
+      wsk.trigger.delete(triggerName, expectedExitCode = SUCCESS_EXIT)
+
+      val feedCreationResult = wsk.trigger.create(triggerName, feed = Some(s"/whisk.system/messaging/messageHubFeed"), parameters = parameters)
+      val activation = wsk.parseJsonString(feedCreationResult.stdout.substring(0, feedCreationResult.stdout.indexOf("ok: created trigger"))).convertTo[ActivationResult]
+      activation.response.success shouldBe true
+
+      wsk.rule.enable(ruleName, expectedExitCode = SUCCESS_EXIT)
+
+      println("Giving the consumer a moment to get ready")
+      Thread.sleep(KafkaUtils.consumerInitTime)
+
+      val uuid = activation.response.result.get.fields.get("uuid").get.toString().replaceAll("\"", "")
+      consumerExists(uuid)
+
+      produceMessage(topic, key, verificationName)
+      retry(wsk.trigger.get(verificationName), 60, Some(1.second))
   }
 
   it should "fire multiple triggers for two large payloads" in withAssetCleaner(wskprops) {
