@@ -160,8 +160,12 @@ class ConsumerProcess (Process):
         if 'isIamKey' in params and params['isIamKey'] == True:
             self.authHandler = IAMAuth(params['authKey'], params['iamUrl'])
         else:
-            auth = params['authKey'].split(':')
-            self.authHandler = HTTPBasicAuth(auth[0], auth[1])
+            if 'authKey' in params:
+                auth = params['authKey'].split(':')
+                self.authHandler = HTTPBasicAuth(auth[0], auth[1])
+            else:
+                parsedUrl = urlparse(params["triggerURL"])
+                self.authHandler = HTTPBasicAuth(parsedUrl.username, parsedUrl.password)
 
         # handle the case where there may be existing triggers that do not
         # have the isJSONData field set
