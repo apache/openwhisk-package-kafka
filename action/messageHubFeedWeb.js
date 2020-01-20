@@ -299,7 +299,7 @@ function checkMessageHubCredentials(params) {
 }
 
 function verifyTriggerAuth(triggerURL, apiKey, isIamKey, iamUrl, rejectNotFound) {
-    if (isIamKey === true) {
+    if (isIamKey === true || isIamKey === "true") {
         return new itm({ 'iamApikey': apiKey, 'iamUrl': iamUrl }).getToken().then( token => common.verifyTriggerAuth(triggerURL, { bearer: token }));
     } else {
         var auth = apiKey.split(':');
