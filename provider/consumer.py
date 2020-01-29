@@ -515,6 +515,10 @@ class ConsumerProcess (Process):
 
 
     def __encodeMessageIfNeeded(self, value):
+        if value is None:
+            logging.debug('[{}] message is None, skipping encoding.'.format(self.trigger))
+            return value
+
         value = self.__getUTF8Encoding(value)
 
         if self.encodeValueAsJSON:
@@ -540,6 +544,10 @@ class ConsumerProcess (Process):
         return value
 
     def __encodeKeyIfNeeded(self, key):
+        if key is None:
+            logging.debug('[{}] key is None, skipping encoding.'.format(self.trigger))
+            return key
+
         if self.encodeKeyAsBase64:
             try:
                 parsed = key.encode("base64").strip()
