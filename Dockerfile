@@ -17,6 +17,9 @@
 
 FROM python:2.7.16
 
+# Remove CURL as it is has constant security vulnerabilities and we don't use it
+RUN apt-get purge -y --auto-remove curl
+
 RUN apt-get update && apt-get upgrade -y
 
 # install librdkafka
