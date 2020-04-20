@@ -17,9 +17,6 @@
 
 FROM python:2.7.16
 
-# Remove CURL as it is has constant security vulnerabilities and we don't use it
-RUN apt-get purge -y --auto-remove curl
-
 RUN apt-get update && apt-get upgrade -y
 
 # install librdkafka
@@ -31,6 +28,9 @@ RUN git clone --depth 1 --branch v${LIBRDKAFKA_VERSION} https://github.com/edenh
     && make install \
     && make clean \
     && ./configure --clean
+
+# Remove CURL and git as it is has constant security vulnerabilities and we don't use it
+RUN apt-get purge -y --auto-remove curl git
 
 ENV CPLUS_INCLUDE_PATH /usr/local/include
 ENV LIBRARY_PATH /usr/local/lib
