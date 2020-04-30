@@ -15,12 +15,12 @@
 # limitations under the License.
 #
 
-FROM python:2.7.16
+FROM python:3.8.2
 
 RUN apt-get update && apt-get upgrade -y
 
 # install librdkafka
-ENV LIBRDKAFKA_VERSION 1.3.0
+ENV LIBRDKAFKA_VERSION 1.4.0
 RUN git clone --depth 1 --branch v${LIBRDKAFKA_VERSION} https://github.com/edenhill/librdkafka.git librdkafka \
     && cd librdkafka \
     && ./configure \
@@ -36,8 +36,8 @@ ENV CPLUS_INCLUDE_PATH /usr/local/include
 ENV LIBRARY_PATH /usr/local/lib
 ENV LD_LIBRARY_PATH /usr/local/lib
 
-RUN pip install gevent==1.1.2 flask==0.11.1 confluent-kafka==${LIBRDKAFKA_VERSION} \
-    requests==2.10.0 cloudant==2.5.0 psutil==5.0.0 werkzeug==0.16.1
+RUN pip install gevent==1.5.0 flask==1.1.2 confluent-kafka==${LIBRDKAFKA_VERSION} \
+    requests==2.10.0 cloudant==2.5.0 psutil==5.0.0
 
 # while I expect these will be overridden during deployment, we might as well
 # set reasonable defaults

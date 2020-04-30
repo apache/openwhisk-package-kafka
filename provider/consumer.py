@@ -23,6 +23,7 @@ import logging
 import os
 import requests
 import time
+import base64
 
 # HEADS UP! I'm importing confluent_kafka.Consumer as KafkaConsumer to avoid a
 # naming conflict with my own Consumer class
@@ -31,7 +32,7 @@ from database import Database
 from datetime import datetime
 from datetimeutils import secondsSince
 from multiprocessing import Process, Manager
-from urlparse import urlparse
+from urllib.parse import urlparse
 from authHandler import AuthHandlerException
 from authHandler import IAMAuth
 from requests.auth import HTTPBasicAuth
@@ -340,7 +341,7 @@ class ConsumerProcess (Process):
                         if totalPayloadSize + messageSize > payload_limit:
                             if len(messages) == 0:
                                 logging.error('[{}] Single message at offset {} exceeds payload size limit. Skipping this message!'.format(self.trigger, message.offset()))
-                                self.consumer.commit(message=message, async=False)
+                                self.consumer.commit(message=message, asynchronous=False)
                             else:
                                 logging.debug('[{}] Message at offset {} would cause payload to exceed the size limit. Queueing up for the next round...'.format(self.trigger, message.offset()))
                                 self.queuedMessage = message
@@ -410,7 +411,7 @@ class ConsumerProcess (Process):
                         # the consumer may have consumed messages that did not make it into the messages array.
                         # the consumer may have consumed messages that did not make it into the messages array.
                         # be sure to only commit to the messages that were actually fired.
-                        self.consumer.commit(offsets=self.__getOffsetList(messages), async=False)
+                        self.consumer.commit(offsets=self.__getOffsetList(messages), asynchronous=False)
                         retry = False
                     elif self.__shouldDisable(status_code, response.headers):
                         retry = False
@@ -436,7 +437,7 @@ class ConsumerProcess (Process):
                         time.sleep(sleepyTime)
                     else:
                         logging.warn("[{}] Skipping {} messages to offset {} of partition {}".format(self.trigger, len(messages), lastMessage.offset(), lastMessage.partition()))
-                        self.consumer.commit(offsets=self.__getOffsetList(messages), async=False)
+                        self.consumer.commit(offsets=self.__getOffsetList(messages), asynchronous=False)
                         retry = False
 
     def __disableTrigger(self, status_code):
@@ -503,16 +504,26 @@ class ConsumerProcess (Process):
             value.decode('utf-8')
         except UnicodeDecodeError:
             try:
-                logging.debug('[{}] Value is not UTF-8 encoded. Attempting encoding...'.format(self.trigger))
+                logging.debug('[{}] Value is not UTF-8 encoded (UnicodeDecodeError). Attempting encoding... '.format(self.trigger))
                 value = value.encode('utf-8')
             except UnicodeDecodeError:
-                logging.debug('[{}] Value contains non-unicode bytes. Replacing invalid bytes.'.format(self.trigger))
-                value = unicode(value, errors='replace').encode('utf-8')
+                logging.debug('[{}] Value contains non-unicode bytes (UnicodeDecodeError). Replacing invalid bytes.'.format(self.trigger))
+                value = str(value, errors='replace').encode('utf-8')
+            except AttributeError:
+                logging.debug('[{}] Value contains non-unicode bytes (AttributeError). Replacing invalid bytes.'.format(self.trigger))
+                value = str(value, errors='replace').encode('utf-8')
         except AttributeError:
-            logging.debug('[{}] Cannot decode a NoneType message value'.format(self.trigger))
+            try:
+                logging.debug('[{}] Value is not UTF-8 encoded (AttributeError). Attempting encoding...'.format(self.trigger))
+                value = value.encode('utf-8')
+            except UnicodeDecodeError:
+                logging.debug('[{}] Value contains non-unicode bytes (UnicodeDecodeError). Replacing invalid bytes.'.format(self.trigger))
+                value = str(value, errors='replace').encode('utf-8')
+            except AttributeError:
+                logging.debug('[{}] Value contains non-unicode bytes (AttributeError). Replacing invalid bytes.'.format(self.trigger))
+                value = str(value, errors='replace').encode('utf-8')
 
         return value
-
 
     def __encodeMessageIfNeeded(self, value):
         if value is None:
@@ -523,24 +534,28 @@ class ConsumerProcess (Process):
 
         if self.encodeValueAsJSON:
             try:
+                # json.dumps fails with an encoded argument, but json.loads takes care of that
                 parsed = json.loads(value, parse_constant=self.__errorOnJSONConstant, parse_float=self.__parseFloat)
                 logging.debug('[{}] Successfully encoded a message as JSON.'.format(self.trigger))
                 return parsed
-            except ValueError as e:
+            except Exception as e:
                 # message is not a JSON object, return the message as a JSON value
                 logging.debug('[{}] I was asked to encode a message as JSON, but I failed with "{}".'.format(self.trigger, e))
                 value = "\"{}\"".format(value)
                 return value
         elif self.encodeValueAsBase64:
             try:
-                parsed = value.encode("base64").strip()
+                parsed = base64.b64encode(value).decode('utf-8')
                 logging.debug('[{}] Successfully encoded a binary message.'.format(self.trigger))
                 return parsed
             except:
                 logging.debug('[{}] Unable to encode a binary message.'.format(self.trigger))
                 pass
+        else:
+            # If message is not None it is encoded here. json.dumps will error when called with encoded argument
+            value = value.decode('utf-8')
 
-        logging.debug('[{}] Returning un-encoded message'.format(self.trigger))
+        logging.debug('[{}] Returning encoded message'.format(self.trigger))
         return value
 
     def __encodeKeyIfNeeded(self, key):
@@ -548,18 +563,21 @@ class ConsumerProcess (Process):
             logging.debug('[{}] key is None, skipping encoding.'.format(self.trigger))
             return key
 
+        key = self.__getUTF8Encoding(key)
+
         if self.encodeKeyAsBase64:
             try:
-                parsed = key.encode("base64").strip()
+                parsed = base64.b64encode(key).decode('utf-8')
                 logging.debug('[{}] Successfully encoded a binary key.'.format(self.trigger))
                 return parsed
             except:
                 logging.debug('[{}] Unable to encode a binary key.'.format(self.trigger))
                 pass
+        else:
+            # If key is not None it is encoded here. json.dumps will error when called with encoded argument
+            key = key.decode('utf-8')
 
-        key = self.__getUTF8Encoding(key)
-
-        logging.debug('[{}] Returning un-encoded message'.format(self.trigger))
+        logging.debug('[{}] Returning encoded key'.format(self.trigger))
         return key
 
     def __on_assign(self, consumer, partitions):
