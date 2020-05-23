@@ -1,5 +1,10 @@
 {
   "name": "kafkaFeedWeb",
   "version": "1.0.0",
-  "main": "kafkaFeedWeb.js"
+  "main": "kafkaFeedWeb.js",
+  "dependencies": {
+    "moment": "^2.26.0",
+    "nano": "^8.2.2",
+    "request-promise": "^4.2.5"
+  }
 }

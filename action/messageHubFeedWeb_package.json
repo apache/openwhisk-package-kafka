@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "messageHubFeedWeb.js",
   "dependencies": {
-    "@ibm-functions/iam-token-manager": "^1.0.0"
+    "@ibm-functions/iam-token-manager": "^1.0.0",
+    "moment": "^2.26.0",
+    "nano": "^8.2.2",
+    "request-promise": "^4.2.5"
   }
 }
