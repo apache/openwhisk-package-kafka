@@ -72,7 +72,9 @@ then
 fi
 
 cp -f kafkaFeed_package.json package.json
-zip -r kafkaFeed.zip lib package.json kafkaFeed.js
+rm -rf node_modules
+npm install
+zip -r kafkaFeed.zip lib package.json kafkaFeed.js node_modules
 cd $OLD_PATH
 
 $WSK_CLI -i --apihost "$EDGEHOST" action update --kind nodejs:default messaging/kafkaFeed "$PACKAGE_HOME/action/kafkaFeed.zip" \
@@ -111,7 +113,9 @@ then
 fi
 
 cp -f kafkaFeedWeb_package.json package.json
-zip -r kafkaFeedWeb.zip lib package.json kafkaFeedWeb.js
+rm -rf node_modules
+npm install
+zip -r kafkaFeedWeb.zip lib package.json kafkaFeedWeb.js node_modules
 
 cd $OLD_PATH
 
