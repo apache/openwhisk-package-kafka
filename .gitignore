@@ -8,5 +8,13 @@ action/node_modules/
 action/package-lock.json
 package-lock.json
 
+# Eclipse
+bin/
+**/.project
+.settings/
+.classpath
+.cache-main
+.cache-tests
+
 .idea/
 out/

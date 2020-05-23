@@ -379,8 +379,11 @@ The action caller (you, or your code) must first Base64 encode the data, for exa
 ### Integrating OpenWhisk with IBM Message Hub, Node Red, IBM Watson IoT, IBM Object Storage, and IBM Data Science Experience
 Example that integrates OpenWhisk with IBM Message Hub, Node Red, IBM Watson IoT, IBM Object Storage, IBM Data Science Experience (Spark) service can be [found here](https://medium.com/openwhisk/transit-flexible-pipeline-for-iot-data-with-bluemix-and-openwhisk-4824cf20f1e0).
 
+## Architecture
+Archtecture documentation and diagrams, please refer to the [Architecture Docs](docs/arch/README.md)
+
 ## Development and Testing
-If you wish to deploy the feed service yourself, please refer to the [Development Guide](devGuide.md).
+If you wish to deploy the feed service yourself, please refer to the [Development Guide](docs/dev/README.md).
 
 ## References
 - [OpenWhisk](https://www.ibm.com/cloud-computing/bluemix/openwhisk)
