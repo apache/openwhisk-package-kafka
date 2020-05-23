@@ -327,9 +327,9 @@ $ wsk trigger update myTopicTrigger -p isJSONData false -p isBinaryKey true -p i
 
 ### Producing messages to Message Hub
 
-The `/messaging/messageHubProduce` Action is deprecated and will be removed at a future date. To maintain optimal performance, migrate your usage of the `/messaging/messageHubProduce` Action to use a persistent connection when data is produced to Message Hub.
+The `/messaging/messageHubProduce` Action is deprecated and will be removed at a future date. To maintain optimal performance, migrate your usage of the `/messaging/messageHubProduce` Action to use a persistent connection, for example, by deploying a non-OpenWhisk component which contains a Message Hub client.
 
-If you would like to use an OpenWhisk action to conveniently produce a message to Message Hub, you can use the `/messaging/messageHubProduce` action. This action takes the following parameters:
+The deprecated `/messaging/messageHubProduce` takes the following parameters:
 
 |Name|Type|Description|
 |---|---|---|
@@ -350,9 +350,9 @@ wsk action invoke /messaging/messageHubProduce -p kafka_brokers_sasl "[\"kafka01
 
 ### Producing messages to a generic Kafka instance
 
-The `/messaging/kafkaProduce` Action is deprecated and will be removed at a future date. To maintain optimal performance, migrate your usage of the `/messaging/kafkaProduce` Action to use a persistent connection when data is produced to Kafka.
+> :point_right: **Note** The `/messaging/kafkaProduce` Action is deprecated and will be removed at a future date. To maintain optimal performance, migrate your usage of the `/messaging/kafkaProduce` Action to use a persistent connection, for example, by deploying a non-OpenWhisk component which contains a Kafka Producer.
 
-If you would like to use an OpenWhisk action to conveniently produce a message to a generic Kafka instance, you can use the `/messaging/kafkaProduce` action. This action takes the following parameters:
+The deprecated `/messaging/kafkaProduce` takes the following parameters:
 
 |Name|Type|Description|
 |---|---|---|
