@@ -75,7 +75,7 @@ cp -f kafkaFeed_package.json package.json
 zip -r kafkaFeed.zip lib package.json kafkaFeed.js
 cd $OLD_PATH
 
-$WSK_CLI -i --apihost "$EDGEHOST" action update --kind nodejs:6 messaging/kafkaFeed "$PACKAGE_HOME/action/kafkaFeed.zip" \
+$WSK_CLI -i --apihost "$EDGEHOST" action update --kind nodejs:default messaging/kafkaFeed "$PACKAGE_HOME/action/kafkaFeed.zip" \
     --auth "$AUTH" \
     -a feed true \
     -a description 'Feed to listen to Kafka messages' \
@@ -116,7 +116,7 @@ zip -r kafkaFeedWeb.zip lib package.json kafkaFeedWeb.js
 cd $OLD_PATH
 
 
-$WSK_CLI -i --apihost "$EDGEHOST" action update --kind nodejs:6 messagingWeb/kafkaFeedWeb "$PACKAGE_HOME/action/kafkaFeedWeb.zip" \
+$WSK_CLI -i --apihost "$EDGEHOST" action update --kind nodejs:default messagingWeb/kafkaFeedWeb "$PACKAGE_HOME/action/kafkaFeedWeb.zip" \
     --auth "$AUTH" \
     --web true \
     -a description 'Write a new trigger to Kafka provider DB' \
