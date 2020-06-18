@@ -26,14 +26,21 @@ function triggerComponents(triggerName) {
     };
 }
 
+function addHTTPS(url) {
+    if (!/^(?:f|ht)tps?\:\/\//.test(url)) {
+        url = "https://" + url;
+    }
+    return url;
+}
+
 function getTriggerURL(endpoint, triggerName) {
-    var massagedAPIHost = endpoint.replace(/https?:\/\/(.*)/, "$1");
+    var massagedAPIHost = addHTTPS(endpoint)
 
     var components = triggerComponents(triggerName);
     var namespace = components.namespace;
     var trigger = components.triggerName;
 
-    var url = `https://${massagedAPIHost}/api/v1/namespaces/${encodeURIComponent(namespace)}/triggers/${encodeURIComponent(trigger)}`;
+    var url = `${massagedAPIHost}/api/v1/namespaces/${encodeURIComponent(namespace)}/triggers/${encodeURIComponent(trigger)}`;
 
     return url;
 }
@@ -98,7 +105,9 @@ function massageParamsForWeb(rawParams) {
 }
 
 function getWebActionURL(endpoint, actionName) {
-    return `https://${endpoint}/api/v1/web/whisk.system/messagingWeb/${actionName}.http`;
+    var massagedAPIHost = addHTTPS(endpoint)
+
+    return `${massagedAPIHost}/api/v1/web/whisk.system/messagingWeb/${actionName}.http`;
 }
 
 function createTrigger(endpoint, params, actionName) {
