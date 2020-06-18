@@ -34,7 +34,7 @@ function addHTTPS(url) {
 }
 
 function getTriggerURL(endpoint, triggerName) {
-    var massagedAPIHost = addHTTPS(endpoint)
+    var massagedAPIHost = addHTTPS(endpoint);
 
     var components = triggerComponents(triggerName);
     var namespace = components.namespace;
@@ -105,7 +105,7 @@ function massageParamsForWeb(rawParams) {
 }
 
 function getWebActionURL(endpoint, actionName) {
-    var massagedAPIHost = addHTTPS(endpoint)
+    var massagedAPIHost = addHTTPS(endpoint);
 
     return `${massagedAPIHost}/api/v1/web/whisk.system/messagingWeb/${actionName}.http`;
 }
