@@ -107,7 +107,7 @@ function massageParamsForWeb(rawParams) {
 function getWebActionURL(endpoint, actionName) {
     var apiHost = addHTTPS(endpoint);
 
-    return `${apiHost}/api/v1/web/whisk.system/messagingWeb/${actionName}.http`;
+    return `${apiHost}/api/v1/web/whisk.system/messagingWeb/${actionName}`;
 }
 
 function createTrigger(endpoint, params, actionName) {
