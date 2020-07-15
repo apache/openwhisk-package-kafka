@@ -69,7 +69,7 @@ class Database:
 
                 status = {
                     'active': False,
-                    'dateChanged': long(time.time() * 1000),
+                    'dateChanged': int(time.time() * 1000),
                     'reason': {
                         'kind': 'AUTO',
                         'statusCode': status_code,
