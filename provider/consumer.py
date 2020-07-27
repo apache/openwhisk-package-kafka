@@ -42,7 +42,7 @@ local_dev = os.getenv('LOCAL_DEV', 'False')
 payload_limit = int(os.getenv('PAYLOAD_LIMIT', 900000))
 check_ssl = (local_dev == 'False')
 seconds_in_day = 86400
-
+non_existent_topic_status_code = 404
 processingManager = Manager()
 
 
@@ -157,6 +157,7 @@ class ConsumerProcess (Process):
         if self.isMessageHub:
             self.username = params["username"]
             self.password = params["password"]
+            self.kafkaAdminUrl = params['kafka_admin_url']
 
         if 'isIamKey' in params and params['isIamKey'] == True:
             self.authHandler = IAMAuth(params['authKey'], params['iamUrl'])
@@ -296,6 +297,7 @@ class ConsumerProcess (Process):
 
     def __createConsumer(self):
         if self.__shouldRun():
+            logging.info('[{}] brokers is: [{}]'.format(self.trigger, self.brokers))
             config = {'metadata.broker.list': ','.join(self.brokers),
                         'group.id': self.trigger,
                         'default.topic.config': {'auto.offset.reset': 'latest'},
@@ -312,7 +314,24 @@ class ConsumerProcess (Process):
                                 'security.protocol': 'sasl_ssl'
                              })
 
+            logging.info("[{}] verifyiing credentials...".format(self.trigger))
+            try:
+                response = requests.get(self.kafkaAdminUrl, auth=(self.username.lower(), self.password), timeout=60.0, verify=check_ssl)
+                if response.status_code == 403:
+                    logging.info("[{}] Invalid event stream auth, disabling trigger... {}".format(self.trigger, response.status_code))
+                    self.__disableTrigger(response.status_code)
+                else:
+                    logging.info("[{}] Supplied credentials are valid.".format(self.trigger))
+            except requests.exceptions.RequestException as e:
+                logging.info("[{}] Exception during Kafka auth, continuing... {}".format(self.trigger, e))
+
             consumer = KafkaConsumer(config)
+            logging.info("[{}] listing topics...".format(self.trigger))
+            topic_metadata = consumer.list_topics()
+            if topic_metadata.topics.get(self.topic) is None:
+                logging.info("[{}] topic [{}] does not exists. Disabling trigger.".format(self.trigger, self.topic))
+                self.__disableTrigger(non_existent_topic_status_code)
+
             consumer.subscribe([self.topic], self.__on_assign, self.__on_revoke)
             logging.info("[{}] Now listening in order to fire trigger".format(self.trigger))
             return consumer
@@ -321,7 +340,7 @@ class ConsumerProcess (Process):
         messages = []
         totalPayloadSize = 0
         batchMessages = True
-
+        logging.info('[{}] should run [{}], batchMessages [{}] and secondsSinceLastPoll() [{}]'.format(self.trigger, self.__shouldRun(), batchMessages, (self.secondsSinceLastPoll() < 2)))
         if self.__shouldRun():
             while batchMessages and (self.secondsSinceLastPoll() < 2):
                 if self.queuedMessage != None:
@@ -329,12 +348,16 @@ class ConsumerProcess (Process):
                     message = self.queuedMessage
                     self.queuedMessage = None
                 else:
+                    logging.info('[{}] starts polling and time is [{}]'.format(self.trigger, datetime.now()))
                     message = self.consumer.poll(1.0)
+                    logging.info('[{}] finished polling and time is [{}]'.format(self.trigger, datetime.now()))
 
                 if self.secondsSinceLastPoll() < 0:
                     logging.info('[{}] Completed first poll'.format(self.trigger))
 
+                logging.info('[{}] polled message, message is not None: [{}]'.format(self.trigger, (message is not None)))
                 if (message is not None):
+                    logging.info('[{}] message error happened? [{}]'.format(self.trigger, (not message.error())))
                     if not message.error():
                         logging.debug("Consumed message: {}".format(str(message)))
                         messageSize = self.__sizeMessage(message)
@@ -349,19 +372,21 @@ class ConsumerProcess (Process):
                             # in any case, we need to stop batching now
                             batchMessages = False
                         else:
+                            logging.info('[{}] batching up message'.format(self.trigger))
                             totalPayloadSize += messageSize
                             messages.append(message)
                     elif message.error().code() != KafkaError._PARTITION_EOF:
                         logging.error('[{}] Error polling: {}'.format(self.trigger, message.error()))
                         batchMessages = False
                     else:
+                        logging.info('[{}] message error details [{}]'.format(self.trigger, message.error()))
                         logging.debug('[{}] No more messages. Stopping batch op.'.format(self.trigger))
                         batchMessages = False
                 else:
-                    logging.debug('[{}] message was None. Stopping batch op.'.format(self.trigger))
+                    logging.info('[{}] message was None. Stopping batch op.'.format(self.trigger))
                     batchMessages = False
 
-        logging.debug('[{}] Completed poll'.format(self.trigger))
+        logging.info('[{}] Completed poll'.format(self.trigger))
 
         if len(messages) > 0:
             logging.info("[{}] Found {} messages with a total size of {} bytes".format(self.trigger, len(messages), totalPayloadSize))

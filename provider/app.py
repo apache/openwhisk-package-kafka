@@ -38,9 +38,9 @@ consumers = ConsumerCollection()
 feedService = None
 
 
-@app.route('/')
+@app.route('/ping')
 def testRoute():
-    return jsonify('Hi!')
+    return jsonify('pong')
 
 
 # TODO call TheDoctor.isAlive() and report on that
