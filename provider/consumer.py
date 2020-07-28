@@ -43,6 +43,7 @@ payload_limit = int(os.getenv('PAYLOAD_LIMIT', 900000))
 check_ssl = (local_dev == 'False')
 seconds_in_day = 86400
 non_existent_topic_status_code = 404
+invalid_credential_status_code = 403
 processingManager = Manager()
 
 
@@ -315,6 +316,12 @@ class ConsumerProcess (Process):
                              })
 
             logging.info("[{}] verifyiing credentials...".format(self.trigger))
+            #first to check whether users are using old event stream instance
+            if 'messagehub' in self.kafkaAdminUrl:
+                logging.info('[{}] references an deprecated event stream instance.'.format(self.trigger))
+                self.__disableTrigger(invalid_credential_status_code)
+                return None
+
             try:
                 response = requests.get(self.kafkaAdminUrl, auth=(self.username.lower(), self.password), timeout=60.0, verify=check_ssl)
                 if response.status_code == 403:
@@ -324,6 +331,8 @@ class ConsumerProcess (Process):
                     logging.info("[{}] Supplied credentials are valid.".format(self.trigger))
             except requests.exceptions.RequestException as e:
                 logging.info("[{}] Exception during Kafka auth, continuing... {}".format(self.trigger, e))
+                self.__disableTrigger(invalid_credential_status_code)
+                return None
 
             consumer = KafkaConsumer(config)
             logging.info("[{}] listing topics...".format(self.trigger))
@@ -331,6 +340,7 @@ class ConsumerProcess (Process):
             if topic_metadata.topics.get(self.topic) is None:
                 logging.info("[{}] topic [{}] does not exists. Disabling trigger.".format(self.trigger, self.topic))
                 self.__disableTrigger(non_existent_topic_status_code)
+                return None
 
             consumer.subscribe([self.topic], self.__on_assign, self.__on_revoke)
             logging.info("[{}] Now listening in order to fire trigger".format(self.trigger))
