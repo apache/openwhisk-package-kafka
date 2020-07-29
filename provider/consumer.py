@@ -315,31 +315,37 @@ class ConsumerProcess (Process):
                                 'security.protocol': 'sasl_ssl'
                              })
 
-            logging.info("[{}] verifyiing credentials...".format(self.trigger))
+            logging.info("[{}] verifying credentials...".format(self.trigger))
             #first to check whether users are using old event stream instance
             if 'messagehub' in self.kafkaAdminUrl:
-                logging.info('[{}] references an deprecated event stream instance.'.format(self.trigger))
-                self.__disableTrigger(invalid_credential_status_code)
+                msg = '[{}] references an deprecated event stream instance. Status code {}. Disabling the trigger...'.format(self.trigger, invalid_credential_status_code)
+                logging.info(msg)
+                self.__disableTrigger(invalid_credential_status_code, msg)
                 return None
 
             try:
-                response = requests.get(self.kafkaAdminUrl, auth=(self.username.lower(), self.password), timeout=60.0, verify=check_ssl)
+                authURL = self.kafkaAdminUrl + '/admin/topics'
+                response = requests.get(authURL, auth=(self.username.lower(), self.password), timeout=60.0, verify=check_ssl)
                 if response.status_code == 403:
-                    logging.info("[{}] Invalid event stream auth, disabling trigger... {}".format(self.trigger, response.status_code))
-                    self.__disableTrigger(response.status_code)
+                    msg = '[{}] contains invalid event stream auth. Status code {}. Disabling trigger...'.format(self.trigger, response.status_code)
+                    logging.info(msg)
+                    self.__disableTrigger(response.status_code, msg)
+                    return None
                 else:
                     logging.info("[{}] Supplied credentials are valid.".format(self.trigger))
             except requests.exceptions.RequestException as e:
-                logging.info("[{}] Exception during Kafka auth, continuing... {}".format(self.trigger, e))
-                self.__disableTrigger(invalid_credential_status_code)
+                msg = '[{}] Exception occurred during verifying event stream auth: [{}]. Status code {}. Disabling trigger...'.format(self.trigger, e, invalid_credential_status_code)
+                logging.info(msg)
+                self.__disableTrigger(invalid_credential_status_code, msg)
                 return None
 
             consumer = KafkaConsumer(config)
             logging.info("[{}] listing topics...".format(self.trigger))
             topic_metadata = consumer.list_topics()
             if topic_metadata.topics.get(self.topic) is None:
-                logging.info("[{}] topic [{}] does not exists. Disabling trigger.".format(self.trigger, self.topic))
-                self.__disableTrigger(non_existent_topic_status_code)
+                msg = '[{}] topic [{}] does not exists. Status code {}. Disabling trigger.'.format(self.trigger, self.topic, non_existent_topic_status_code)
+                logging.info(msg)
+                self.__disableTrigger(non_existent_topic_status_code, msg)
                 return None
 
             consumer.subscribe([self.topic], self.__on_assign, self.__on_revoke)
@@ -450,18 +456,20 @@ class ConsumerProcess (Process):
                         retry = False
                     elif self.__shouldDisable(status_code, response.headers):
                         retry = False
-                        logging.error('[{}] Error talking to OpenWhisk, status code {}'.format(self.trigger, status_code))
+                        msg = '[{}] Error talking to OpenWhisk, status code {}'.format(self.trigger, status_code)
+                        logging.error(msg)
                         self.__dumpRequestResponse(response)
-                        self.__disableTrigger(status_code)
+                        self.__disableTrigger(status_code, msg)
                 except requests.exceptions.RequestException as e:
                     logging.error('[{}] Error talking to OpenWhisk: {}'.format(self.trigger, e))
                 except AuthHandlerException as e:
-                    logging.error("[{}] Encountered an exception from auth handler, status code {}".format(self.trigger, e.response.status_code))
+                    msg = '[{}] Encountered an exception from auth handler, status code {}'.format(self.trigger, e.response.status_code)
+                    logging.error(msg)
                     self.__dumpRequestResponse(e.response)
 
                     if self.__shouldDisable(e.response.status_code, e.response.headers):
                         retry = False
-                        self.__disableTrigger(e.response.status_code)
+                        self.__disableTrigger(e.response.status_code, msg)
 
                 if retry:
                     retry_count += 1
@@ -475,13 +483,13 @@ class ConsumerProcess (Process):
                         self.consumer.commit(offsets=self.__getOffsetList(messages), asynchronous=False)
                         retry = False
 
-    def __disableTrigger(self, status_code):
+    def __disableTrigger(self, status_code, message):
         self.setDesiredState(Consumer.State.Disabled)
 
         # when failing to establish a database connection, mark the consumer as dead to restart the consumer
         try:
             self.database = Database()
-            self.database.disableTrigger(self.trigger, status_code)
+            self.database.disableTrigger(self.trigger, status_code, message)
         except Exception as e:
             logging.error('[{}] Uncaught exception: {}'.format(self.trigger, e))
             self.__recordState(Consumer.State.Dead)
