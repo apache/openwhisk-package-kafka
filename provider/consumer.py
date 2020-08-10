@@ -298,7 +298,6 @@ class ConsumerProcess (Process):
 
     def __createConsumer(self):
         if self.__shouldRun():
-            logging.info('[{}] brokers is: [{}]'.format(self.trigger, self.brokers))
             config = {'metadata.broker.list': ','.join(self.brokers),
                         'group.id': self.trigger,
                         'default.topic.config': {'auto.offset.reset': 'latest'},
@@ -314,18 +313,19 @@ class ConsumerProcess (Process):
                                 'sasl.password': self.password,
                                 'security.protocol': 'sasl_ssl'
                              })
-            if 'fiskars.com' in self.trigger:
-                consumer = KafkaConsumer(config)
-                consumer.subscribe([self.topic], self.__on_assign, self.__on_revoke)
-                logging.info("[{}] Now listening in order to fire trigger".format(self.trigger))
-                return consumer
-            logging.info("[{}] verifying credentials...".format(self.trigger))
+            # if 'fiskars.com' in self.trigger:
+            #     consumer = KafkaConsumer(config)
+            #     consumer.subscribe([self.topic], self.__on_assign, self.__on_revoke)
+            #     logging.info("[{}] Now listening in order to fire trigger".format(self.trigger))
+            #     return consumer
+                
+            # logging.info("[{}] verifying credentials...".format(self.trigger))
             #first to check whether users are using old event stream instance
-            if 'messagehub' in self.kafkaAdminUrl:
-                msg = '[{}] references an deprecated event stream instance. Status code {}. Disabling the trigger...'.format(self.trigger, invalid_credential_status_code)
-                logging.info(msg)
-                self.__disableTrigger(invalid_credential_status_code, msg)
-                return None
+            # if 'messagehub' in self.kafkaAdminUrl:
+            #     msg = '[{}] references an deprecated event stream instance. Status code {}. Disabling the trigger...'.format(self.trigger, invalid_credential_status_code)
+            #     logging.info(msg)
+            #     self.__disableTrigger(invalid_credential_status_code, msg)
+            #     return None
 
             try:
                 authURL = self.kafkaAdminUrl + '/admin/topics'
@@ -334,8 +334,10 @@ class ConsumerProcess (Process):
                     msg = '[{}] contains invalid event stream auth. Status code {}. Disabling trigger...'.format(self.trigger, response.status_code)
                     logging.info(msg)
                     self.__disableTrigger(response.status_code, msg)
+                    response.close()
                     return None
                 else:
+                    response.close()
                     logging.info("[{}] Supplied credentials are valid.".format(self.trigger))
             except requests.exceptions.RequestException as e:
                 msg = '[{}] Exception occurred during verifying event stream auth: [{}]. Status code {}. Disabling trigger...'.format(self.trigger, e, invalid_credential_status_code)
@@ -344,13 +346,12 @@ class ConsumerProcess (Process):
                 return None
 
             consumer = KafkaConsumer(config)
-            logging.info("[{}] listing topics...".format(self.trigger))
             topic_metadata = consumer.list_topics()
             if topic_metadata.topics.get(self.topic) is None:
                 msg = '[{}] topic [{}] does not exists. Status code {}. Disabling trigger.'.format(self.trigger, self.topic, non_existent_topic_status_code)
                 logging.info(msg)
                 self.__disableTrigger(non_existent_topic_status_code, msg)
-                return None
+                return consumer
 
             consumer.subscribe([self.topic], self.__on_assign, self.__on_revoke)
             logging.info("[{}] Now listening in order to fire trigger".format(self.trigger))
@@ -360,7 +361,6 @@ class ConsumerProcess (Process):
         messages = []
         totalPayloadSize = 0
         batchMessages = True
-        logging.info('[{}] should run [{}], batchMessages [{}] and secondsSinceLastPoll() [{}]'.format(self.trigger, self.__shouldRun(), batchMessages, (self.secondsSinceLastPoll() < 2)))
         if self.__shouldRun():
             while batchMessages and (self.secondsSinceLastPoll() < 2):
                 if self.queuedMessage != None:
@@ -368,16 +368,12 @@ class ConsumerProcess (Process):
                     message = self.queuedMessage
                     self.queuedMessage = None
                 else:
-                    logging.info('[{}] starts polling and time is [{}]'.format(self.trigger, datetime.now()))
                     message = self.consumer.poll(1.0)
-                    logging.info('[{}] finished polling and time is [{}]'.format(self.trigger, datetime.now()))
 
                 if self.secondsSinceLastPoll() < 0:
                     logging.info('[{}] Completed first poll'.format(self.trigger))
 
-                logging.info('[{}] polled message, message is not None: [{}]'.format(self.trigger, (message is not None)))
                 if (message is not None):
-                    logging.info('[{}] message error happened? [{}]'.format(self.trigger, (not message.error())))
                     if not message.error():
                         logging.debug("Consumed message: {}".format(str(message)))
                         messageSize = self.__sizeMessage(message)
@@ -399,7 +395,6 @@ class ConsumerProcess (Process):
                         logging.error('[{}] Error polling: {}'.format(self.trigger, message.error()))
                         batchMessages = False
                     else:
-                        logging.info('[{}] message error details [{}]'.format(self.trigger, message.error()))
                         logging.debug('[{}] No more messages. Stopping batch op.'.format(self.trigger))
                         batchMessages = False
                 else:
