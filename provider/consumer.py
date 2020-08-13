@@ -162,7 +162,9 @@ class ConsumerProcess (Process):
 
         if 'isIamKey' in params and params['isIamKey'] == True:
             self.authHandler = IAMAuth(params['authKey'], params['iamUrl'])
+            self.isIAMTrigger = True
         else:
+            self.isIAMTrigger = False
             if 'authKey' in params:
                 auth = params['authKey'].split(':')
                 self.authHandler = HTTPBasicAuth(auth[0], auth[1])
@@ -382,7 +384,7 @@ class ConsumerProcess (Process):
     # from firing the trigger. Specifically, disable on all 4xx status codes
     # except 408 (gateway timeout), 409 (document update conflict), and 429 (throttle)
     def __shouldDisable(self, status_code, headers):
-        return status_code in range(400, 500) and 'x-request-id' in headers and status_code not in [403, 408, 409, 429]
+        return (status_code in range(400, 500) and 'x-request-id' in headers and status_code not in [408, 409, 429]) or (status_code == 403 and self.isIAMTrigger)
 
     def __fireTrigger(self, messages):
         if self.__shouldRun():
