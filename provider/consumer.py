@@ -315,13 +315,6 @@ class ConsumerProcess (Process):
                                 'security.protocol': 'sasl_ssl'
                              })
 
-            #first to check whether users are using old event stream instance
-            if 'messagehub' in self.kafkaAdminUrl:
-                msg = '[{}] references an deprecated event stream instance. Status code {}. Disabling the trigger...'.format(self.trigger, invalid_credential_status_code)
-                logging.info(msg)
-                self.__disableTrigger(invalid_credential_status_code, msg)
-                return None
-
             consumer = KafkaConsumer(config)
             consumer.subscribe([self.topic], self.__on_assign, self.__on_revoke)
             logging.info("[{}] Now listening in order to fire trigger".format(self.trigger))

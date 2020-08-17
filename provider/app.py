@@ -20,6 +20,9 @@
 
 import logging
 import os
+import tracemalloc
+import time
+import threading
 
 from flask import Flask, jsonify
 from consumercollection import ConsumerCollection
@@ -48,8 +51,38 @@ def testRoute():
 def healthRoute():
     return jsonify(generateHealthReport(consumers, feedService.lastCanaryTime))
 
+def trace_leak():
+    time.sleep(300)
+    tracemalloc.start(5)
+    prev = tracemalloc.take_snapshot()
+    start = prev
+    for i, stat in enumerate(prev.statistics('lineno')[:5], 1):
+        logging.info('memtrace_top_current' + " " + str(i) + " " + str(stat))
+    print ('\n')
+    while True:
+        time.sleep(1200)
+        current = tracemalloc.take_snapshot()
+        for i, stat in enumerate(current.statistics('lineno')[:5], 1):
+            logging.info('memtrace_top_now' + " " + str(i) + " " + str(stat))
+        print ('\n')
+        stats = current.compare_to(prev, 'traceback')
+        for i, stat in enumerate(stats[:5], 1):
+            logging.info('memtrace_incremental' + " " + str(i) + " " + str(stat))
+            for line in stat.traceback.format():
+                logging.info('memtrace_incremental' + line)
+            print('\n')
+        totals = current.compare_to(start, 'traceback')
+        for i, total in enumerate(totals[:5], 1):
+            logging.info('memtrace_since_start' + " " + str(i) + " " + str(total))
+            for line in total.traceback.format():
+                logging.info('memtrace_since_start' + line)
+            print('\n')
+        prev = current
 
 def main():
+    collect_memory_profile = threading.Thread(target=trace_leak)
+    collect_memory_profile.start()
+
     logLevels = {
         "info": logging.INFO,
         "debug": logging.DEBUG,
@@ -99,6 +132,9 @@ def main():
     port = int(os.getenv('PORT', 5000))
     server = WSGIServer(('', port), app, log=logging.getLogger())
     server.serve_forever()
+
+
+
 
 if __name__ == '__main__':
     main()
