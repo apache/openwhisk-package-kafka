@@ -52,31 +52,29 @@ def healthRoute():
     return jsonify(generateHealthReport(consumers, feedService.lastCanaryTime))
 
 def trace_leak():
+    compare_to_start = tracemalloc.take_snapshot()
     time.sleep(300)
     tracemalloc.start(5)
     prev = tracemalloc.take_snapshot()
     start = prev
-    for i, stat in enumerate(prev.statistics('lineno')[:5], 1):
-        logging.info('memtrace_top_current' + " " + str(i) + " " + str(stat))
-    print ('\n')
     while True:
         time.sleep(1200)
         current = tracemalloc.take_snapshot()
-        for i, stat in enumerate(current.statistics('lineno')[:5], 1):
-            logging.info('memtrace_top_now' + " " + str(i) + " " + str(stat))
-        print ('\n')
-        stats = current.compare_to(prev, 'traceback')
-        for i, stat in enumerate(stats[:5], 1):
-            logging.info('memtrace_incremental' + " " + str(i) + " " + str(stat))
+        stats = current.compare_to(compare_to_start, 'traceback')
+        for i, stat in enumerate(stats[:5]):
+            logging.info('{} memtrace_comparetoinitial: {}'.format(i, stat))
             for line in stat.traceback.format():
-                logging.info('memtrace_incremental' + line)
-            print('\n')
-        totals = current.compare_to(start, 'traceback')
-        for i, total in enumerate(totals[:5], 1):
-            logging.info('memtrace_since_start' + " " + str(i) + " " + str(total))
-            for line in total.traceback.format():
-                logging.info('memtrace_since_start' + line)
-            print('\n')
+                logging.info('memtrace_comparetoinitial: {}'.format(line))
+        incrementals = current.compare_to(prev, 'traceback')
+        for i, incremental in enumerate(incrementals[:10]):
+            logging.info('{} memtrace_incremental: {}'.format(i, incremental))
+            for line in incremental.traceback.format():
+                logging.info('memtrace_incremental: {}'.format(line))
+        cumulatives = current.compare_to(start, 'traceback')
+        for i, cumulative in enumerate(cumulatives[:5]):
+            logging.info('{} memtrace_since_start: {}'.format(i, cumulative))
+            for line in cumulative.traceback.format():
+                logging.info('memtrace_since_start:{}'.format(line))
         prev = current
 
 def main():
