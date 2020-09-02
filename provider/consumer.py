@@ -24,8 +24,6 @@ import os
 import requests
 import time
 import base64
-import tracemalloc
-import threading
 
 # HEADS UP! I'm importing confluent_kafka.Consumer as KafkaConsumer to avoid a
 # naming conflict with my own Consumer class
@@ -48,26 +46,6 @@ non_existent_topic_status_code = 404
 invalid_credential_status_code = 403
 processingManager = Manager()
 
-def trace_leak():
-    time.sleep(300)
-    tracemalloc.start(3)
-    prev = tracemalloc.take_snapshot()
-    start = prev
-    while True:
-        time.sleep(1200)
-        current = tracemalloc.take_snapshot()
-        stats = current.compare_to(prev, 'traceback')
-        for i, stat in enumerate(stats[:3], 1):
-            logging.info('consumer_incremental ' + str(i) + " " + str(stat))
-            for line in stat.traceback.format():
-                logging.info('consumer_incremental ' + line)
-        totals = current.compare_to(start, 'traceback')
-        for i, total in enumerate(totals[:3], 1):
-            logging.info('consumer_sinceStart ' + str(i) + " " + str(total))
-            for line in total.traceback.format():
-                logging.info('consumer_sinceStart ' + line)
-        prev = current
-
 # Each Consumer instance will have a shared dictionary that will be used to
 # indicate state, and desired state changes between this process, and the ConsumerProcess.
 def newSharedDictionary():
@@ -85,8 +63,6 @@ class Consumer:
         Disabled = 'Disabled'
 
     def __init__(self, trigger, params):
-        collect_memory_profile = threading.Thread(target=trace_leak)
-        collect_memory_profile.start()
         self.trigger = trigger
         self.params = params
 
@@ -400,7 +376,7 @@ class ConsumerProcess (Process):
     # from firing the trigger. Specifically, disable on all 4xx status codes
     # except 408 (gateway timeout), 409 (document update conflict), and 429 (throttle)
     def __shouldDisable(self, status_code, headers):
-        return (status_code in range(400, 500) and 'x-request-id' in headers and status_code not in [408, 409, 429]) or (status_code == 403 and self.isIAMTrigger)
+        return status_code in range(400, 500) and 'x-request-id' in headers and status_code not in [401, 403, 408, 409, 429]
 
     def __fireTrigger(self, messages):
         if self.__shouldRun():
