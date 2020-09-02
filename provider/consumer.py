@@ -24,6 +24,8 @@ import os
 import requests
 import time
 import base64
+import tracemalloc
+import threading
 
 # HEADS UP! I'm importing confluent_kafka.Consumer as KafkaConsumer to avoid a
 # naming conflict with my own Consumer class
@@ -46,6 +48,25 @@ non_existent_topic_status_code = 404
 invalid_credential_status_code = 403
 processingManager = Manager()
 
+def trace_leak():
+    time.sleep(300)
+    tracemalloc.start(3)
+    prev = tracemalloc.take_snapshot()
+    start = prev
+    while True:
+        time.sleep(1200)
+        current = tracemalloc.take_snapshot()
+        stats = current.compare_to(prev, 'traceback')
+        for i, stat in enumerate(stats[:3], 1):
+            logging.info('consumer_incremental ' + str(i) + " " + str(stat))
+            for line in stat.traceback.format():
+                logging.info('consumer_incremental ' + line)
+        totals = current.compare_to(start, 'traceback')
+        for i, total in enumerate(totals[:3], 1):
+            logging.info('consumer_sinceStart ' + str(i) + " " + str(total))
+            for line in total.traceback.format():
+                logging.info('consumer_sinceStart ' + line)
+        prev = current
 
 # Each Consumer instance will have a shared dictionary that will be used to
 # indicate state, and desired state changes between this process, and the ConsumerProcess.
@@ -64,6 +85,8 @@ class Consumer:
         Disabled = 'Disabled'
 
     def __init__(self, trigger, params):
+        collect_memory_profile = threading.Thread(target=trace_leak)
+        collect_memory_profile.start()
         self.trigger = trigger
         self.params = params
 
@@ -314,33 +337,8 @@ class ConsumerProcess (Process):
                                 'sasl.password': self.password,
                                 'security.protocol': 'sasl_ssl'
                              })
-            if 'messagehub' in self.kafkaAdminUrl:
-                msg = '[{}] references an deprecated event stream instance. Status code {}. Disabling the trigger...'.format(self.trigger, invalid_credential_status_code)
-                logging.info(msg)
-                self.__disableTrigger(invalid_credential_status_code, msg)
-                return None
-            try:
-                authURL = self.kafkaAdminUrl + '/admin/topics'
-                response = requests.get(authURL, auth=(self.username.lower(), self.password), timeout=60.0, verify=check_ssl)
-                if response.status_code == 403:
-                    msg = '[{}] contains invalid event stream auth. Status code {}. Disabling trigger...'.format(self.trigger, response.status_code)
-                    logging.info(msg)
-                    self.__disableTrigger(response.status_code, msg)
-                    response.close()
-                    return None
-                else:
-                    response.close()
-                    logging.info("[{}] Supplied credentials are valid.".format(self.trigger))
-            except requests.exceptions.RequestException as e:
-                msg = '[{}] Exception occurred during verifying event stream auth: [{}]. Status code {}. Disabling trigger...'.format(self.trigger, e, invalid_credential_status_code)
 
             consumer = KafkaConsumer(config)
-            topic_metadata = consumer.list_topics()
-            if topic_metadata.topics.get(self.topic) is None:
-                msg = '[{}] topic [{}] does not exists. Status code {}. Disabling trigger.'.format(self.trigger, self.topic, non_existent_topic_status_code)
-                logging.info(msg)
-                self.__disableTrigger(non_existent_topic_status_code, msg)
-                return consumer
             consumer.subscribe([self.topic], self.__on_assign, self.__on_revoke)
             logging.info("[{}] Now listening in order to fire trigger".format(self.trigger))
             return consumer
