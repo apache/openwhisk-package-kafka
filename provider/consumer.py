@@ -188,38 +188,37 @@ class ConsumerProcess (Process):
         else:
             self.encodeKeyAsBase64 = False
 
-        if self.isIAMTrigger:
-            retry = True
-            retry_count = 0
-            while retry:
-                try:
-                    response = requests.get(self.triggerURL, auth=self.authHandler, timeout=10.0, verify=check_ssl)
-                    status_code = response.status_code
-                    msg = "[{}] At consumer start up. Repsonse status code {}".format(self.trigger, status_code)
-                    logging.info(msg)
-                    if status_code == 200:
-                        retry = False
-                    elif self.__shouldDisableDuringConsumerStartUp(status_code):
-                        self.__disableTrigger(status_code, msg)
-                        self.__recordState(self.desiredState())
-                        retry = False
-                except requests.exceptions.RequestException as e:
-                    logging.error('[{}] Error getting trigger: {}'.format(self.trigger, e))
-                except AuthHandlerException as e:
-                    msg = '[{}] At consumer start up. Encountered an exception from auth handler, status code {}'.format(self.trigger, e.response.status_code)
-                    logging.error(msg)
-                    if self.__shouldDisableDuringConsumerStartUp(e.response.status_code):
-                        self.__disableTrigger(e.response.status_code, msg)
-                        self.__recordState(self.desiredState())
-                        retry = False
-                if retry:
-                    retry_count += 1
-                    if retry_count <= self.max_retries:
-                        sleepyTime = pow(2,retry_count)
-                        logging.info("[{}] At consumer start up. Retrying in {} second(s)".format(self.trigger, sleepyTime))
-                        time.sleep(sleepyTime)
-                    else:
-                        retry = False
+        retry = True
+        retry_count = 0
+        while retry:
+            try:
+                response = requests.get(self.triggerURL, auth=self.authHandler, timeout=10.0, verify=check_ssl)
+                status_code = response.status_code
+                msg = "[{}] At consumer start up. Repsonse status code {}".format(self.trigger, status_code)
+                logging.info(msg)
+                if status_code == 200:
+                    retry = False
+                elif self.__shouldDisableDuringConsumerStartUp(status_code):
+                    self.__disableTrigger(status_code, msg)
+                    self.__recordState(self.desiredState())
+                    retry = False
+            except requests.exceptions.RequestException as e:
+                logging.error('[{}] Error getting trigger: {}'.format(self.trigger, e))
+            except AuthHandlerException as e:
+                msg = '[{}] At consumer start up. Encountered an exception from auth handler, status code {}'.format(self.trigger, e.response.status_code)
+                logging.error(msg)
+                if self.__shouldDisableDuringConsumerStartUp(e.response.status_code):
+                    self.__disableTrigger(e.response.status_code, msg)
+                    self.__recordState(self.desiredState())
+                    retry = False
+            if retry:
+                retry_count += 1
+                if retry_count <= self.max_retries:
+                    sleepyTime = pow(2,retry_count)
+                    logging.info("[{}] At consumer start up. Retrying in {} second(s)".format(self.trigger, sleepyTime))
+                    time.sleep(sleepyTime)
+                else:
+                    retry = False
 
         # always init consumer to None in case the consumer needs to shut down
         # before the KafkaConsumer is fully initialized/assigned
@@ -412,7 +411,10 @@ class ConsumerProcess (Process):
         return status_code in range(400, 500) and 'x-request-id' in headers and status_code not in [408, 409, 429]
 
     def __shouldDisableDuringConsumerStartUp(self, status_code):
-        return status_code in [401, 403]
+        if self.isIAMTrigger:
+            return status_code in [401, 403, 404]
+        else:
+            return status_code in [404]
 
     def __fireTrigger(self, messages):
         if self.__shouldRun():
