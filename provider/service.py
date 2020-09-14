@@ -33,7 +33,7 @@ from threading import Thread
 canaryInterval = 60  # seconds
 
 # How long the changes feed should poll before timing out
-changesFeedTimeout = 30  # seconds
+changesFeedTimeout = 150  # seconds
 
 
 class Service (Thread):

@@ -188,37 +188,22 @@ class ConsumerProcess (Process):
         else:
             self.encodeKeyAsBase64 = False
 
-        retry = True
-        retry_count = 0
-        while retry:
-            try:
-                response = requests.get(self.triggerURL, auth=self.authHandler, timeout=10.0, verify=check_ssl)
-                status_code = response.status_code
-                msg = "[{}] At consumer start up. Repsonse status code {}".format(self.trigger, status_code)
-                logging.info(msg)
-                if status_code == 200:
-                    retry = False
-                elif self.__shouldDisableDuringConsumerStartUp(status_code):
-                    self.__disableTrigger(status_code, msg)
-                    self.__recordState(self.desiredState())
-                    retry = False
-            except requests.exceptions.RequestException as e:
-                logging.error('[{}] Error getting trigger: {}'.format(self.trigger, e))
-            except AuthHandlerException as e:
-                msg = '[{}] At consumer start up. Encountered an exception from auth handler, status code {}'.format(self.trigger, e.response.status_code)
-                logging.error(msg)
-                if self.__shouldDisableDuringConsumerStartUp(e.response.status_code):
-                    self.__disableTrigger(e.response.status_code, msg)
-                    self.__recordState(self.desiredState())
-                    retry = False
-            if retry:
-                retry_count += 1
-                if retry_count <= self.max_retries:
-                    sleepyTime = pow(2,retry_count)
-                    logging.info("[{}] At consumer start up. Retrying in {} second(s)".format(self.trigger, sleepyTime))
-                    time.sleep(sleepyTime)
-                else:
-                    retry = False
+        try:
+            response = requests.get(self.triggerURL, auth=self.authHandler, timeout=10.0, verify=check_ssl)
+            status_code = response.status_code
+            msg = "[{}] At consumer start up. Repsonse status code {}".format(self.trigger, status_code)
+            logging.info(msg)
+            if self.__shouldDisableDuringConsumerStartUp(status_code):
+                self.__disableTrigger(status_code, msg)
+                self.__recordState(self.desiredState())
+        except requests.exceptions.RequestException as e:
+            logging.error('[{}] Error getting trigger: {}'.format(self.trigger, e))
+        except AuthHandlerException as e:
+            msg = '[{}] At consumer start up. Encountered an exception from auth handler, status code {}'.format(self.trigger, e.response.status_code)
+            logging.error(msg)
+            if self.__shouldDisableDuringConsumerStartUp(e.response.status_code):
+                self.__disableTrigger(e.response.status_code, msg)
+                self.__recordState(self.desiredState())
 
         # always init consumer to None in case the consumer needs to shut down
         # before the KafkaConsumer is fully initialized/assigned
