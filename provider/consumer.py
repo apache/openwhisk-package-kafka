@@ -393,13 +393,12 @@ class ConsumerProcess (Process):
     # from firing the trigger. Specifically, disable on all 4xx status codes
     # except 408 (gateway timeout), 409 (document update conflict), and 429 (throttle)
     def __shouldDisable(self, status_code, headers):
+        if self.isIAMTrigger:
+            return status_code in range(400, 500) and 'x-request-id' in headers and status_code not in [401, 403, 404, 408, 409, 429]
         return status_code in range(400, 500) and 'x-request-id' in headers and status_code not in [408, 409, 429]
 
     def __shouldDisableDuringConsumerStartUp(self, status_code):
-        if self.isIAMTrigger:
-            return status_code in [401, 403, 404]
-        else:
-            return status_code in [404]
+        return status_code in [401, 403, 404]
 
     def __fireTrigger(self, messages):
         if self.__shouldRun():
