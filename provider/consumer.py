@@ -201,9 +201,9 @@ class ConsumerProcess (Process):
         except AuthHandlerException as e:
             msg = '[{}] At consumer start up. Encountered an exception from auth handler, status code {}'.format(self.trigger, e.response.status_code)
             logging.error(msg)
-            if self.__shouldDisableDuringConsumerStartUp(e.response.status_code):
-                self.__disableTrigger(e.response.status_code, msg)
-                self.__recordState(self.desiredState())
+            # if self.__shouldDisableDuringConsumerStartUp(e.response.status_code):
+            #     self.__disableTrigger(e.response.status_code, msg)
+            #     self.__recordState(self.desiredState())
 
         # always init consumer to None in case the consumer needs to shut down
         # before the KafkaConsumer is fully initialized/assigned
@@ -420,7 +420,7 @@ class ConsumerProcess (Process):
                 try:
                     response = requests.post(self.triggerURL, json=payload, auth=self.authHandler, timeout=10.0, verify=check_ssl)
                     status_code = response.status_code
-                    logging.info("[{}] Repsonse status code {}".format(self.trigger, status_code))
+                    logging.info("[{}] Response status code {}".format(self.trigger, status_code))
 
                     # Manually commit offset if the trigger was fired successfully. Retry firing the trigger
                     # for a select set of status codes
