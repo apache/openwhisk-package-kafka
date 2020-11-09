@@ -193,9 +193,9 @@ class ConsumerProcess (Process):
             status_code = response.status_code
             msg = "[{}] At consumer start up. Repsonse status code {}".format(self.trigger, status_code)
             logging.info(msg)
-            if self.__shouldDisableDuringConsumerStartUp(status_code):
-                self.__disableTrigger(status_code, msg)
-                self.__recordState(self.desiredState())
+            #if self.__shouldDisableDuringConsumerStartUp(status_code):
+                #self.__disableTrigger(status_code, msg)
+                #self.__recordState(self.desiredState())
         except requests.exceptions.RequestException as e:
             logging.error('[{}] Error getting trigger: {}'.format(self.trigger, e))
         except AuthHandlerException as e:
@@ -443,7 +443,7 @@ class ConsumerProcess (Process):
                         msg = '[{}] Error talking to OpenWhisk, status code {}'.format(self.trigger, status_code)
                         logging.error(msg)
                         self.__dumpRequestResponse(response)
-                        self.__disableTrigger(status_code, msg)
+                        #self.__disableTrigger(status_code, msg)
                 except requests.exceptions.RequestException as e:
                     logging.error('[{}] Error talking to OpenWhisk: {}'.format(self.trigger, e))
                 except AuthHandlerException as e:
