@@ -37,6 +37,7 @@ from authHandler import AuthHandlerException
 from authHandler import IAMAuth
 from requests.auth import HTTPBasicAuth
 from datetime import datetime, timedelta
+from Crypto.Cipher import AES
 
 local_dev = os.getenv('LOCAL_DEV', 'False')
 payload_limit = int(os.getenv('PAYLOAD_LIMIT', 900000))
@@ -52,6 +53,31 @@ def newSharedDictionary():
     sharedDictionary = processingManager.dict()
     sharedDictionary['lastPoll'] = datetime.max
     return sharedDictionary
+
+def keyDecrypt(apiKey, trigger):
+    splittedAPIKey = apiKey.split("::")
+    if len(splittedAPIKey) <= 1:
+        return apiKey
+    secretKey, base64_message = splittedAPIKey[2], splittedAPIKey[3]
+    try:
+        if secretKey == os.getenv('CONFIG_WHISK_CRYPT_KEKI'):
+            logging.debug('[{}] uses matched secret id'.format(trigger))
+            key = os.getenv('CONFIG_WHISK_CRYPT_KEK').encode()
+        else:
+            if secretKey != os.getenv('CONFIG_WHISK_CRYPT_KEKIF'):
+                logging.error('[{}] unable to find a encryption secret id: {}'.format(trigger, secretKey))
+                return ''
+            logging.debug('[{}] uses fallback secret id'.format(trigger))
+            key = os.getenv('CONFIG_WHISK_CRYPT_KEKF').encode()
+        base64_bytes = base64_message.encode()
+        data = base64.b64decode(base64_bytes)
+        nonce, tag = data[:12], data[-16:]
+        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+        res = cipher.decrypt_and_verify(data[12:-16], tag).decode()
+    except Exception as e:
+        logging.error('[{}] unable to decrypt the data using key for secret id {} for the following reason: {}'.format(trigger, secretKey, e))
+        return ''
+    return res
 
 class Consumer:
     class State:
@@ -160,12 +186,14 @@ class ConsumerProcess (Process):
             self.kafkaAdminUrl = params['kafka_admin_url']
 
         if 'isIamKey' in params and params['isIamKey'] == True:
-            self.authHandler = IAMAuth(params['authKey'], params['iamUrl'])
+            decryptedKey = keyDecrypt(params['authKey'], trigger)
+            self.authHandler = IAMAuth(decryptedKey, params['iamUrl'])
             self.isIAMTrigger = True
         else:
             self.isIAMTrigger = False
             if 'authKey' in params:
-                auth = params['authKey'].split(':')
+                decryptedAuthKey = keyDecrypt(params['authKey'], trigger)
+                auth = decryptedAuthKey.split(':')
                 self.authHandler = HTTPBasicAuth(auth[0], auth[1])
             else:
                 parsedUrl = urlparse(params["triggerURL"])
