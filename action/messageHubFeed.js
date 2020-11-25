@@ -38,6 +38,7 @@ function main(params) {
     var iamKey = process.env.__OW_IAM_NAMESPACE_API_KEY;
     massagedParams.authKey = iamKey || params.authKey;
     massagedParams.isIamKey = iamKey !== undefined;
+    massagedParams.encryptedAuth = process.env.__OW_API_KEY_ENCRYPTED;
 
     if (massagedParams.isIamKey) {
         massagedParams.iamUrl = process.env.__OW_IAM_API_URL;

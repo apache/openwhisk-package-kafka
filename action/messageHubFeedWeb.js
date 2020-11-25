@@ -60,6 +60,9 @@ function main(params) {
                 })
                 .then((worker) => {
                     validatedParams['worker'] = worker;
+                    if (params.encryptedAuth) {
+                        validatedParams.authKey = params.encryptedAuth;
+                    }
                     return db.recordTrigger(validatedParams);
                 })
                 .then(() => {
