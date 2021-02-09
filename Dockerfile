@@ -20,7 +20,7 @@ FROM python:3.8.2
 RUN apt-get update && apt-get upgrade -y
 
 # install librdkafka
-ENV LIBRDKAFKA_VERSION 1.5.0
+ENV LIBRDKAFKA_VERSION 1.6.0
 RUN git clone --depth 1 --branch v${LIBRDKAFKA_VERSION} https://github.com/edenhill/librdkafka.git librdkafka \
     && cd librdkafka \
     && ./configure \

@@ -66,7 +66,6 @@ class MessageHubProduceTests
     val messageHubFeed = "messageHubFeed"
     val messageHubProduce = "messageHubProduce"
     val consumerInitTime = 10000 // ms
-    val testTriggerSuffix = "cfnpipelinetest"
     val maxRetries = System.getProperty("max.retries", "60").toInt
 
     // these parameter values are 100% valid and should work as-is
@@ -133,7 +132,7 @@ class MessageHubProduceTests
         val currentTime = s"${System.currentTimeMillis}"
 
         (wp, assetHelper) =>
-            val triggerName = s"/_/binaryValueTrigger-$currentTime-$testTriggerSuffix"
+            val triggerName = s"/_/binaryValueTrigger-$currentTime"
 
             createTrigger(assetHelper, triggerName, parameters = Map(
                 "user" -> getAsJson("user"),
@@ -177,7 +176,7 @@ class MessageHubProduceTests
         val currentTime = s"${System.currentTimeMillis}"
 
         (wp, assetHelper) =>
-            val triggerName = s"/_/binaryKeyTrigger-$currentTime-$testTriggerSuffix"
+            val triggerName = s"/_/binaryKeyTrigger-$currentTime"
 
             createTrigger(assetHelper, triggerName, parameters = Map(
                 "user" -> getAsJson("user"),

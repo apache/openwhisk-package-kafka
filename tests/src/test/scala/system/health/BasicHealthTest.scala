@@ -52,7 +52,6 @@ class BasicHealthTest
   val messagingPackage = "/whisk.system/messaging"
   val messageHubFeed = "messageHubFeed"
   val messageHubProduce = "messageHubProduce"
-  val testTriggerSuffix = "cfnpipelinetest"
   val actionName = s"$messagingPackage/$messageHubFeed"
   val maxRetries = System.getProperty("max.retries", "60").toInt
 
@@ -62,7 +61,7 @@ class BasicHealthTest
     val currentTime = s"${System.currentTimeMillis}"
 
     (wp, assetHelper) =>
-      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime-$testTriggerSuffix"
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
 
       createTrigger(assetHelper, triggerName, parameters = Map(
         "user" -> getAsJson("user"),
@@ -110,7 +109,7 @@ class BasicHealthTest
     val currentTime = s"${System.currentTimeMillis}"
 
     (wp, assetHelper) =>
-      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime-$testTriggerSuffix"
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
       println(s"Creating trigger $triggerName")
 
       val username = getAsJson("user")
