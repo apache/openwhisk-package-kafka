@@ -59,6 +59,7 @@ class MessageHubFeedTests
   val messagingPackage = "/whisk.system/messaging"
   val messageHubFeed = "messageHubFeed"
   val consumerInitTime = 10000 // ms
+  val testTriggerSuffix = "cfnpipelinetest"
   val maxRetries = System.getProperty("max.retries", "60").toInt
 
   implicit val wskprops = WskProps()
@@ -119,7 +120,7 @@ class MessageHubFeedTests
 
     (wp, assetHelper) =>
       val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
-      val ruleName = s"dummyMessageHub-helloKafka-$currentTime"
+      val ruleName = s"dummyMessageHub-helloKafka-$currentTime-$testTriggerSuffix"
       val parameters = Map(
         "user" -> getAsJson("user"),
         "password" -> getAsJson("password"),
@@ -178,7 +179,7 @@ class MessageHubFeedTests
     val currentTime = s"${System.currentTimeMillis}"
 
     (wp, assetHelper) =>
-      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime-$testTriggerSuffix"
 
       createTrigger(assetHelper, triggerName, parameters = Map(
         "user" -> getAsJson("user"),
@@ -231,7 +232,7 @@ class MessageHubFeedTests
     val currentTime = s"${System.currentTimeMillis}"
 
     (wp, assetHelper) =>
-      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime-$testTriggerSuffix"
 
       createTrigger(assetHelper, triggerName, parameters = Map(
         "user" -> getAsJson("user"),
@@ -266,7 +267,7 @@ class MessageHubFeedTests
     val currentTime = s"${System.currentTimeMillis}"
 
     (wp, assetHelper) =>
-      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime-$testTriggerSuffix"
       val username = getAsJson("user")
       val password = getAsJson("password")
       val admin_url = getAsJson("kafka_admin_url")
@@ -298,7 +299,7 @@ class MessageHubFeedTests
     val currentTime = s"${System.currentTimeMillis}"
 
     (wp, assetHelper) =>
-      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime-$testTriggerSuffix"
       val username = getAsJson("user")
       val password = getAsJson("password")
       val admin_url = getAsJson("kafka_admin_url")
@@ -332,7 +333,7 @@ class MessageHubFeedTests
     val currentTime = s"${System.currentTimeMillis}"
 
     (wp, assetHelper) =>
-      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime-$testTriggerSuffix"
       val username = getAsJson("user")
       val password = getAsJson("password")
       val admin_url = getAsJson("kafka_admin_url")
@@ -414,7 +415,7 @@ class MessageHubFeedTests
 
     (wp, assetHelper) =>
       val key = "TheKey"
-      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime-$testTriggerSuffix"
 
       val uuid = createTrigger(assetHelper, triggerName, parameters = Map(
         "user" -> getAsJson("user"),
@@ -480,7 +481,7 @@ class MessageHubFeedTests
 
     (wp, assetHelper) =>
       val key = "TheKey"
-      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime-$testTriggerSuffix"
 
       createTrigger(assetHelper, triggerName, parameters = Map(
         "__bx_creds" -> Map(

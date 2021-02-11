@@ -43,6 +43,7 @@ local_dev = os.getenv('LOCAL_DEV', 'False')
 payload_limit = int(os.getenv('PAYLOAD_LIMIT', 900000))
 check_ssl = (local_dev == 'False')
 cloud_functions_stamp = "-CFn"
+cfn_pipeline_test = "cfnpipelinetest"
 seconds_in_day = 86400
 non_existent_topic_status_code = 404
 invalid_credential_status_code = 403
@@ -345,8 +346,9 @@ class ConsumerProcess (Process):
 
     def __createConsumer(self):
         if self.__shouldRun():
+            cg = self.topic + cloud_functions_stamp if cfn_pipeline_test in self.trigger else self.trigger
             config = {'metadata.broker.list': ','.join(self.brokers),
-                        'group.id': self.topic + cloud_functions_stamp,
+                        'group.id': cg,
                         'default.topic.config': {'auto.offset.reset': 'latest'},
                         'enable.auto.commit': False,
                         'api.version.request': True
