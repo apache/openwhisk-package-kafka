@@ -22,8 +22,12 @@ const ALGORITHM_TAG_SIZE_16 = 16;
 
 module.exports = function (encryptKeyID, encryptKeyValue, encryptFallBackKeyID, encryptFallBackKeyValue, cryptVersion) {
 
-    this.encryptKeyValue = decodeKeyValue(encryptKeyValue);
-    this.encryptFallBackKeyValue = decodeKeyValue(encryptFallBackKeyValue);
+    if (encryptKeyValue) {
+        this.encryptKeyValue = decodeKeyValue(encryptKeyValue);
+    }
+    if (encryptFallBackKeyValue) {
+        this.encryptFallBackKeyValue = decodeKeyValue(encryptFallBackKeyValue);
+    }
 
     this.decryptAuth = function (authDBString) {
         if (authDBString) {
