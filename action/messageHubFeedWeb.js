@@ -65,7 +65,7 @@ function main(params) {
                         validatedParams.authKey = params.encryptedAuth;
                     }
                     const crypto = new CryptoUtils(params.CRYPT_KEKI, params.CRYPT_KEK, params.CRYPT_KEKIF, params.CRYPT_KEKF, params.CRYPT_VERSION);
-                    validatedParams.password = crypto.encryptAuth(validatedParams);
+                    validatedParams.password = crypto.encryptAuth(validatedParams.password);
                     return db.recordTrigger(validatedParams);
                 })
                 .then(() => {
