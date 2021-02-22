@@ -54,6 +54,7 @@ class BasicStressTest
     val messagingPackage = "/whisk.system/messaging"
     val messageHubFeed = "messageHubFeed"
     val messageHubProduce = "messageHubProduce"
+    val testTriggerSuffix = "cfnpipelinetest"
 
     behavior of "Message Hub provider"
 
@@ -76,7 +77,7 @@ class BasicStressTest
             // use this to print non-zero-based iteration numbers you know... for humans
             val iterationLabel = currentIteration + 1
 
-            val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
+            val triggerName = s"/_/dummyMessageHubTrigger-$currentTime-$testTriggerSuffix"
             println(s"\nCreating trigger #${iterationLabel}: ${triggerName}")
             val feedCreationResult = wsk.trigger.create(triggerName, feed = Some(s"$messagingPackage/$messageHubFeed"), parameters = Map(
                     "user" -> getAsJson("user"),

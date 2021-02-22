@@ -119,8 +119,8 @@ class MessageHubFeedTests
     val currentTime = s"${System.currentTimeMillis}"
 
     (wp, assetHelper) =>
-      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime"
-      val ruleName = s"dummyMessageHub-helloKafka-$currentTime-$testTriggerSuffix"
+      val triggerName = s"/_/dummyMessageHubTrigger-$currentTime-$testTriggerSuffix"
+      val ruleName = s"dummyMessageHub-helloKafka-$currentTime"
       val parameters = Map(
         "user" -> getAsJson("user"),
         "password" -> getAsJson("password"),
