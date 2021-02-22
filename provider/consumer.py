@@ -57,10 +57,10 @@ def newSharedDictionary():
     sharedDictionary['lastPoll'] = datetime.max
     return sharedDictionary
 
-def keyDecrypt(apiKey, trigger):
-    splittedAPIKey = apiKey.split("::")
+def keyDecrypt(encryptedString, trigger, isEventStream):
+    splittedAPIKey = encryptedString.split("::")
     if len(splittedAPIKey) <= 1:
-        return apiKey
+        return encryptedString
     secretKey, base64_message = splittedAPIKey[2], splittedAPIKey[3]
     try:
         if secretKey == os.getenv('CONFIG_WHISK_CRYPT_KEKI'):
@@ -78,6 +78,9 @@ def keyDecrypt(apiKey, trigger):
         cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
         res = cipher.decrypt_and_verify(data[12:-16], tag).decode()
     except Exception as e:
+        if isEventStream:
+            logging.error('[{}] unable to decrypt the kafka password using key for secret id {} for the following reason: {}'.format(trigger, secretKey, e))
+            return ''
         logging.error('[{}] unable to decrypt the data using key for secret id {} for the following reason: {}'.format(trigger, secretKey, e))
         return ''
     return res
@@ -185,17 +188,17 @@ class ConsumerProcess (Process):
 
         if self.isMessageHub:
             self.username = params["username"]
-            self.password = params["password"]
+            self.password = keyDecrypt(params["password"], trigger, True)
             self.kafkaAdminUrl = params['kafka_admin_url']
 
         if 'isIamKey' in params and params['isIamKey'] == True:
-            decryptedKey = keyDecrypt(params['authKey'], trigger)
+            decryptedKey = keyDecrypt(params['authKey'], trigger, False)
             self.authHandler = IAMAuth(decryptedKey, params['iamUrl'])
             self.isIAMTrigger = True
         else:
             self.isIAMTrigger = False
             if 'authKey' in params:
-                decryptedAuthKey = keyDecrypt(params['authKey'], trigger)
+                decryptedAuthKey = keyDecrypt(params['authKey'], trigger, False)
                 auth = decryptedAuthKey.split(':')
                 self.authHandler = HTTPBasicAuth(auth[0], auth[1])
             else:
