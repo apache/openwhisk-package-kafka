@@ -17,6 +17,7 @@
 
 const common = require('./lib/common');
 const Database = require('./lib/Database');
+const CryptoUtils = require('./lib/CryptoUtils');
 const itm = require('@ibm-functions/iam-token-manager');
 var moment = require('moment');
 
@@ -63,6 +64,8 @@ function main(params) {
                     if (params.encryptedAuth) {
                         validatedParams.authKey = params.encryptedAuth;
                     }
+                    const crypto = new CryptoUtils(params.CRYPT_KEKI, params.CRYPT_KEK, params.CRYPT_KEKIF, params.CRYPT_KEKF, params.CRYPT_VERSION);
+                    validatedParams.password = crypto.encryptAuth(validatedParams);
                     return db.recordTrigger(validatedParams);
                 })
                 .then(() => {
@@ -95,6 +98,7 @@ function main(params) {
                     return db.getTrigger(params.triggerName);
                 })
                 .then((triggerDoc) => {
+                    const crypto = new CryptoUtils(params.CRYPT_KEKI, params.CRYPT_KEK, params.CRYPT_KEKIF, params.CRYPT_KEKF, params.CRYPT_VERSION);
                     var body = {
                         config: {
                             triggerName: triggerDoc.triggerName,
@@ -105,7 +109,7 @@ function main(params) {
                             kafka_brokers_sasl: triggerDoc.brokers,
                             kafka_admin_url: triggerDoc.kafka_admin_url,
                             user: triggerDoc.username,
-                            password: triggerDoc.password
+                            password: crypto.decryptAuth(triggerDoc.password)
                         },
                         status: {
                             active: triggerDoc.status.active,

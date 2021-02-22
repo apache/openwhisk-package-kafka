@@ -87,23 +87,29 @@ $WSK_CLI -i --apihost "$EDGEHOST" action update --kind "$ACTION_RUNTIME_VERSION"
     -a sampleInput '{"kafka_brokers_sasl":"[\"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093\"]", "username":"someUsername", "password":"somePassword", "topic":"mytopic", "isJSONData": "false", "endpoint":"openwhisk.ng.bluemix.net", "kafka_admin_url":"https://kafka-admin-prod01.messagehub.services.us-south.bluemix.net:443"}'
 
 # create messagingWeb package and web version of feed action
-if [ -n "$WORKERS" ];
-then
-    $WSK_CLI -i --apihost "$EDGEHOST" package update messagingWeb \
-        --auth "$AUTH" \
-        --shared no \
-        -p endpoint "$APIHOST" \
-        -p DB_URL "$DB_URL" \
-        -p DB_NAME "$DB_NAME"  \
-        -p workers "$WORKERS"
-else
-    $WSK_CLI -i --apihost "$EDGEHOST" package update messagingWeb \
-        --auth "$AUTH" \
-        --shared no \
-        -p endpoint "$APIHOST" \
-        -p DB_URL "$DB_URL" \
-        -p DB_NAME "$DB_NAME"
+COMMAND=" -i --apihost $EDGEHOST package update messagingWeb \
+    --auth $AUTH \
+    --shared no \
+    -p endpoint $APIHOST \
+    -p DB_URL $DB_URL \
+    -p DB_NAME $DB_NAME \
+    -p CRYPT_VERSION $CRYPT_VERSION"
+
+if [ -n "$WORKERS" ]; then
+    COMMAND+=" -p workers $WORKERS"
 fi
+
+if [ -n "$CRYPT_KEKI" ]; then
+    COMMAND+=" -p CRYPT_KEKI $CRYPT_KEKI"
+    COMMAND+=" -p CRYPT_KEK $CRYPT_KEK"
+fi
+
+if [ -n "$CRYPT_KEKIF" ]; then
+    COMMAND+=" -p CRYPT_KEKIF $CRYPT_KEKIF"
+    COMMAND+=" -p CRYPT_KEKF $CRYPT_KEKF"
+fi
+
+$WSK_CLI $COMMAND
 
 # make messageHubFeedWeb.zip
 
