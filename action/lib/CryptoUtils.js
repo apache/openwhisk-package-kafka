@@ -22,12 +22,8 @@ const ALGORITHM_TAG_SIZE_16 = 16;
 
 module.exports = function (encryptKeyID, encryptKeyValue, encryptFallBackKeyID, encryptFallBackKeyValue, cryptVersion) {
 
-    if (encryptKeyValue) {
-        this.encryptKeyValue = decodeKeyValue(encryptKeyValue);
-    }
-    if (encryptFallBackKeyValue) {
-        this.encryptFallBackKeyValue = decodeKeyValue(encryptFallBackKeyValue);
-    }
+    this.encryptKeyValue = decodeKeyValue(encryptKeyValue);
+    this.encryptFallBackKeyValue = decodeKeyValue(encryptFallBackKeyValue);
 
     this.decryptAuth = function (authDBString) {
         if (authDBString) {
@@ -38,10 +34,10 @@ module.exports = function (encryptKeyID, encryptKeyValue, encryptFallBackKeyID, 
                 let keyValue;
                 let cryptVersionID = authDBStringArray[2];
                 let base64NonceAndCiphertext = authDBStringArray[3];
-                if (cryptVersionID === encryptKeyID) {
+                if (cryptVersionID === encryptKeyID.toString()) {
                     keyValue = this.encryptKeyValue;
-                } else if (cryptVersionID === encryptFallBackKeyID) {
-                    keyValue = this.encryptFallBackKeyValue
+                } else if (cryptVersionID === encryptFallBackKeyID.toString()) {
+                    keyValue = this.encryptFallBackKeyValue;
                 } else {
                     return "";
                 }
@@ -87,10 +83,14 @@ module.exports = function (encryptKeyID, encryptKeyValue, encryptFallBackKeyID, 
     }
 
     function decodeKeyValue(keyValue) {
-        // Create a buffer from the string
-        let bufferObj = Buffer.from(keyValue, "base64");
-        // Encode the Buffer as a utf8 string
-        return bufferObj.toString("utf8");
+        if (keyValue) {
+            // Create a buffer from the string
+            let bufferObj = Buffer.from(keyValue, "base64");
+            // Encode the Buffer as a utf8 string
+            return bufferObj.toString("utf8");
+        } else {
+            return undefined;
+        }
     }
 
 };
