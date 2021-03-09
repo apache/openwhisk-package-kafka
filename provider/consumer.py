@@ -284,7 +284,7 @@ class ConsumerProcess (Process):
                 self.consumer.close()
                 logging.info('[{}] Successfully closed KafkaConsumer'.format(self.trigger))
 
-                logging.debug('[{}] Dellocating KafkaConsumer'.format(self.trigger))
+                logging.debug('[{}] Deallocating KafkaConsumer'.format(self.trigger))
                 self.consumer = None
                 logging.info('[{}] Successfully cleaned up consumer'.format(self.trigger))
         except Exception as e:
@@ -395,7 +395,7 @@ class ConsumerProcess (Process):
                 try:
                     response = requests.post(self.triggerURL, json=payload, auth=self.authHandler, timeout=10.0, verify=check_ssl)
                     status_code = response.status_code
-                    logging.info("[{}] Repsonse status code {}".format(self.trigger, status_code))
+                    logging.info("[{}] Response status code {}".format(self.trigger, status_code))
 
                     # Manually commit offset if the trigger was fired successfully. Retry firing the trigger
                     # for a select set of status codes
@@ -559,7 +559,7 @@ class ConsumerProcess (Process):
         logging.info('[{}] Completed partition assignment. Connected to broker(s)'.format(self.trigger))
 
         if self.currentState() == Consumer.State.Initializing and self.__shouldRun():
-            logging.info('[{}] Setting consumer state to runnning.'.format(self.trigger))
+            logging.info('[{}] Setting consumer state to running.'.format(self.trigger))
             self.__recordState(Consumer.State.Running)
 
     def __on_revoke(self, consumer, partitions):

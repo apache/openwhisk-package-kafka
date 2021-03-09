@@ -30,7 +30,7 @@
 4. Developer creates trigger `trigger1` on OpenWhisk, the trigger stores the annotation `feed` with the feedAction name from system package or binded package.(`/whisk.system/messagingWeb/messageHubFeed`).
 5. Developer invokes action feedAction to create trigger feed passing input parameters (lifeCycle:`CREATE`, `trigger1`, Credentials1, Options:`topic1`)
 6. The feedAction invokes feedWebAction forwarding input parameter.
-7. The feedWebAction inserts trigger feed doc into DB for worker group 0 (feedWebAction protects DB credentials)
+7. The feedWebAction inserts trigger feed doc into the DB for worker group 0 (feedWebAction protects DB credentials)
 8. DB insertion notifies workers group 0 via Cloudant/CouchDB changes API, workers listen on DB view with a filter for their group `worker0` and gets the DB doc.
 9. Kafka Consumer is created on each worker in a consumer group and starts polling for messages on `topic1` from `instance1` using `Credentials-1`.
 10. Developer creates `rule1` indicating that when `trigger1` fires invoke `action1`.
@@ -50,7 +50,7 @@
 2. Developer gets the annotation `feed` from trigger `trigger1`.
 3. Developer invokes feedAction to update trigger feed passing input parameters (lifeCycle:`UPDATE`, `trigger1`, Options:`topic2`).
 4. The feedAction invokes feedWebAction forwarding input parameter.
-5. The feedWebAction inserts trigger feed doc into DB for worker group 0 (feedWebAction protects DB credentials).
+5. The feedWebAction inserts trigger feed doc into the DB for worker group 0 (feedWebAction protects DB credentials).
 6. DB insertion notifies workers group 0 via Cloudant/CouchDB changes API, workers listen on DB view with a filter for their group `worker0` and gets the DB doc.
 7. Kafka Consumer is re-created on each worker in a consumer group and starts polling for messages on `topic2` from `instance1` using `Credentials-1`.
 8. Event source produces messages on `topic2`.
@@ -60,12 +60,12 @@
 ### Read Trigger Feed
 ![MessageHub Trigger Read](images/Arch-Provider-MHV1-Read.png)
 
-**Scenario:** User wants to read the configuration and staus for trigger `trigger1`.
+**Scenario:** User wants to read the configuration and status for trigger `trigger1`.
 
 1. Developer gets the annotation `feed` from trigger `trigger1`.
 2. Developer invokes feedAction to read the trigger feed passing input parameters (lifeCycle:`READ`, `trigger1`).
 3. The feedAction invokes feedWebAction forwarding input parameter.
-4. The feedWebAction gets the trigger feed doc from DB (feedWebAction protects DB credentials).
+4. The feedWebAction gets the trigger feed doc from the DB (feedWebAction protects DB credentials).
 5. The DB returns the trigger feed doc for `trigger1`.
 6. The feedWebAction returns a response to feedAction.
 7. The feedAction returns response (config, status) to Developer.
@@ -79,7 +79,7 @@
 2. Developer gets the annotation `feed` from trigger `trigger1`.
 3. Developer invokes feedAction to delete the trigger feed passing input parameters (lifeCycle:`DELETE`, `trigger1`).
 4. The feedAction invokes feedWebAction forwarding input parameter.
-5. The feedWebAction updates the trigger feed doc into DB with a field `delete:true`(feedWebAction protects DB credentials).
+5. The feedWebAction updates the trigger feed doc into the DB with a field `delete:true`(feedWebAction protects DB credentials).
 6. DB update notifies workers group 0 via Cloudant/CouchDB changes API, workers listen on DB view with a filter for their group `worker0` and gets the DB doc. The Kafka consumers for `trigger1/topic2` get destroyed.
-7. The feedWebAction deletes the trigger feed doc from DB.
+7. The feedWebAction deletes the trigger feed doc from the DB.
 8. The Developer deletes trigger `trigger1`

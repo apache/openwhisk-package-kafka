@@ -67,7 +67,7 @@ class MessageHubMultiWorkersTest extends FlatSpec
   val dbName = s"${dbPrefix}ow_kafka_triggers"
   val client = new ExtendedCouchDbRestClient(dbProtocol, dbHost, dbPort, dbUsername, dbPassword, dbName)
 
-  behavior of "Mussage Hub Feed"
+  behavior of "Message Hub Feed"
 
   ignore should "assign two triggers to same worker when only worker0 is available" in withAssetCleaner(wskprops) {
 
