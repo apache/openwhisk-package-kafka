@@ -42,7 +42,7 @@ DB_NAME="${4}ow_kafka_triggers"
 APIHOST="$5"
 WORKERS="$6"
 INSTALL_PRODUCE_ACTION=${INSTALL_PRODUCE_ACTION:="true"}
-ACTION_RUNTIME_VERSION=${ACTION_RUNTIME_VERSION:="nodejs:6"}
+ACTION_RUNTIME_VERSION=${ACTION_RUNTIME_VERSION:="nodejs:12"}
 
 # If the auth key file exists, read the key in the file. Otherwise, take the
 # first argument as the key itself.
