@@ -144,9 +144,9 @@ class Consumer:
         logging.info('[{}] Quietly shutting down consumer for restart'.format(self.trigger))
         self.setDesiredState(Consumer.State.Restart)
         self.process.join()
-        logging.info('Consumer has shut down')
+        logging.info('[{}] Consumer has shut down'.format(self.trigger))
 
-        # user may have interleaved a request to delete the trigger, check again
+        # user may have interleaved a request to delete the trigger,check again
         if self.desiredState() != Consumer.State.Dead:
             logging.info('[{}] Starting new consumer thread'.format(self.trigger))
             self.sharedDictionary = newSharedDictionary()
