@@ -347,8 +347,8 @@ class ConsumerProcess (Process):
         except Exception as e:
             logging.error('[{}] Uncaught exception while shutting down consumer: {}'.format(self.trigger, e))
         finally:
-            logging.info('[{}] Recording consumer as {}. Bye bye!'.format(self.trigger, self.desiredState()))
             self.__recordState(self.desiredState())
+            logging.info('[{}] Recording consumer as {}. Bye bye!'.format(self.trigger, self.desiredState()))
 
     def __createConsumer(self):
         if self.__shouldRun():
