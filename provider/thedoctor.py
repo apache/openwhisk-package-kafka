@@ -65,12 +65,15 @@ class TheDoctor (Thread):
 
                         logging.info('[{}] Removing dead consumer from the collection.'.format(consumer.trigger))
                         self.consumerCollection.removeConsumerForTrigger(consumer.trigger)
-                    elif consumer.secondsSinceLastPoll() > self.poll_timeout_seconds and consumer.desiredState() == Consumer.State.Running:
-                        # there seems to be an issue with the kafka-python client where it gets into an
-                        # error-handling loop. This causes poll() to never complete, but also does not
-                        # throw an exception.
-                        logging.error('[Doctor][{}] Consumer timed-out, but should be alive! Restarting consumer.'.format(consumerId))
-                        consumer.restart()
+                    elif consumer.secondsSinceLastPoll() > self.poll_timeout_seconds:
+                        if consumer.desiredState() == Consumer.State.Running:
+                            # there seems to be an issue with the kafka-python client where it gets into an
+                            # error-handling loop. This causes poll() to never complete, but also does not
+                            # throw an exception.
+                            logging.error('[Doctor][{}] Consumer timed-out, but should be alive! Restarting consumer.'.format(consumerId))
+                            consumer.restart()
+                        else
+                            logging.error('[Doctor][{}] Consumer timed-out, but cannot restart, because desired state is: {} '.format(consumerId, consumer.desiredState()))
 
                 time.sleep(self.sleepy_time_seconds)
             except Exception as e:
