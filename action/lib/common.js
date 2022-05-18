@@ -104,16 +104,20 @@ function massageParamsForWeb(rawParams) {
     return massagedParams;
 }
 
-function getWebActionURL(endpoint, actionName) {
+function getWebActionURL(endpoint, dedicated, actionName) {
     var apiHost = addHTTPS(endpoint);
+    var package = 'messagingWeb';
+    if (dedicated === true || dedicated === 'true') {
+        package = 'messagingWebDedicated'
+    }
 
-    return `${apiHost}/api/v1/web/whisk.system/messagingWeb/${actionName}`;
+    return `${apiHost}/api/v1/web/whisk.system/${package}/${actionName}`;
 }
 
 function createTrigger(endpoint, params, actionName) {
     var options = {
         method: 'POST',
-        url: getWebActionURL(endpoint, actionName),
+        url: getWebActionURL(endpoint, params.dedicated, actionName),
         rejectUnauthorized: false,
         json: true,
         body: params,
@@ -140,7 +144,7 @@ function createTrigger(endpoint, params, actionName) {
 function deleteTrigger(endpoint, params, actionName) {
     var options = {
         method: 'DELETE',
-        url: getWebActionURL(endpoint, actionName),
+        url: getWebActionURL(endpoint, params.dedicated, actionName),
         rejectUnauthorized: false,
         json: true,
         body: params,
@@ -164,7 +168,7 @@ function deleteTrigger(endpoint, params, actionName) {
 function getTrigger(endpoint, params, actionName) {
     var options = {
         method: 'GET',
-        url: getWebActionURL(endpoint, actionName),
+        url: getWebActionURL(endpoint, params.dedicated, actionName),
         rejectUnauthorized: false,
         json: true,
         qs: params,
@@ -187,7 +191,7 @@ function getTrigger(endpoint, params, actionName) {
 function updateTrigger(endpoint, params, actionName) {
     var options = {
         method: 'PUT',
-        url: getWebActionURL(endpoint, actionName),
+        url: getWebActionURL(endpoint, params.dedicated, actionName),
         rejectUnauthorized: false,
         json: true,
         body: params,
