@@ -111,7 +111,7 @@ $ wsk trigger create MyKafkaTrigger -f /whisk.system/messaging/kafkaFeed -p brok
 
 ### Using a separated kafka feed provider for each user
 Sometimes users may not want to expose their kafka to the shared feed providers which are provided by OpenWhisk cloud provider.
-They can run their own providers and use their own CouchDB/Cloudant by passing below additional parameters when **create/update/fire/get/delete** triggers:
+They can run their own providers and use their own CouchDB/Cloudant by passing below additional parameters when **create/update/get/delete** triggers:
 
 |Name|Type|Description|
 |---|---|---|
