@@ -109,6 +109,22 @@ Example:
 $ wsk trigger create MyKafkaTrigger -f /whisk.system/messaging/kafkaFeed -p brokers "[\"mykafkahost:9092\", \"mykafkahost:9093\"]" -p topic mytopic -p isJSONData true
 ```
 
+### Using a separated kafka feed provider for each user
+Sometimes users may not want to expose their kafka to the shared feed providers which are provided by OpenWhisk cloud provider.
+They can run their own providers and use their own CouchDB/Cloudant by passing below additional parameters when **create/update/fire/get/delete** triggers:
+
+|Name|Type|Description|
+|---|---|---|
+|dedicated|Boolean|`true` to use dedicated kafka feed providers and CouchDB/Cloudant, default is `false`|
+|DB_URL|URL|The base URL(including username:password) for persistent storage (either CouchDB or Cloudant)|
+|DB_NAME|String|The database name for triggers|
+|workers|An array of the IDs of the running instances with each ID of the form `workerX`. e.g. `["worker0", "worker1"]`|
+
+Example:
+```
+$ wsk trigger create MyKafkaTrigger -f /whisk.system/messaging/kafkaFeed -p brokers "[\"mykafkahost:9092\", \"mykafkahost:9093\"]" -p topic mytopic -p isJSONData true -p dedicated true -p DB_URL http://admin:admin@localhost:5984 -p DB_NAME dedicated_triggers -p workers "[\"worker0\"]"
+```
+
 ### Listening for messages
 After creating a trigger, the system will monitor the specified topic in your messaging service. When new messages are posted, the trigger will be fired.
 

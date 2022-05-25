@@ -42,11 +42,12 @@ Now we need to start the provider service. This is also a simple matter of runni
 |LOCAL_DEV|Boolean|If you are using a locally-deployed OpenWhisk core system, it likely has a self-signed certificate. Set `LOCAL_DEV` to `true` to allow firing triggers without checking the certificate validity. *Do not use this for production systems!*|
 |PAYLOAD_LIMIT|Integer (default=900000)|The maximum payload size, in bytes, allowed during message batching. This value should be less than your OpenWhisk deployment's payload limit.|
 |WORKER|String|The ID of this running instances. Useful when running multiple instances. This should be of the form `workerX`. e.g. `worker0`.
+|DB_PREFIX|String|A prefix to be prepended to the default DB name|
 
 With that in mind, starting the feed service might look something like:
 
 ```sh
-docker run -e DB_URL=https://myDbHost -e DB_USER=MyDbUser -e DB_PASS=MySuperSecret -p 80:5000 kafkafeedprovider
+docker run -e DB_URL=https://myDbHost -e DB_USER=MyDbUser -e DB_PASS=MySuperSecret -e DB_PREFIX=ow_ -p 80:5000 kafkafeedprovider
 ```
 
 This example will start the provider service with the specified DB details. The container provides a number of RESTful endpoints which can be accessed on port 5000 _inside_ the container. To expose this port to the rest of the world `-p 80:5000` tells Docker to map port 80 of the host machine into port 5000 inside this new container.
